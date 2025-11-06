@@ -148,33 +148,25 @@ function renderTable(openIndex = null) {
     });
     thead.appendChild(headerRow);
 
-    // 若尚未載入任何資料，渲染簡單的占位假表
+    // 若尚未載入任何資料，渲染簡單的占位假表（只顯示一列，整列作為載入按鈕）
     if (tableData.length === 0) {
-        const placeholderRows = 4;
-        for (let i = 0; i < placeholderRows; i++) {
-            const tr = document.createElement('tr');
-            tr.classList.add('placeholder-row');
-            headers.forEach(() => {
-                const td = document.createElement('td');
-                td.textContent = '';
-                tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
-        }
+        const tr = document.createElement('tr');
+        tr.classList.add('placeholder-row');
 
-        // 讓假表第一列第二欄「載入 CSV」區塊可以點擊觸發匯入
-        const firstPlaceholderRow = tbody.querySelector('tr.placeholder-row');
-        if (firstPlaceholderRow && firstPlaceholderRow.children[1]) {
-            const loadCell = firstPlaceholderRow.children[1];
-            loadCell.style.cursor = 'pointer';
-            loadCell.classList.add('placeholder-load-cell');
-            loadCell.addEventListener('click', () => {
-                const importInput = document.getElementById('importCSVCard');
-                if (importInput) {
-                    importInput.click();
-                }
-            });
-        }
+        const td = document.createElement('td');
+        td.colSpan = headers.length;
+        td.classList.add('placeholder-load-cell');
+        td.style.cursor = 'pointer';
+
+        td.addEventListener('click', () => {
+            const importInput = document.getElementById('importCSVCard');
+            if (importInput) {
+                importInput.click();
+            }
+        });
+
+        tr.appendChild(td);
+        tbody.appendChild(tr);
 
         table.appendChild(thead);
         table.appendChild(tbody);
