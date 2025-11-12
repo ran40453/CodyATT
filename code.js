@@ -41,8 +41,17 @@ function doGet(e) {
 
     const payload = { data };
 
-    // 3) ?callback=xxx → 回 JSONP：xxx({...})
-    const cb = e && e.parameter && e.parameter.callback;
+    // 3) JSONP：支援多個常見參數名稱
+    const p = (e && e.parameter) ? e.parameter : {};
+    const cb =
+      p.callback ||
+      p.cb ||
+      p.jsoncallback ||
+      p.jsonp ||
+      p.callBack ||
+      p.CALLBACK ||
+      null;
+
     if (cb) {
       const js = `${cb}(${JSON.stringify(payload)})`;
       return ContentService.createTextOutput(js)
@@ -54,7 +63,15 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {
-    const cb = e && e.parameter && e.parameter.callback;
+    const p = (e && e.parameter) ? e.parameter : {};
+    const cb =
+      p.callback ||
+      p.cb ||
+      p.jsoncallback ||
+      p.jsonp ||
+      p.callBack ||
+      p.CALLBACK ||
+      null;
     const errPayload = { error: String(err && err.message ? err.message : err) };
     if (cb) {
       const js = `${cb}(${JSON.stringify(errPayload)})`;
