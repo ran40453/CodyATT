@@ -23,6 +23,10 @@
     <div class="card dashboard">
       <h3>總計</h3>
       <div class="capsule-column">
+        <div class="metric">
+          <div class="metric-label">出差天數</div>
+          <div id="travelDays" class="metric-value">0</div>
+        </div>
         <div class="capsule-row">
           <span class="label">加班總時數</span>
           <span class="capsule black" id="totalOT">0</span>
@@ -71,6 +75,7 @@
         <label for="importCSVCard" class="icon-button file-label">
           <span class="material-symbols-outlined">upload</span>
         </label>
+        <button id="saveToSheetBtn">Save to Google Sheet</button>
         <input type="file" id="importCSVCard" accept=".csv">
       </div>
     </div>
