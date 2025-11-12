@@ -65,17 +65,47 @@ function doGet(e) {
   }
 }
 
-function saveOvertimeData(payload) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheets()[0]; // 或 getSheetByName('工作表1')
-  const { headers, rows } = payload || {};
-  if (!headers || !rows) return { ok: false, error: 'bad payload' };
+/**
+ * 將前端 payload 寫回試算表
+ * payload 結構：
+ * {
+ *   headers: [..],   // 第一列欄名
+ *   rows: [ [..], ... ]  // 資料列
+ * }
+ * 回傳：{ ok:true, wrote:<筆數> } 或 { ok:false, error:"..." }
+ */
 
-  // 清空 & 重寫（你也可改 append 或只覆蓋資料區）
-  sheet.clearContents();
-  sheet.getRange(1,1,1,headers.length).setValues([headers]);
-  if (rows.length) {
-    sheet.getRange(2,1,rows.length,headers.length).setValues(rows);
+function saveOvertimeData(payload) {
+  try {
+    if (!payload || !payload.headers || !payload.rows) {
+      return { ok: false, error: 'bad payload' };
+    }
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheets()[0]; // 如需指定請改 getSheetByName('工作表1')
+    if (!sheet) throw new Error('找不到工作表');
+
+    // 全清 & 回寫
+    var headers = payload.headers;
+    var rows = payload.rows;
+
+    // 避免巨量清空帶走格式，可改成只清內容
+    sheet.clearContents();
+
+    // 寫入表頭
+    if (headers && headers.length) {
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    }
+    // 寫入資料
+    if (rows && rows.length) {
+      sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
+    }
+
+    // 記錄一下
+    Logger.log('[saveOvertimeData] wrote rows = %s', rows ? rows.length : 0);
+    return { ok: true, wrote: rows ? rows.length : 0 };
+
+  } catch (err) {
+    Logger.log('[saveOvertimeData] error: %s', err);
+    return { ok: false, error: String(err && err.message ? err.message : err) };
   }
-  return { ok: true, wrote: rows.length };
 }
