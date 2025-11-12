@@ -666,11 +666,11 @@ if (travelToggleBtn) {
     });
 }
 
+
 // === Google Sheet 相關工具（支援 Apps Script JSONP 與 Sheet CSV） ===
 // 1) Apps Script Web App（/exec）：建議走 JSONP（在 URL 後加 ?callback=... 會自動套用）
 // 2) Google Sheet 發佈 CSV：'https://docs.google.com/spreadsheets/d/e/XXXX/pub?output=csv'
 const SHEET_URL = 'https://script.google.com/macros/s/AKfycbybvyOVF_Qj8C9FQ4QaKj1hAmp7tsspkdNR1IlPDBpuNbakKy4GpuhZuygxrPiYDgMv2Q/exec';
-
 
 // JSONP helper：以 <script> 注入避免 CORS
 function jsonp(url, cbParam = 'callback') {
@@ -831,6 +831,50 @@ async function loadFromSheet() {
     }
 }
 // === End Google Sheet 相關工具 ===
+
+/**
+ * 將前端 payload 寫回試算表
+ * payload 結構：
+ * {
+ *   headers: [..],   // 第一列欄名
+ *   rows: [ [..], ... ]  // 資料列
+ * }
+ * 回傳：{ ok:true, wrote:<筆數> } 或 { ok:false, error:"..." }
+ */
+function saveOvertimeData(payload) {
+  try {
+    if (!payload || !payload.headers || !payload.rows) {
+      return { ok: false, error: 'bad payload' };
+    }
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheets()[0]; // 如需指定請改 getSheetByName('工作表1')
+    if (!sheet) throw new Error('找不到工作表');
+
+    // 全清 & 回寫
+    var headers = payload.headers;
+    var rows = payload.rows;
+
+    // 避免巨量清空帶走格式，可改成只清內容
+    sheet.clearContents();
+
+    // 寫入表頭
+    if (headers && headers.length) {
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    }
+    // 寫入資料
+    if (rows && rows.length) {
+      sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
+    }
+
+    // 記錄一下
+    Logger.log('[saveOvertimeData] wrote rows = %s', rows ? rows.length : 0);
+    return { ok: true, wrote: rows ? rows.length : 0 };
+
+  } catch (err) {
+    Logger.log('[saveOvertimeData] error: %s', err);
+    return { ok: false, error: String(err && err.message ? err.message : err) };
+  }
+}
 
 // 綁定「回傳到 Google Sheet」按鈕（HTML 之後加上 id="saveToSheetBtn" 即可）
 const saveBtn = document.getElementById('saveToSheetBtn');
