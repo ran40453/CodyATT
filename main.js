@@ -601,35 +601,6 @@ if (travelToggleBtn) {
 // 2) Google Sheet 發佈 CSV：'https://docs.google.com/spreadsheets/d/e/XXXX/pub?output=csv'
 const SHEET_URL = 'https://script.google.com/macros/s/AKfycbybvyOVF_Qj8C9FQ4QaKj1hAmp7tsspkdNR1IlPDBpuNbakKy4GpuhZuygxrPiYDgMv2Q/exec';
 
-// 以「原本前端做法」：先嘗試 JSONP；失敗就直接 fetch 純 JSON（不再使用任何 proxy）
-async function fetchWebExec(url) {
-    // 1) 先嘗試 JSONP
-    try {
-        const j = await jsonp(url);
-        return j; // 期待回傳 { data: [...] }
-    } catch (e) {
-        console.warn('[OT] JSONP 失敗，改走直接 fetch：', e);
-    }
-
-    // 2) 直接以 fetch 讀取純 JSON（Apps Script /exec 通常允許 GET）
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) throw new Error('direct fetch failed: ' + res.status);
-    const text = await res.text();
-
-    // 嘗試解析兩種情況：
-    //  a) 純 JSON：{"data":[...]}
-    //  b) JSONP 字串：callback({...});
-    try {
-        return JSON.parse(text);
-    } catch (_) {
-        // 嘗試剝 JSONP 外皮
-        const m = text.match(/^[\s\S]*?\(\s*({[\s\S]*})\s*\)\s*;?\s*$/);
-        if (m) {
-            return JSON.parse(m[1]);
-        }
-        throw new Error('unrecognized response (neither JSON nor JSONP)');
-    }
-}
 
 // JSONP helper：以 <script> 注入避免 CORS
 function jsonp(url, cbParam = 'callback') {
@@ -701,15 +672,15 @@ async function loadFromSheet() {
     try {
         if (!SHEET_URL) throw new Error('未設定資料來源 SHEET_URL');
 
-        // 情況 A：Apps Script /exec
+        // 情況 A：Apps Script /exec（只用 JSONP）
         if (SHEET_URL.includes('/exec')) {
             let rows = [];
             try {
-                const payload = await fetchWebExec(SHEET_URL);
+                const payload = await jsonp(SHEET_URL);
                 rows = (payload && payload.data) ? payload.data : [];
             } catch (e) {
-                console.error('[OT] /exec 載入失敗：', e);
-                throw e; // 進入外層 catch → 顯示假表
+                console.error('[OT] /exec JSONP 載入失敗：', e);
+                throw e; // 讓外層 catch 顯示假表
             }
 
             tableData = rows.map(row => {
