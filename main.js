@@ -1,10 +1,5 @@
-window.__BUILD_TAG__ = '2025-11-12a';
-console.log('[OT] BUILD', window.__BUILD_TAG__);
 let tableData = []; // 所有資料
 let newRowTravelEnabled = true; // 新增列預設是否啟用 Travel 津貼
-
-
-
 
 function getWeekdayChar(dateStr) {
     const date = new Date(dateStr);
@@ -596,108 +591,25 @@ if (travelToggleBtn) {
     });
 }
 
-// === Google Sheet 相關工具（同時支援 Apps Script JSON 與 Sheet CSV，含 CORS 備援） ===
-// 將下方 SHEET_URL 設為你的資料來源：
-// 1) 若使用 Google Sheet「發佈到網路」的 CSV 連結：
-//    例：'https://docs.google.com/spreadsheets/d/e/XXXX/pub?output=csv'
-// 2) 若使用 Apps Script Web App（/exec）回傳 JSON：
-//    例：'https://script.google.com/macros/s/XXXX/exec'
-const SHEET_URL = 'https://script.google.com/macros/s/AKfycbybvyOVF_Qj8C9FQ4QaKj1hAmp7tsspkdNR1IlPDBpuNbakKy4GpuhZuygxrPiYDgMv2Q/exec';
-
-// 兼容舊版變數名稱（避免舊檔案誤判）
-const SHEET_CSV_URL = SHEET_URL;
-
-// 簡易 CORS 備援：抓不到就改走 r.jina.ai 代理（僅 GET，僅公開資料，勿放私密）
-async function fetchWithFallback(url) {
-    try {
-        console.log('[OT] loadFromSheet fetch =>', url);
-        const res = await fetch(url, { cache: 'no-store' });
-        if (res.ok) return res;
-
-        console.warn('[OT] fetch not ok, status=', res.status, 'try proxy...');
-        // 走代理
-        const proxied = 'https://r.jina.ai/http://' + url.replace(/^https?:\/\//, '');
-        console.log('[OT] proxy fetch =>', proxied);
-        return await fetch(proxied, { cache: 'no-store' });
-    } catch (e) {
-        console.warn('[OT] fetch error, try proxy...', e);
-        const proxied = 'https://r.jina.ai/http://' + url.replace(/^https?:\/\//, '');
-        console.log('[OT] proxy fetch =>', proxied);
-        return await fetch(proxied, { cache: 'no-store' });
-    }
-}
+// === Google Sheet 相關工具（使用發佈成 CSV 的連結） ===
+// TODO: 把下面這個網址換成你在 Google Sheet「發佈到網路」後拿到的 CSV 連結
+// 例如：'https://docs.google.com/spreadsheets/d/e/XXXX/pub?output=csv'
+const SHEET_CSV_URL = 'https://script.google.com/macros/s/AKfycbybvyOVF_Qj8C9FQ4QaKj1hAmp7tsspkdNR1IlPDBpuNbakKy4GpuhZuygxrPiYDgMv2Q/exec';
 
 async function loadFromSheet() {
     try {
-        if (!SHEET_URL) {
-            throw new Error('未設定資料來源 SHEET_URL');
+        if (!SHEET_CSV_URL || SHEET_CSV_URL === 'PASTE_YOUR_SHEET_CSV_URL_HERE') {
+            throw new Error('Sheet CSV URL 未設定');
         }
+        const res = await fetch(SHEET_CSV_URL, { cache: 'no-store' });
+        if (!res.ok) throw new Error('fetch failed');
+        const text = await res.text();
 
-        const res = await fetchWithFallback(SHEET_URL);
-
-        // 有些代理會回 text/plain；直接用 text 取回後依序嘗試 JSON → CSV
-        const ct = (res.headers.get('content-type') || '').toLowerCase();
-        console.log('[OT] content-type:', ct);
-
-        const raw = await res.text();
-
-        // 1) 先試 JSON（Apps Script /exec）
-        try {
-            const json = JSON.parse(raw);
-            const rows = json.data || [];
-
-            tableData = rows.map(row => {
-                // 日期若是 "2025-10-22T17:00:00.000Z" → 取前 10 碼
-                let rawDate = row.date;
-                if (typeof rawDate === 'string' && rawDate.includes('T')) {
-                    rawDate = rawDate.slice(0, 10);
-                }
-
-                const v167 = Number(row.v167 ?? row['1.67'] ?? 0);
-                const v134 = Number(row.v134 ?? row['1.34'] ?? 0);
-                const v166 = Number(row.v166 ?? row['1.66'] ?? 0);
-                const v267 = Number(row.v267 ?? row['2.67'] ?? 0);
-
-                const base     = Number(row.base     ?? row.Base        ?? 0);
-                const travel   = Number(row.travel   ?? row.Travel      ?? 0);
-                const otSalary = Number(row.otSalary ?? row['OT Salary'] ?? 0);
-                const total    = Number(row.total    ?? row.Total       ?? 0);
-                const monthSLR = Number(row.monthSLR ?? row['Month SLR'] ?? 0);
-
-                return {
-                    date: rawDate,
-                    weekday: row.weekday || getWeekdayChar(rawDate),
-                    v167,
-                    v134,
-                    v166,
-                    v267,
-                    base: base.toFixed(2),
-                    travel: travel.toFixed(2),
-                    otSalary: otSalary.toFixed(2),
-                    total: total.toFixed(2),
-                    monthSLR: monthSLR.toFixed(2),
-                    remark: row.remark ?? row.Remark ?? '',
-                    travelEnabled: true
-                };
-            });
-
-            updateAll();
-            return;
-        } catch (e1) {
-            // 不是 JSON，繼續試 CSV
-        }
-
-        // 2) 再試 CSV（Google Sheet 發佈 CSV）
-        try {
-            parseCSV(raw);
-            updateAll();
-            return;
-        } catch (e2) {
-            // CSV 也失敗
-            throw new Error('未知資料格式，解析失敗');
-        }
+        // 直接沿用現有的 CSV 解析邏輯
+        parseCSV(text);
+        updateAll();
     } catch (err) {
-        console.log('載入 Sheet 失敗，改用空表', err, 'URL=', SHEET_URL);
+        console.log('載入 Sheet 失敗，改用空表', err);
         renderTable();
         syncTravelToggleUI();
     }
