@@ -650,6 +650,54 @@ function jsonp(url, cbParam = 'callback') {
 }
 
 async function loadFromSheet() {
+    // ★ 若在 HtmlService 環境（有 google.script.run），改走 GAS 直呼，完全不使用 fetch/JSONP
+    if (window.google && google.script && google.script.run) {
+        await new Promise((resolve, reject) => {
+            google.script.run
+              .withSuccessHandler(payload => {
+                  try {
+                      const rows = (payload && payload.data) ? payload.data : [];
+                      tableData = rows.map(row => {
+                          let rawDate = row.date;
+                          if (typeof rawDate === 'string' && rawDate.includes('T')) {
+                              rawDate = rawDate.slice(0, 10);
+                          }
+                          const v167 = Number(row.v167 ?? row['1.67'] ?? 0);
+                          const v134 = Number(row.v134 ?? row['1.34'] ?? 0);
+                          const v166 = Number(row.v166 ?? row['1.66'] ?? 0);
+                          const v267 = Number(row.v267 ?? row['2.67'] ?? 0);
+
+                          const base     = Number(row.base     ?? row.Base        ?? 0);
+                          const travel   = Number(row.travel   ?? row.Travel      ?? 0);
+                          const otSalary = Number(row.otSalary ?? row['OT Salary'] ?? 0);
+                          const total    = Number(row.total    ?? row.Total       ?? 0);
+                          const monthSLR = Number(row.monthSLR ?? row['Month SLR'] ?? 0);
+
+                          return {
+                              date: rawDate,
+                              weekday: row.weekday || getWeekdayChar(rawDate),
+                              v167,
+                              v134,
+                              v166,
+                              v267,
+                              base: base.toFixed(2),
+                              travel: travel.toFixed(2),
+                              otSalary: otSalary.toFixed(2),
+                              total: total.toFixed(2),
+                              monthSLR: monthSLR.toFixed(2),
+                              remark: row.remark ?? row.Remark ?? '',
+                              travelEnabled: true
+                          };
+                      });
+                      updateAll();
+                      resolve();
+                  } catch (err) { reject(err); }
+              })
+              .withFailureHandler(err => reject(err))
+              .getOvertimeData();
+        });
+        return; // 已用 GAS 取回資料
+    }
     try {
         if (!SHEET_URL) throw new Error('未設定資料來源 SHEET_URL');
 
