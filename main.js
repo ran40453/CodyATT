@@ -1,3 +1,5 @@
+window.__BUILD_TAG__ = '2025-11-12a';
+console.log('[OT] BUILD', window.__BUILD_TAG__);
 let tableData = []; // 所有資料
 let newRowTravelEnabled = true; // 新增列預設是否啟用 Travel 津貼
 
@@ -598,17 +600,21 @@ if (travelToggleBtn) {
 // 2) 若使用 Apps Script Web App（/exec）回傳 JSON：
 //    例：'https://script.google.com/macros/s/XXXX/exec'
 const SHEET_URL = 'https://script.google.com/macros/s/AKfycbybvyOVF_Qj8C9FQ4QaKj1hAmp7tsspkdNR1IlPDBpuNbakKy4GpuhZuygxrPiYDgMv2Q/exec';
+// 兼容舊版變數名稱，避免因快取或舊檔造成「Sheet CSV URL 未設定」誤判
+const SHEET_CSV_URL = SHEET_URL;
 
 async function loadFromSheet() {
     try {
         if (!SHEET_URL) {
             throw new Error('未設定資料來源 SHEET_URL');
         }
+        console.log('[OT] loadFromSheet fetch =>', SHEET_URL);
         const res = await fetch(SHEET_URL, { cache: 'no-store' });
         if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
 
         // 嘗試由 content-type / URL 判斷 CSV 或 JSON
         const ct = (res.headers.get('content-type') || '').toLowerCase();
+        console.log('[OT] content-type:', ct);
         const isCSV = ct.includes('text/csv') || SHEET_URL.includes('output=csv');
         const isAppsScriptJSON = SHEET_URL.includes('/exec') || ct.includes('application/json');
 
@@ -692,7 +698,7 @@ async function loadFromSheet() {
 
         updateAll();
     } catch (err) {
-        console.log('載入 Sheet 失敗，改用空表', err);
+        console.log('載入 Sheet 失敗，改用空表', err, 'URL=', SHEET_URL);
         renderTable();
         syncTravelToggleUI();
     }
