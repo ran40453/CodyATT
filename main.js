@@ -690,6 +690,23 @@ function jsonp(url, cbParam = 'callback') {
     });
 }
 
+// 若 JSONP 失敗，改以直連方式抓取純 JSON（Apps Script /exec 通常允許 GET）
+// 不使用任何 proxy；若伺服端仍不允許，會丟錯並回到假表
+async function fetchWebExec(url) {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('direct fetch failed: ' + res.status);
+    const text = await res.text();
+
+    // 嘗試兩種解析：純 JSON 或誤回 JSONP
+    try {
+        return JSON.parse(text);
+    } catch (_) {
+        const m = text.match(/^[\s\S]*?\(\s*({[\s\S]*})\s*\)\s*;?\s*$/);
+        if (m) return JSON.parse(m[1]);
+        throw new Error('unrecognized response (neither JSON nor JSONP)');
+    }
+}
+
 async function loadFromSheet() {
     // ★ 若在 HtmlService 環境（有 google.script.run），改走 GAS 直呼，完全不使用 fetch/JSONP
     if (window.google && google.script && google.script.run) {
@@ -742,15 +759,18 @@ async function loadFromSheet() {
     try {
         if (!SHEET_URL) throw new Error('未設定資料來源 SHEET_URL');
 
-        // 情況 A：Apps Script /exec（只用 JSONP）
+        // 情況 A：Apps Script /exec（先用 JSONP，失敗就直連 JSON）
         if (SHEET_URL.includes('/exec')) {
             let rows = [];
             try {
+                // 先嘗試 JSONP（標準途徑）
                 const payload = await jsonp(SHEET_URL);
                 rows = (payload && payload.data) ? payload.data : [];
-            } catch (e) {
-                console.error('[OT] /exec JSONP 載入失敗：', e);
-                throw e; // 讓外層 catch 顯示假表
+            } catch (e1) {
+                console.warn('[OT] /exec JSONP 失敗，改嘗試直連 JSON：', e1);
+                // 失敗就改以直連方式抓純 JSON
+                const payload2 = await fetchWebExec(SHEET_URL);
+                rows = (payload2 && payload2.data) ? payload2.data : [];
             }
 
             tableData = rows.map(row => {
