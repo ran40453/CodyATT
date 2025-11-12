@@ -487,10 +487,18 @@ document.getElementById('exportCSVCard').addEventListener('click', () => {
         ].join(',') + '\n';
     });
 
-    const blob = new Blob([csv], {type:'text/csv'});
+    const blob = new Blob([csv], { type: 'text/csv' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = 'overtime.csv';
+
+    // 以本地時間產生 yyyymmdd（例如：20251112）
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const filename = `overtime_${yyyy}${mm}${dd}.csv`;
+
+    link.download = filename;
     link.click();
 });
 
@@ -583,31 +591,22 @@ if (travelToggleBtn) {
     });
 }
 
-// === Google Sheet 相關工具 ===
-const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbybvyOVF_Qj8C9FQ4QaKj1hAmp7tsspkdNR1IlPDBpuNbakKy4GpuhZuygxrPiYDgMv2Q/exec'; // Apps Script 部署網址
+// === Google Sheet 相關工具（使用發佈成 CSV 的連結） ===
+// TODO: 把下面這個網址換成你在 Google Sheet「發佈到網路」後拿到的 CSV 連結
+// 例如：'https://docs.google.com/spreadsheets/d/e/XXXX/pub?output=csv'
+const SHEET_CSV_URL = 'PASTE_YOUR_SHEET_CSV_URL_HERE';
 
 async function loadFromSheet() {
     try {
-        const res = await fetch(SHEET_API_URL, { cache: 'no-store' });
+        if (!SHEET_CSV_URL || SHEET_CSV_URL === 'PASTE_YOUR_SHEET_CSV_URL_HERE') {
+            throw new Error('Sheet CSV URL 未設定');
+        }
+        const res = await fetch(SHEET_CSV_URL, { cache: 'no-store' });
         if (!res.ok) throw new Error('fetch failed');
-        const json = await res.json();
-        const rows = json.data || [];
+        const text = await res.text();
 
-        tableData = rows.map(row => ({
-            date: row.date,
-            weekday: row.weekday || getWeekdayChar(row.date),
-            v167: Number(row.v167) || 0,
-            v134: Number(row.v134) || 0,
-            v166: Number(row.v166) || 0,
-            v267: Number(row.v267) || 0,
-            base: Number(row.base) || 0,
-            travel: Number(row.travel) || 0,
-            otSalary: Number(row.otSalary) || 0,
-            total: Number(row.total) || 0,
-            remark: row.remark || '',
-            travelEnabled: true   // 或之後你要存這個欄位也可以
-        }));
-
+        // 直接沿用現有的 CSV 解析邏輯
+        parseCSV(text);
         updateAll();
     } catch (err) {
         console.log('載入 Sheet 失敗，改用空表', err);
