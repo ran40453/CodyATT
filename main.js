@@ -78,7 +78,7 @@ function updateAll(openIndex = null) {
 // 新增資料
 function addNewEntry(entry) {
     tableData.push(entry);
-    tableData.sort((a,b) => new Date(a.date) - new Date(b.date));
+    tableData.sort((a, b) => new Date(b.date) - new Date(a.date)); // 由新到舊
     updateAll();
 }
 
@@ -791,6 +791,9 @@ async function loadFromSheet() {
                     travelEnabled: true
                 };
             });
+
+            // 全域排序：由新日期到舊日期，確保畫面第一列是最新一筆
+            tableData.sort((a, b) => new Date(b.date) - new Date(a.date));
 
             updateAll();
             return;
