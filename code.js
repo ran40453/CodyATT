@@ -1,13 +1,13 @@
 function doGet(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
   var range = sheet.getDataRange();
-  var values = range.getValues();  // 第一列是標題
+  var values = range.getValues();  // 第一列 = 標題列
 
   var headers = values[0];
   var dataRows = values.slice(1);
 
   var rows = dataRows
-    .filter(function(r) { return r[0]; })  // 沒日期的列略過
+    .filter(function(r) { return r[0]; })  // 沒日期的列就跳過
     .map(function(r) {
       var obj = {};
       headers.forEach(function(h, i) {
@@ -21,18 +21,18 @@ function doGet(e) {
 
   var output = ContentService.createTextOutput();
 
-  // 如果前端有給 callback，就用 JSONP 格式回傳
+  // 🔹這裡是重點：如果有 callback，就用 JSONP 格式回傳
   if (e && e.parameter && e.parameter.callback) {
     var cbName = String(e.parameter.callback);
     output.setContent(cbName + '(' + json + ');');
     output.setMimeType(ContentService.MimeType.JAVASCRIPT);
   } else {
-    // 一般純 JSON
+    // 沒 callback 就回純 JSON（方便你自己測試）
     output.setContent(json);
     output.setMimeType(ContentService.MimeType.JSON);
   }
 
-  // 給 GitHub / 其他網域用的 CORS
+  // 給 GitHub 等其他網域使用
   output.setHeader('Access-Control-Allow-Origin', '*');
 
   return output;
