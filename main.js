@@ -713,30 +713,23 @@ async function fetchWebExec(url) {
 }
 
 async function loadFromSheet() {
-    // 若不在 Apps Script HtmlService，且目前 host 不是 script.google.com，就不要硬打 /exec，改用假表＋CSV
-    const isGasHtml = !!(window.google && google.script && google.script.run);
-    const isScriptHost = location.hostname.includes('script.google.com');
-    if (!isGasHtml && !isScriptHost) {
-        console.warn('[OT] 偵測到外部網域（例如 GitHub Pages），略過自動載入 Sheet，改顯示假表。');
-        renderTable();
-        syncTravelToggleUI();
+    // 若在 Apps Script HtmlService（有 google.script.run），優先走直呼後端
+    if (window.google && google.script && google.script.run) {
+        google.script.run
+            .withSuccessHandler((payload) => {
+                // payload = { data: [...] }
+                initTableFromPayload(payload);
+            })
+            .withFailureHandler((err) => {
+                console.error('[OT] loadFromSheet via GAS FAIL:', err);
+                // fallback: render empty table
+                renderTable();
+            })
+            .getOvertimeData();
         return;
     }
-    // ★ 若在 HtmlService 環境（有 google.script.run），改走 GAS 直呼，完全不使用 fetch/JSONP
-    if (window.google && google.script && google.script.run) {
-    google.script.run
-        .withSuccessHandler((payload) => {
-        // payload = { data: [...] }
-        initTableFromPayload(payload);
-        })
-        .withFailureHandler((err) => {
-        console.error('[OT] loadFromSheet via GAS FAIL:', err);
-        // fallback: render empty table
-        renderTable();
-        })
-        .getOvertimeData();
-    return;
-    }
+
+    // 其餘情境（例如 GitHub Pages、本機），改為直接嘗試 /exec（JSONP → 直連 JSON）
     try {
         if (!SHEET_URL) throw new Error('未設定資料來源 SHEET_URL');
 
