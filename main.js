@@ -671,46 +671,17 @@ if (travelToggleBtn) {
     });
 }
 
-// === Google Sheet 相關工具（支援 Apps Script JSONP 與 Sheet CSV） ===
-// 1) Apps Script Web App（/exec）：建議走 JSONP（在 URL 後加 ?callback=... 會自動套用）
-// 2) Google Sheet 發佈 CSV：'https://docs.google.com/spreadsheets/d/e/XXXX/pub?output=csv'
-const SHEET_URL = 'https://script.google.com/macros/s/AKfycbybvyOVF_Qj8C9FQ4QaKj1hAmp7tsspkdNR1IlPDBpuNbakKy4GpuhZuygxrPiYDgMv2Q/exec';
+// === Google Sheet 相關工具（新版僅支援純 JSON Web 版本） ===
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbybvyOVF_Qj8C9FQ4QaKj1hAmp7tsspkdNR1IlPDBpuNbakKy4GpuhZuygxrPiYDgMv2Q/exec?api=1';
 
-
-// JSONP helper：以 <script> 注入避免 CORS
-function jsonp(url, cbParam = 'callback') {
-    return new Promise((resolve, reject) => {
-        const cbName = 'gas_cb_' + Date.now() + Math.random().toString(36).slice(2);
-        const cleanup = () => {
-            try { delete window[cbName]; } catch (_) {}
-            if (script && script.parentNode) script.parentNode.removeChild(script);
-        };
-        window[cbName] = (data) => { cleanup(); resolve(data); };
-
-        const sep = url.includes('?') ? '&' : '?';
-        const script = document.createElement('script');
-        script.src = url + sep + cbParam + '=' + cbName;
-        script.onerror = () => { cleanup(); reject(new Error('JSONP load failed')); };
-        document.head.appendChild(script);
-    });
-}
-
-// 若 JSONP 失敗，改以直連方式抓取純 JSON（Apps Script /exec 通常允許 GET）
-// 不使用任何 proxy；若伺服端仍不允許，會丟錯並回到假表
+// 只支援純 JSON 回應的 fetch
 async function fetchWebExec(url) {
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) throw new Error('direct fetch failed: ' + res.status);
-    const text = await res.text();
-
-    // 嘗試兩種解析：純 JSON 或誤回 JSONP
-    try {
-        return JSON.parse(text);
-    } catch (_) {
-        const m = text.match(/^[\s\S]*?\(\s*({[\s\S]*})\s*\)\s*;?\s*$/);
-        if (m) return JSON.parse(m[1]);
-        throw new Error('unrecognized response (neither JSON nor JSONP)');
-    }
+    // 後端以 ContentService.JSON 回傳 → 直接解析 JSON
+    return await res.json();
 }
+
 
 async function loadFromSheet() {
     // 若在 Apps Script HtmlService（有 google.script.run），優先走直呼後端
@@ -729,81 +700,54 @@ async function loadFromSheet() {
         return;
     }
 
-    // 其餘情境（例如 GitHub Pages、本機），改為直接嘗試 /exec（JSONP → 直連 JSON）
+    // 其餘情境（例如 GitHub Pages、本機），直接用 /exec?api=1 抓純 JSON
     try {
         if (!SHEET_URL) throw new Error('未設定資料來源 SHEET_URL');
 
-        // 情況 A：Apps Script /exec（先用 JSONP，失敗就直連 JSON）
-        if (SHEET_URL.includes('/exec')) {
-            let rows = [];
-            try {
-                // 先嘗試 JSONP（標準途徑）
-                const payload = await jsonp(SHEET_URL);
-                rows = (payload && payload.data) ? payload.data : [];
-            } catch (e1) {
-                console.warn('[OT] /exec JSONP 失敗，改嘗試直連 JSON：', e1);
-                // 失敗就改以直連方式抓純 JSON
-                const payload2 = await fetchWebExec(SHEET_URL);
-                rows = (payload2 && payload2.data) ? payload2.data : [];
+        const payload = await fetchWebExec(SHEET_URL);
+        const rows = (payload && payload.data) ? payload.data : [];
+
+        tableData = rows.map(row => {
+            // 日期若是 "2025-10-22T17:00:00.000Z" → 轉成本地 yyyy-mm-dd
+            let rawDate = row.date;
+            if (typeof rawDate === 'string' && rawDate.includes('T')) {
+                const d = new Date(rawDate);
+                if (!isNaN(d)) {
+                    const yyyy = d.getFullYear();
+                    const mm = String(d.getMonth() + 1).padStart(2, '0');
+                    const dd = String(d.getDate()).padStart(2, '0');
+                    rawDate = `${yyyy}-${mm}-${dd}`;
+                } else {
+                    rawDate = rawDate.slice(0, 10);
+                }
             }
 
-            tableData = rows.map(row => {
-                // 日期若是 "2025-10-22T17:00:00.000Z" → 取前 10 碼
-                let rawDate = row.date;
-                if (typeof rawDate === 'string' && rawDate.includes('T')) {
-                    // 將 ISO UTC 字串轉為本地時間後再取日期，避免往前一天
-                    const d = new Date(rawDate);
-                    if (!isNaN(d)) {
-                        const yyyy = d.getFullYear();
-                        const mm = String(d.getMonth() + 1).padStart(2, '0');
-                        const dd = String(d.getDate()).padStart(2, '0');
-                        rawDate = `${yyyy}-${mm}-${dd}`;
-                    } else {
-                        rawDate = rawDate.slice(0, 10);
-                    }
-                }
+            const v167 = Number(row.v167 ?? row['1.67'] ?? 0);
+            const v134 = Number(row.v134 ?? row['1.34'] ?? 0);
+            const v166 = Number(row.v166 ?? row['1.66'] ?? 0);
+            const v267 = Number(row.v267 ?? row['2.67'] ?? 0);
+            return {
+                date: rawDate,
+                weekday: row.weekday || getWeekdayChar(rawDate),
+                v167,
+                v134,
+                v166,
+                v267,
+                base: (row.base ?? row.Base ?? '').toString(),
+                travel: (row.travel ?? row.Travel ?? '').toString(),
+                otSalary: (row.otSalary ?? row['OT Salary'] ?? '').toString(),
+                total: (row.total ?? row.Total ?? '').toString(),
+                monthSLR: (row.monthSLR ?? row['Month SLR'] ?? '').toString(),
+                otSum: (row.otSum ?? row['OT hr SUM'] ?? '').toString(),
+                remark: row.remark ?? row.Remark ?? '',
+                travelEnabled: true
+            };
+        });
 
-                const v167 = Number(row.v167 ?? row['1.67'] ?? 0);
-                const v134 = Number(row.v134 ?? row['1.34'] ?? 0);
-                const v166 = Number(row.v166 ?? row['1.66'] ?? 0);
-                const v267 = Number(row.v267 ?? row['2.67'] ?? 0);
-                return {
-                    date: rawDate,
-                    weekday: row.weekday || getWeekdayChar(rawDate),
-                    v167,
-                    v134,
-                    v166,
-                    v267,
-                    base: (row.base ?? row.Base ?? '').toString(),
-                    travel: (row.travel ?? row.Travel ?? '').toString(),
-                    otSalary: (row.otSalary ?? row['OT Salary'] ?? '').toString(),
-                    total: (row.total ?? row.Total ?? '').toString(),
-                    monthSLR: (row.monthSLR ?? row['Month SLR'] ?? '').toString(),
-                    otSum: (row.otSum ?? row['OT hr SUM'] ?? '').toString(),
-                    remark: row.remark ?? row.Remark ?? '',
-                    travelEnabled: true
-                };
-            });
+        // 全域排序：由新日期到舊日期，確保畫面第一列是最新一筆
+        tableData.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            // 全域排序：由新日期到舊日期，確保畫面第一列是最新一筆
-            tableData.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            updateAll();
-            return;
-        }
-
-        // 情況 B：Google Sheet CSV
-        if (SHEET_URL.includes('output=csv')) {
-            const res = await fetch(SHEET_URL, { cache: 'no-store' });
-            if (!res.ok) throw new Error('fetch failed: ' + res.status);
-            const text = await res.text();
-            parseCSV(text);
-            updateAll();
-            return;
-        }
-
-        // 都不是就丟錯
-        throw new Error('未知資料來源格式，請提供 /exec 或 ?output=csv');
+        updateAll();
     } catch (err) {
         console.log('載入 Sheet 失敗，改用空表', err, 'URL=', SHEET_URL);
         renderTable();
