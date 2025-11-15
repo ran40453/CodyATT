@@ -724,54 +724,18 @@ async function loadFromSheet() {
     }
     // ★ 若在 HtmlService 環境（有 google.script.run），改走 GAS 直呼，完全不使用 fetch/JSONP
     if (window.google && google.script && google.script.run) {
-        await new Promise((resolve, reject) => {
-            google.script.run
-              .withSuccessHandler(payload => {
-                  try {
-                      const rows = (payload && payload.data) ? payload.data : [];
-                      tableData = rows.map(row => {
-                          let rawDate = row.date;
-                          if (typeof rawDate === 'string' && rawDate.includes('T')) {
-                              // 將 ISO UTC 字串轉為本地時間後再取日期，避免往前一天
-                              const d = new Date(rawDate);
-                              if (!isNaN(d)) {
-                                  const yyyy = d.getFullYear();
-                                  const mm = String(d.getMonth() + 1).padStart(2, '0');
-                                  const dd = String(d.getDate()).padStart(2, '0');
-                                  rawDate = `${yyyy}-${mm}-${dd}`;
-                              } else {
-                                  rawDate = rawDate.slice(0, 10);
-                              }
-                          }
-                          const v167 = Number(row.v167 ?? row['1.67'] ?? 0);
-                          const v134 = Number(row.v134 ?? row['1.34'] ?? 0);
-                          const v166 = Number(row.v166 ?? row['1.66'] ?? 0);
-                          const v267 = Number(row.v267 ?? row['2.67'] ?? 0);
-                          return {
-                              date: rawDate,
-                              weekday: row.weekday || getWeekdayChar(rawDate),
-                              v167,
-                              v134,
-                              v166,
-                              v267,
-                              base: (row.base ?? row.Base ?? '').toString(),
-                              travel: (row.travel ?? row.Travel ?? '').toString(),
-                              otSalary: (row.otSalary ?? row['OT Salary'] ?? '').toString(),
-                              total: (row.total ?? row.Total ?? '').toString(),
-                              monthSLR: (row.monthSLR ?? row['Month SLR'] ?? '').toString(),
-                              otSum: (row.otSum ?? row['OT hr SUM'] ?? '').toString(),
-                              remark: row.remark ?? row.Remark ?? '',
-                              travelEnabled: true
-                          };
-                      });
-                      updateAll();
-                      resolve();
-                  } catch (err) { reject(err); }
-              })
-              .withFailureHandler(err => reject(err))
-              .getOvertimeData();
-        });
-        return; // 已用 GAS 取回資料
+    google.script.run
+        .withSuccessHandler((payload) => {
+        // payload = { data: [...] }
+        initTableFromPayload(payload);
+        })
+        .withFailureHandler((err) => {
+        console.error('[OT] loadFromSheet via GAS FAIL:', err);
+        // fallback: render empty table
+        renderTable();
+        })
+        .getOvertimeData();
+    return;
     }
     try {
         if (!SHEET_URL) throw new Error('未設定資料來源 SHEET_URL');

@@ -1,4 +1,4 @@
-function doGet(e) {
+function getOvertimeData() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
   var range = sheet.getDataRange();
   var values = range.getValues();  // 第一列 = 標題列
@@ -16,26 +16,38 @@ function doGet(e) {
       return obj;
     });
 
-  var payload = { data: rows };
-  var json = JSON.stringify(payload);
+  return { data: rows };
+}
 
-  var output = ContentService.createTextOutput();
+function doGet(e) {
+  e = e || {};
+  var params = e.parameter || {};
 
-  // 🔹這裡是重點：如果有 callback，就用 JSONP 格式回傳
-  if (e && e.parameter && e.parameter.callback) {
-    var cbName = String(e.parameter.callback);
-    output.setContent(cbName + '(' + json + ');');
-    output.setMimeType(ContentService.MimeType.JAVASCRIPT);
-  } else {
-    // 沒 callback 就回純 JSON（方便你自己測試）
-    output.setContent(json);
-    output.setMimeType(ContentService.MimeType.JSON);
+  var wantsApi = params.api === '1' || params.mode === 'api' || params.callback;
+
+  // 🔹 API 模式：回 JSON / JSONP，未來如果真的要外部呼叫可以用
+  if (wantsApi) {
+    var payload = getOvertimeData();
+    var json = JSON.stringify(payload);
+
+    var output = ContentService.createTextOutput();
+
+    if (params.callback) {
+      var cbName = String(params.callback);
+      output.setContent(cbName + '(' + json + ');');
+      output.setMimeType(ContentService.MimeType.JAVASCRIPT);
+    } else {
+      output.setContent(json);
+      output.setMimeType(ContentService.MimeType.JSON);
+    }
+
+    output.setHeader('Access-Control-Allow-Origin', '*');
+    return output;
   }
 
-  // 給 GitHub 等其他網域使用
-  output.setHeader('Access-Control-Allow-Origin', '*');
-
-  return output;
+  // 🔹 預設：回 HtmlService 畫面（跟 GitHub 一樣的 UI）
+  return HtmlService.createHtmlOutputFromFile('index')
+    .setTitle('OT calculation');
 }
 
 /**
@@ -47,7 +59,6 @@ function doGet(e) {
  * }
  * 回傳：{ ok:true, wrote:<筆數> } 或 { ok:false, error:"..." }
  */
-
 function saveOvertimeData(payload) {
   try {
     if (!payload || !payload.headers || !payload.rows) {
@@ -80,7 +91,7 @@ function saveOvertimeData(payload) {
 }
 
 /**
- * 讓 GitHub / 本機頁面可以用 POST 寫回加班資料。
+ * 讓（未來如果有需要）外部可以用 POST 寫回加班資料。
  */
 function doPost(e) {
   try {
