@@ -2,6 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>加班表管理</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
     <script>
@@ -20,7 +21,7 @@
   <div class="left-panel">
 
     <!-- Logo 卡片 -->
-    <div class="card logo-card">
+    <div class="card logo-card" onclick="showOtMonthlySummary()" style="cursor:pointer;">
       <img src="https://static.wixstatic.com/media/f31164_8fb3a217689346059f1c7a5e599fa050~mv2.png/v1/fill/w_282,h_50,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/logoFONT.png"
           alt="OT Logo" class="logo-image">
     </div>
@@ -87,6 +88,10 @@
         <input type="file" id="importCSVCard" accept=".csv">
       </div>
     </div>
+    <a class="icon-button mobile-table-toggle" href="#tableSection">
+        <span class="material-symbols-outlined">table_view</span>
+        <span class="mobile-table-toggle-label">查看加班明細</span>
+    </a>
 
   </div>
 

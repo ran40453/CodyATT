@@ -743,4 +743,85 @@ tr.sunday .row-delete-wrapper,
     border-radius: 999px;
 }
 
+/* 手機版響應式版面調整 */
+@media (max-width: 1024px) {
+    body {
+        padding: 12px;
+    }
+
+    .container {
+        flex-direction: column;
+        gap: 16px;
+        align-items: stretch;
+    }
+
+    .left-panel {
+        position: static;
+        width: 100%;
+        gap: 10px;
+    }
+
+    .card,
+    .logo-card {
+        width: 100%;
+    }
+
+    .right-panel {
+        width: 100%;
+        flex: 1;
+    }
+
+    /* 新增卡片在手機版不固定在畫面頂部，跟著內容往下 */
+    .add-card {
+        position: static;
+        top: auto;
+        margin-top: 4px;
+    }
+
+    /* 手機版顯示「查看加班明細」按鈕 */
+    .mobile-table-toggle {
+        display: inline-flex;
+        margin-top: 4px;
+        width: 100%;
+    }
+
+    .mobile-table-toggle-label {
+        font-size: 0.9rem;
+    }
+
+    /* 手機版表格更緊湊（僅套用在主 OT 表格） */
+    #tableSection th,
+    #tableSection td {
+        padding: 6px 4px;
+        font-size: 0.78rem;
+    }
+
+    .capsule {
+        padding: 2px 6px;
+        font-size: 0.78rem;
+    }
+
+    /* 手機版加班時數調整箭頭放大，點擊區域更友善 */
+    .ot-arrow {
+        font-size: 1rem;
+        padding: 2px;
+    }
+
+    .ot-arrow .material-symbols-outlined {
+        font-size: 1.4rem;
+    }
+
+    /* 手機版隱藏備註欄位（假設為最後一欄，限定主 OT 表格） */
+    #tableSection thead th:last-child,
+    #tableSection tbody td:last-child {
+        display: none;
+    }
+}
+
+/* 桌機版預設隱藏 mobile-table-toggle（上面 media query 會覆蓋） */
+.mobile-table-toggle {
+    display: none;
+}
+
+
 </style>
