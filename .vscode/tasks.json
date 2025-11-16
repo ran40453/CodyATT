@@ -2,17 +2,12 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "快速更新 GitHub Pages",
+      "label": "clasp: push to Apps Script",
       "type": "shell",
-      "command": "git add . && git commit -m 'update' && git push",
+      "command": "cd ${workspaceFolder} && clasp push",
       "group": {
         "kind": "build",
         "isDefault": true
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "showReuseMessage": false
       },
       "problemMatcher": []
     }

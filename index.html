@@ -3,8 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <title>加班表管理</title>
-<link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <script>
+      // 版本標籤（方便在 console 看到目前版號）
+      window.__CW_DEPLOY_TAG = "<?= DEPLOY_TAG ?>";
+      // 從 Apps Script 模板注入的初始加班資料（getOvertimeData 的回傳值）
+      window.__OT_INIT_PAYLOAD__ = <?!= INIT_DATA_JSON ?>;
+    </script>
+    <?!= include('style'); ?>
 </head>
 <body>
 
@@ -110,6 +116,6 @@
 
 </div>
 
-<script src="main.js?v=2025-11-16a"></script>
+<?!= include('main'); ?>
 </body>
 </html>
