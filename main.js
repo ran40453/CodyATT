@@ -1,11 +1,10 @@
-;(function () {
-  // 如果不是在瀏覽器環境（例如 Apps Script 後端），就直接跳出不執行
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
+;(function (global) {
+  // 在 Apps Script（後端）也會載入這個檔案，但沒有 window / document，所以這裡用 globalThis/this 做防呆
+  if (!global || !global.document) {
     return;
   }
-
-  window.__BUILD_TAG__ = '2025-11-16a';
-  console.log('[OT] BUILD', window.__BUILD_TAG__);
+  global.__BUILD_TAG__ = '2025-11-16a';
+  console.log('[OT] BUILD', global.__BUILD_TAG__);
 
   let tableData = []; // 所有資料
   let newRowTravelEnabled = true; // 新增列預設是否啟用 Travel 津貼
@@ -518,7 +517,7 @@
     const payload = buildSheetPayload();
 
     // 有 HtmlService（Apps Script 內嵌頁面）→ 直接呼叫伺服端
-    if (window.google && google.script && google.script.run) {
+    if (global.google && google.script && google.script.run) {
       return new Promise((resolve, reject) => {
         const btn = document.getElementById('saveToSheetBtn');
         if (btn) btn.classList.add('loading');
@@ -753,7 +752,7 @@
 
   async function loadFromSheet() {
     // 若在 Apps Script HtmlService（有 google.script.run），優先走直呼後端
-    if (window.google && google.script && google.script.run) {
+    if (global.google && google.script && google.script.run) {
       google.script.run
         .withSuccessHandler((payload) => {
           // payload = { data: [...] }
@@ -889,4 +888,4 @@
     renderTable();
     syncTravelToggleUI();
   });
-})(); // ← 這一行是整個 wrapper 的結尾
+})(typeof globalThis !== 'undefined' ? globalThis : this); // ← 這一行是整個 wrapper 的結尾
