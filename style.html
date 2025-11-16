@@ -1,9 +1,15 @@
 <style>
+html {
+    max-width: 100%;
+    overflow-x: hidden;
+}
 /* 全局樣式 */
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background: #f0f0f5;
     padding: 20px;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 .container {
@@ -151,7 +157,7 @@ button:active,
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.7rem;
+    font-size: 0.85rem;
     line-height: 1;
     cursor: pointer;
     gap: 0;
@@ -395,7 +401,7 @@ th {
 
 thead th {
     position: sticky; /* 標題固定 */
-    top: 0;
+    top: 60px; /* 頂端預留新增卡片高度，讓標題列不被蓋住 */
     z-index: 5;
 }
 
@@ -803,12 +809,12 @@ tr.sunday .row-delete-wrapper,
 
     /* 手機版加班時數調整箭頭放大，點擊區域更友善 */
     .ot-arrow {
-        font-size: 1rem;
-        padding: 2px;
+        font-size: 1.15rem;
+        padding: 3px;
     }
 
     .ot-arrow .material-symbols-outlined {
-        font-size: 1.4rem;
+        font-size: 1.6rem;
     }
 
     /* 手機版隱藏備註欄位（假設為最後一欄，限定主 OT 表格） */
@@ -816,9 +822,38 @@ tr.sunday .row-delete-wrapper,
     #tableSection tbody td:last-child {
         display: none;
     }
+
+    thead th {
+        top: 0;
+    }
 }
 
 /* 桌機版預設隱藏 mobile-table-toggle（上面 media query 會覆蓋） */
+/* 通知氣泡內文左右排版：標題靠左，數字靠右 */
+.ot-notify-bubble .notify-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin: 2px 0;
+}
+
+.ot-notify-bubble .notify-label {
+    flex: 1;
+    text-align: left;
+    white-space: nowrap;
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+.ot-notify-bubble .notify-value {
+    text-align: right;
+    font-size: 1em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    margin-left: 12px;
+}
+
 .mobile-table-toggle {
     display: none;
 }

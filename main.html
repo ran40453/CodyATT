@@ -16,6 +16,13 @@
     return weekdays[date.getDay()];
   }
 
+  function formatDateYYYYMMDD(d) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
   // 根據輸入設定的國家，決定每日 Travel USD（China:33, Vietnam:40, India:80）
   function getTravelUsdByCountry() {
     const select = document.getElementById('travelCountry');
@@ -84,6 +91,79 @@
     });
 
     renderTable(openIndex);
+  }
+
+  function fillMissingDatesToToday() {
+    if (!tableData.length) {
+      showNotification('❌ 目前沒有任何資料，無法自動補滿日期', true);
+      return;
+    }
+
+    // 找出目前資料中「最新」日期
+    let latest = null;
+    tableData.forEach((entry) => {
+      if (!entry.date) return;
+      const d = new Date(entry.date);
+      if (isNaN(d)) return;
+      if (!latest || d > latest) {
+        latest = d;
+      }
+    });
+
+    if (!latest) {
+      showNotification('❌ 目前資料日期格式異常，無法自動補滿日期', true);
+      return;
+    }
+
+    // 從最新日期的下一天開始補到今天（含）
+    const startDate = new Date(latest.getFullYear(), latest.getMonth(), latest.getDate() + 1);
+    const today = new Date();
+    const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    if (startDate > todayDateOnly) {
+      showNotification('✅ 目前已補滿至今日，沒有新增資料');
+      return;
+    }
+
+    let added = 0;
+    const addedDates = [];
+
+    for (let d = new Date(startDate); d <= todayDateOnly; d.setDate(d.getDate() + 1)) {
+      const dateStr = formatDateYYYYMMDD(d);
+      const newEntry = {
+        date: dateStr,
+        v167: 0,
+        v134: 0,
+        v166: 0,
+        v267: 0,
+        remark: '',
+        travelEnabled: newRowTravelEnabled,
+      };
+      tableData.push(newEntry);
+      added++;
+      addedDates.push(dateStr);
+    }
+
+    if (!added) {
+      showNotification('✅ 目前已補滿至今日，沒有新增資料');
+      return;
+    }
+
+    // 重新排序並重算
+    tableData.sort((a, b) => new Date(b.date) - new Date(a.date));
+    updateAll();
+
+    const first = addedDates[0];
+    const last = addedDates[addedDates.length - 1];
+
+    const formatMMDD = (iso) => {
+      const mm = iso.slice(5, 7);
+      const dd = iso.slice(8, 10);
+      return `${mm}${dd}`;
+    };
+
+    const msg = `✅ 新增 ${added} 筆，從 ${formatMMDD(first)} 到 ${formatMMDD(last)}`;
+    showNotification(msg);
   }
 
   // 新增資料
@@ -974,6 +1054,17 @@
   } else {
     console.log(
       '[OT] saveToSheetBtn 尚未加入 HTML，待之後加上即可使用。'
+    );
+  }
+
+  const fillBtn = document.getElementById('fillMissingDatesBtn');
+  if (fillBtn) {
+    fillBtn.addEventListener('click', () => {
+      fillMissingDatesToToday();
+    });
+  } else {
+    console.log(
+      '[OT] fillMissingDatesBtn 尚未加入 HTML，待之後加上即可使用。'
     );
   }
 
