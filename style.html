@@ -1,358 +1,479 @@
 <style>
-html {
-    max-width: 100%;
-    overflow-x: hidden;
-    margin: 0;
-}
-/* 全局樣式 */
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: #f0f0f5;
-    padding: 20px;
-    margin: 0;
-    max-width: 100%;
-    overflow-x: hidden;
-}
+    :root {
+        /* 色彩語義化系統 */
+        --color-primary: #007AFF;
+        --color-success: #34C759;
+        --color-warning: #FF9500;
+        --color-danger: #FF3B30;
+        --color-info: #5AC8FA;
 
-.container {
-    display: flex;
-    gap: 56px; /* 增加左右卡片間距，避免重疊 */
-    align-items: flex-start; /* 左側置頂 */
-}
+        /* 功能色彩 */
+        --color-ot-primary: rgba(160, 231, 160, 0.9);
+        /* 1.67 綠色 */
+        --color-ot-secondary: rgba(255, 200, 124, 0.9);
+        /* 其他橘色 */
+        --color-weekend: rgba(0, 0, 0, 0.52);
+        /* 週末深灰 */
+        --color-salary: rgba(255, 235, 59, 0.96);
+        /* 月薪黃色 */
+        --color-header-gradient: linear-gradient(135deg,
+                rgba(255, 235, 59, 0.92),
+                rgba(160, 231, 160, 0.9),
+                rgba(255, 200, 124, 0.9));
 
-/* 左側區域 */
-.left-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    width: 250px;
-    position: sticky;
-    top: 20px; /* 置頂 */
-    height: fit-content;
-}
+        /* Material Design Elevation 陰影系統 */
+        --elevation-0: none;
+        --elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+        --elevation-2: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+        --elevation-3: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+        --elevation-4: 0 14px 28px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.22);
+        --elevation-5: 0 19px 38px rgba(0, 0, 0, 0.30), 0 15px 12px rgba(0, 0, 0, 0.22);
 
-/* 卡片樣式 */
-.card {
-    width: 250px;
-    padding: 20px;
-    border-radius: 24px;
-    background: rgba(255,255,255,0.14);
-    backdrop-filter: blur(18px) saturate(160%);
-    -webkit-backdrop-filter: blur(18px) saturate(160%);
-    box-shadow: 0 18px 40px rgba(0,0,0,0.18);
-    border: 1px solid rgba(255,255,255,0.35);
-}
+        /* 動畫時間曲線 */
+        --duration-instant: 0.08s;
+        --duration-fast: 0.15s;
+        --duration-normal: 0.20s;
+        --duration-slow: 0.30s;
+        --easing-standard: cubic-bezier(0.4, 0.0, 0.2, 1);
+        --easing-decelerate: cubic-bezier(0.0, 0.0, 0.2, 1);
+        --easing-accelerate: cubic-bezier(0.4, 0.0, 1, 1);
 
-.logo-card {
-    min-height: 30px; /* 高度接近上方新增列 */
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+        /* iOS San Francisco 字型系統 */
+        --font-system: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+            "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
 
-.logo-card .logo-image {
-    display: block;
-    width: 50%;
-    height: auto;
-    object-fit: contain;
-}
+    html {
+        max-width: 100%;
+        overflow-x: hidden;
+        margin: 0;
+    }
 
-.card h3 {
-    text-align: center;
-    margin-bottom: 15px;
-}
+    /* 全局樣式 */
+    body {
+        font-family: var(--font-system);
+        background: #f0f0f5;
+        padding: 20px;
+        margin: 0;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
 
-/* Dashboard 膠囊 */
-.capsule-column {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end; /* 膠囊靠右 */
-    gap: 6px;
-}
+    /* 分頁導航列 */
+    .tab-navigation {
+        display: flex;
+        gap: 8px;
+        margin: 20px 0;
+        padding: 6px;
+        background: rgba(255, 255, 255, 0.14);
+        backdrop-filter: blur(18px) saturate(160%);
+        -webkit-backdrop-filter: blur(18px) saturate(160%);
+        border-radius: 16px;
+        box-shadow: var(--elevation-2);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+    }
 
-.capsule-row {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    align-items: center;
-}
+    .tab-btn {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 12px 16px;
+        border: none;
+        border-radius: 12px;
+        background: transparent;
+        color: rgba(0, 0, 0, 0.6);
+        font-family: var(--font-system);
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all var(--duration-normal) var(--easing-standard);
+        position: relative;
+        overflow: hidden;
+    }
 
-.capsule-row .label {
-    flex: 1;
-    text-align: left; /* 標題靠左 */
-    font-size: 0.9rem; /* Base / Travel / OT 標題字體一致 */
-}
+    .tab-btn.active {
+        background: rgba(255, 255, 255, 0.95);
+        color: var(--color-primary);
+        box-shadow: var(--elevation-2);
+    }
 
-/* 膠囊顏色 */
-.capsule.black {
-    background: linear-gradient(135deg, rgba(0,0,0,0.92), rgba(32,32,32,0.92));
-    color: #fff;
-    font-weight: bold;
-    border-color: rgba(255,255,255,0.25);
-}
+    .tab-btn:hover:not(.active) {
+        background: rgba(255, 255, 255, 0.5);
+        transform: translateY(-1px);
+    }
 
-.capsule.black.total-value {
-    background: linear-gradient(135deg, rgba(85,85,85,0.95), rgba(40,40,40,0.95));
-}
+    .tab-btn:active {
+        transform: translateY(0);
+    }
 
-.capsule.dark-gray {
-    background: linear-gradient(135deg, rgba(85,85,85,0.95), rgba(40,40,40,0.95));
-    color: #fff;
-}
+    /* Tab 內容區塊 */
+    .tab-content {
+        display: none;
+    }
 
-.capsule.yellow {
-    background: linear-gradient(135deg,
-        rgba(255,235,59,0.96),
-        rgba(255,235,59,0.8)
-    );
-    color: #000;
-    font-weight: bold;
-    border-color: rgba(255,235,59,0.9);
-}
+    .tab-content.active {
+        display: block;
+        animation: fadeIn var(--duration-normal) var(--easing-decelerate);
+    }
 
-/* 按鈕 */
-button,
-.icon-button {
-    width: 100%;
-    margin: 5px 0;
-    padding: 10px 14px;
-    border-radius: 999px;
-    border: 1px solid rgba(255,255,255,0.45);
-    background: linear-gradient(135deg,
-        rgba(0,122,255,0.95),
-        rgba(0,122,255,0.75)
-    );
-    color: #fff;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.12s ease, box-shadow 0.18s ease, background 0.18s ease;
-    box-shadow: 0 10px 24px rgba(0,0,0,0.22);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-}
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
 
-button:hover,
-.icon-button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 14px 30px rgba(0,0,0,0.26);
-}
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 
-button:active,
-.icon-button:active {
-    transform: translateY(0);
-    box-shadow: 0 8px 18px rgba(0,0,0,0.2);
-}
+    .container {
+        display: flex;
+        gap: 56px;
+        /* 增加左右卡片間距，避免重疊 */
+        align-items: flex-start;
+        /* 左側置頂 */
+    }
 
-/* OT 上下箭頭：覆蓋一般按鈕樣式，縮小並貼在膠囊左右 */
-.ot-arrow {
-    width: auto;
-    height: auto;
-    min-width: 0;
-    margin: 0 2px;
-    padding: 0;
-    border: none;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;   /* ← 桌面版也放大 */
-    line-height: 1;
-    cursor: pointer;
-    gap: 0;
-    color: #000;
-}
+    /* 左側區域 */
+    .left-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 250px;
+        position: sticky;
+        top: 20px;
+        /* 置頂 */
+        height: fit-content;
+    }
 
-/* 桌面版 OT 調整箭頭 icon 放大一級 */
-.ot-arrow .material-symbols-outlined {
-    font-size: 1.4rem;
-}
+    /* 卡片樣式 */
+    .card {
+        width: 250px;
+        padding: 20px;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.14);
+        backdrop-filter: blur(18px) saturate(160%);
+        -webkit-backdrop-filter: blur(18px) saturate(160%);
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+    }
 
-.ot-arrow:active,
-.ot-arrow:hover {
-    transform: none;
-    box-shadow: none;
-}
+    .logo-card {
+        min-height: 30px;
+        /* 高度接近上方新增列 */
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-.material-symbols-outlined {
-    font-variation-settings:
-      'FILL' 0,
-      'wght' 400,
-      'GRAD' 0,
-      'opsz' 24;
-    font-size: 1.2rem;
-}
+    .logo-card .logo-image {
+        display: block;
+        width: 50%;
+        height: auto;
+        object-fit: contain;
+    }
 
-/* 輸入設定卡片內的數字輸入框 */
-.settings-card input[type="number"] {
-    width: 100%;
-    box-sizing: border-box;
-    margin: 4px 0 8px;
-    padding: 8px 12px;
-    border-radius: 999px;
-    border: 1px solid rgba(255,255,255,0.45);
-    background: rgba(207, 207, 207, 0.95);
-    outline: none;
-    color: #111;
-    font-size: 0.9rem;
-}
+    .card h3 {
+        text-align: center;
+        margin-bottom: 15px;
+    }
 
-.settings-card input[type="number"]:focus {
-    box-shadow: 0 0 0 1px rgba(0,122,255,0.7);
-}
+    /* Dashboard 膠囊 */
+    .capsule-column {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        /* 膠囊靠右 */
+        gap: 6px;
+    }
 
-/* 輸入設定卡片內的國家下拉選單 */
-.settings-card select {
-    width: 100%;
-    box-sizing: border-box;
-    margin: 4px 0 8px;
-    padding: 8px 12px;
-    border-radius: 999px;
-    border: 1px solid rgba(255,255,255,0.45);
-    background: rgba(207, 207, 207, 0.95);
-    outline: none;
-    color: #111;
-    font-size: 0.9rem;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-}
+    .capsule-row {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        align-items: center;
+    }
 
-.settings-card select:focus {
-    box-shadow: 0 0 0 1px rgba(0,122,255,0.7);
-}
+    .capsule-row .label {
+        flex: 1;
+        text-align: left;
+        /* 標題靠左 */
+        font-size: 0.9rem;
+        /* Base / Travel / OT 標題字體一致 */
+    }
 
-/* 設定區按鈕排列 */
-/* 設定區按鈕排列 */
-.settings-actions {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: 6px;
-}
+    /* 膠囊顏色 */
+    .capsule.black {
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.92), rgba(32, 32, 32, 0.92));
+        color: #fff;
+        font-weight: bold;
+        border-color: rgba(255, 255, 255, 0.25);
+    }
 
-/* 設定卡片內的 icon 按鈕，縮成小圓形 */
-.settings-card .icon-button {
-    align-self: flex-start;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-}
+    .capsule.black.total-value {
+        background: linear-gradient(135deg, rgba(85, 85, 85, 0.95), rgba(40, 40, 40, 0.95));
+    }
+
+    .capsule.dark-gray {
+        background: linear-gradient(135deg, rgba(85, 85, 85, 0.95), rgba(40, 40, 40, 0.95));
+        color: #fff;
+    }
+
+    .capsule.yellow {
+        background: linear-gradient(135deg,
+                rgba(255, 235, 59, 0.96),
+                rgba(255, 235, 59, 0.8));
+        color: #000;
+        font-weight: bold;
+        border-color: rgba(255, 235, 59, 0.9);
+    }
+
+    /* 按鈕 */
+    button,
+    .icon-button {
+        width: 100%;
+        margin: 5px 0;
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        background: linear-gradient(135deg,
+                rgba(0, 122, 255, 0.95),
+                rgba(0, 122, 255, 0.75));
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.12s ease, box-shadow 0.18s ease, background 0.18s ease;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    button:hover,
+    .icon-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.26);
+    }
+
+    button:active,
+    .icon-button:active {
+        transform: translateY(0);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+    }
+
+    /* OT 上下箭頭：覆蓋一般按鈕樣式，縮小並貼在膠囊左右 */
+    .ot-arrow {
+        width: auto;
+        height: auto;
+        min-width: 0;
+        margin: 0 2px;
+        padding: 0;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        /* ← 桌面版也放大 */
+        line-height: 1;
+        cursor: pointer;
+        gap: 0;
+        color: #000;
+    }
+
+    /* 桌面版 OT 調整箭頭 icon 放大一級 */
+    .ot-arrow .material-symbols-outlined {
+        font-size: 1.4rem;
+    }
+
+    .ot-arrow:active,
+    .ot-arrow:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+    .material-symbols-outlined {
+        font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24;
+        font-size: 1.2rem;
+    }
+
+    /* 輸入設定卡片內的數字輸入框 */
+    .settings-card input[type="number"] {
+        width: 100%;
+        box-sizing: border-box;
+        margin: 4px 0 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        background: rgba(207, 207, 207, 0.95);
+        outline: none;
+        color: #111;
+        font-size: 0.9rem;
+    }
+
+    .settings-card input[type="number"]:focus {
+        box-shadow: 0 0 0 1px rgba(0, 122, 255, 0.7);
+    }
+
+    /* 輸入設定卡片內的國家下拉選單 */
+    .settings-card select {
+        width: 100%;
+        box-sizing: border-box;
+        margin: 4px 0 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        background: rgba(207, 207, 207, 0.95);
+        outline: none;
+        color: #111;
+        font-size: 0.9rem;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+    }
+
+    .settings-card select:focus {
+        box-shadow: 0 0 0 1px rgba(0, 122, 255, 0.7);
+    }
+
+    /* 設定區按鈕排列 */
+    /* 設定區按鈕排列 */
+    .settings-actions {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* 設定卡片內的 icon 按鈕，縮成小圓形 */
+    .settings-card .icon-button {
+        align-self: flex-start;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+    }
 
 
-.file-label {
-    cursor: pointer;
-}
+    .file-label {
+        cursor: pointer;
+    }
 
-input[type="file"] {
-    display: none;
-}
+    input[type="file"] {
+        display: none;
+    }
 
-/* 右側區域 */
-.right-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    overflow: visible; /* 讓 thead:sticky 以整個頁面滾動為基準 */
-}
+    /* 右側區域 */
+    .right-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        overflow: visible;
+        /* 讓 thead:sticky 以整個頁面滾動為基準 */
+    }
 
 
-/* 新增卡片 */
-.add-card {
-    display: flex;
-    gap: 5px;
-    margin-bottom: 10px;
-    position: sticky;
-    top: 0;
-    background: rgba(255,255,255,0.14);
-    padding: 10px;
-    border-radius: 18px;
-    z-index: 10;
-    backdrop-filter: blur(18px) saturate(160%);
-    -webkit-backdrop-filter: blur(18px) saturate(160%);
-    box-shadow: 0 12px 28px rgba(0,0,0,0.18);
-    border: 1px solid rgba(255,255,255,0.35);
-}
+    /* 新增卡片 */
+    .add-card {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 10px;
+        position: sticky;
+        top: 0;
+        background: rgba(255, 255, 255, 0.14);
+        padding: 10px;
+        border-radius: 18px;
+        z-index: 10;
+        backdrop-filter: blur(18px) saturate(160%);
+        -webkit-backdrop-filter: blur(18px) saturate(160%);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+    }
 
-/* 新增列輸入框：類 ChatGPT 輸入樣式 */
-.add-card input[type="number"],
-.add-card input[type="text"],
-.add-card input[type="date"] {
-    flex: 1;
-    min-width: 0;
-    margin: 0 4px 0 0;
-    padding: 8px 10px;
-    border-radius: 999px;
-    border: 1px solid rgba(255,255,255,0.45);
-    background: rgba(207, 207, 207, 0.95);
-    outline: none;
-    font-size: 0.85rem;
-    color: #111;
-}
+    /* 新增列輸入框：類 ChatGPT 輸入樣式 */
+    .add-card input[type="number"],
+    .add-card input[type="text"],
+    .add-card input[type="date"] {
+        flex: 1;
+        min-width: 0;
+        margin: 0 4px 0 0;
+        padding: 8px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        background: rgba(207, 207, 207, 0.95);
+        outline: none;
+        font-size: 0.85rem;
+        color: #111;
+    }
 
-.add-card input[type="number"]:focus,
-.add-card input[type="text"]:focus,
-.add-card input[type="date"]:focus {
-    box-shadow: 0 0 0 1px rgba(0,122,255,0.7);
-}
+    .add-card input[type="number"]:focus,
+    .add-card input[type="text"]:focus,
+    .add-card input[type="date"]:focus {
+        box-shadow: 0 0 0 1px rgba(0, 122, 255, 0.7);
+    }
 
-/* 新增列的新增 icon 縮小，保留空間給輸入框 */
-.add-card .icon-button {
-    flex: 0 0 40px;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-}
+    /* 新增列的新增 icon 縮小，保留空間給輸入框 */
+    .add-card .icon-button {
+        flex: 0 0 40px;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+    }
 
-/* 新增列中的 Travel toggle 按鈕 */
-#travelToggle {
-    flex: 0 0 40px;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-    font-weight: 600;
-    border: 1px solid rgba(255,255,255,0.45);
-    background: linear-gradient(135deg,
-        rgba(160,160,160,0.95),
-        rgba(120,120,120,0.85)
-    );
-    color: #222;
-}
+    /* 新增列中的 Travel toggle 按鈕 */
+    #travelToggle {
+        flex: 0 0 40px;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        background: linear-gradient(135deg,
+                rgba(160, 160, 160, 0.95),
+                rgba(120, 120, 120, 0.85));
+        color: #222;
+    }
 
-/* Travel 開啟狀態：跟新增 (+) 按鈕一樣藍色，動畫沿用全域 button 規則 */
-#travelToggle.on {
-    background: linear-gradient(135deg,
-        rgba(0,122,255,0.95),
-        rgba(0,122,255,0.75)
-    );
-    color: #fff;
-}
+    /* Travel 開啟狀態：跟新增 (+) 按鈕一樣藍色，動畫沿用全域 button 規則 */
+    #travelToggle.on {
+        background: linear-gradient(135deg,
+                rgba(0, 122, 255, 0.95),
+                rgba(0, 122, 255, 0.75));
+        color: #fff;
+    }
 
-/* 表格 */
-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    margin-top: 10px;
-    background: rgba(255,255,255,0.12);
-    backdrop-filter: blur(18px) saturate(160%);
-    -webkit-backdrop-filter: blur(18px) saturate(160%);
-    border-radius: 24px;
-    box-shadow: 0 18px 40px rgba(0,0,0,0.18);
-    border: 1px solid rgba(255,255,255,0.35);
-}
+    /* 表格 */
+    table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin-top: 10px;
+        background: rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(18px) saturate(160%);
+        -webkit-backdrop-filter: blur(18px) saturate(160%);
+        border-radius: 24px;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+    }
 
     /* 表格外層容器（使用 #tableSection 作為可滾動區，讓表頭 sticky 生效） */
     #tableSection {
@@ -361,537 +482,937 @@ table {
         position: relative;
     }
 
-thead {
-    background: linear-gradient(135deg,
-        rgba(255,235,59,0.92),   /* yellow */
-        rgba(160,231,160,0.9),   /* green */
-        rgba(255,200,124,0.9)    /* orange */
-    );
-    backdrop-filter: blur(22px);
-    -webkit-backdrop-filter: blur(22px);
-}
-
-/* 加班總時數與出差天數使用與表頭相同漸層底色，文字改黑色 */
-#totalOT,
-#travelDays {
-    background: linear-gradient(135deg,
-        rgba(255,235,59,0.92),
-        rgba(160,231,160,0.9),
-        rgba(255,200,124,0.9)
-    );
-    color: #111;
-}
-/* 儲存到 Google Sheet 圓形 icon 按鈕（使用 material icon：雲端） */
-#saveToSheetBtn {
-    align-self: flex-start;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg,
-        rgba(255,235,59,0.96),
-        rgba(255,235,59,0.8)
-    );
-    color: #000;
-    border-color: rgba(255,235,59,0.9);
-}
-
-/* 儲存按鈕內的雲端圖示大小 */
-#saveToSheetBtn .material-symbols-outlined {
-    font-size: 20px;
-    line-height: 1;
-}
-
-th, td {
-    padding: 10px 12px;
-    text-align: center;
-    border-bottom: 1px solid rgba(255,255,255,0.18);
-    border-right: none;
-    position: relative; /* 讓刪除按鈕在每個儲存格內定位，避免 Safari 例外行為 */
-}
-
-th {
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    color: #111;
-    font-size: 0.9rem;
-}
-
-thead th {
-    position: sticky; /* 標題固定 */
-    top: 0; /* 以 #tableSection 捲動容器的頂端為準 */
-    z-index: 5;
-}
-
-tbody {
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-}
-
-tbody tr {
-    transition: background 0.18s ease, transform 0.12s ease;
-    position: relative;
-}
-
-/* 尚未載入資料時的占位列 */
-.placeholder-row td {
-    padding: 16px 12px;
-    background: rgba(255,255,255,0.06);
-    border-bottom: 1px solid rgba(255,255,255,0.14);
-}
-
-.placeholder-row:last-child td {
-    border-bottom: none;
-}
-
-.placeholder-row {
-    transition: background 0.18s ease, transform 0.18s ease;
-}
-
-.placeholder-row:hover {
-    background: rgba(255,255,255,0.12);
-    transform: translateY(-1px) scale(1.01);
-}
-
-/* 假表上顯示「載入 CSV」提示（置中大字） */
-.placeholder-load-cell {
-    position: relative;
-    text-align: center;
-    padding: 32px 0;
-    overflow: visible;
-}
-
-/* 載入 CSV 膠囊 */
-.placeholder-pill {
-    display: inline-block;
-    padding: 10px 24px;
-    border-radius: 999px;
-    font-size: 1rem;
-    font-weight: 700;
-    color: #fff;
-    background: rgba(0,0,0,0.35);
-    box-shadow: 0 10px 24px rgba(0,0,0,0.22);
-    transition: transform 0.18s ease, background 0.18s ease, opacity 0.18s ease;
-    opacity: 0.96;
-}
-
-.placeholder-load-cell:hover .placeholder-pill {
-    transform: scale(0.94);
-    background: rgba(0,0,0,0.5);
-}
-tbody tr:hover {
-    background: rgba(255,255,255,0.14);
-    transform: translateY(-1px);
-}
-
-/* 合併費用Total表頭，內容拆分兩欄 */
-th.total-header {
-    text-align: center;
-}
-
-td.total-value {
-    font-weight: bold;
-    font-size: 1rem;
-}
-
-td.salary-value { /* 月薪數字與 Total 一致 */
-    font-weight: bold;
-    font-size: 1rem;
-}
-
-/* 週日列深灰底 */
-tr.sunday, .sunday-row td {
-    background: rgba(0,0,0,0.52);
-    color: #fff;
-    backdrop-filter: blur(22px) saturate(180%);
-    -webkit-backdrop-filter: blur(22px) saturate(180%);
-}
-
-/* 膠囊樣式 */
-.capsule {
-    padding: 4px 10px;
-    border-radius: 999px;
-    margin: 2px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.85rem;
-    border: 1px solid rgba(255,255,255,0.35);
-    backdrop-filter: blur(14px) saturate(140%);
-    -webkit-backdrop-filter: blur(14px) saturate(140%);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
-}
-
-.capsule.green {
-    background: linear-gradient(135deg,
-        rgba(160,231,160,0.9),
-        rgba(160,231,160,0.6)
-    );
-    color: #0f2a0f;
-    border-color: rgba(160,231,160,0.9);
-}
-
-.capsule.orange {
-    background: linear-gradient(135deg,
-        rgba(255,200,124,0.9),
-        rgba(255,200,124,0.6)
-    );
-    color: #4a2c07;
-    border-color: rgba(255,200,124,0.9);
-}
-
-.capsule.gray {
-    background: linear-gradient(135deg,
-        rgba(224,224,224,0.9),
-        rgba(224,224,224,0.5)
-    );
-    color: #111;
-    border-color: rgba(224,224,224,0.9);
-}
-
-/* OT 與總計字體加粗 */
-.ot-value { font-weight: bold; font-size: 1rem; }
-.total-value { font-weight: bold; font-size: 1rem; }
-
-/* Dashboard 專用數值膠囊 */
-.dashboard-value {
-    font-weight: bold;
-    font-size: 1rem;
-    display: inline-block;
-    transform-origin: center bottom;
-}
-.detail-row > td {
-    padding: 0;
-    border-bottom: none;
-    background: rgba(230,230,230,0.95); /* 子清單淺灰底 */
-}
-
-.detail-wrapper {
-    display: flex;
-    gap: 8px;
-    padding: 8px 16px 12px;
-    max-height: 0;
-    overflow: hidden;
-    opacity: 0;
-    transform: translateY(-4px);
-    transition: max-height 0.22s ease, opacity 0.22s ease, transform 0.22s ease;
-    justify-content: space-between;
-}
-
-.detail-row.open .detail-wrapper {
-    max-height: 200px;
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* 讓 label 與膠囊改成左右排列 */
-.detail-chip {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 6px;
-    flex: 1; /* 平均分配可用寬度 */
-}
-
-/* 子清單內 Travel 左側小 toggle */
-.travel-toggle-inline {
-    width: 22px;
-    height: 22px;
-    border-radius: 999px;
-    border: 1px solid rgba(255,255,255,0.45);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg,
-        rgba(160,160,160,0.95),
-        rgba(120,120,120,0.85)
-    );
-    cursor: pointer;
-    box-shadow: 0 6px 14px rgba(0,0,0,0.18);
-    padding: 0;
-}
-
-.travel-toggle-inline.on {
-    background: linear-gradient(135deg,
-        rgba(0,122,255,0.95),
-        rgba(0,122,255,0.75)
-    );
-}
-
-.detail-label {
-    font-size: 0.8rem;
-    opacity: 1;
-    margin-left: 0;
-    color: #191919; 
-}
-
-/* 每列右側刪除小圓點與確認氣泡 */
-.row-delete-wrapper {
-    position: absolute;
-    top: 50%;
-    right: 2px; /* 保持貼齊儲存格右側，避免被瀏覽器裁切 */
-    left: auto;
-    transform: translateY(-50%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none; /* 由內部按鈕接收事件 */
-    z-index: 15; /* 確保浮在列背景之上 */
-}
-
-
-.row-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    padding: 0;
-    border: none;
-    background: #b4b4b4;
-    box-shadow: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: transparent; /* 隱藏原文字，改用 ::before 顯示 */
-    pointer-events: auto;
-}
-
-.row-dot::before {
-    content: '';
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #6d6d6d;
-    display: block;
-}
-
-.row-dot:hover {
-    background: #e53935;
-    transform: scale(3);
-}
-
-.row-dot:hover::before {
-    content: '×';
-    padding-left: 14px;
-    width: auto;
-    height: auto;
-    background: transparent;
-    color: #fff;
-    font-size: 0.4rem;
-    line-height: 1;
-}
-
-/* 刪除確認氣泡 */
-.delete-bubble {
-    position: absolute;
-    top: 50%;
-    right: 26px;
-    transform: translateY(-50%) translateX(8px);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.18s ease, transform 0.18s ease;
-    z-index: 20;
-}
-
-.delete-bubble.open {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateY(-50%) translateX(0);
-}
-
-.delete-bubble-content {
-    background: rgba(0,0,0,0.82);
-    color: #fff;
-    padding: 8px 12px;
-    border-radius: 12px;
-    font-size: 0.78rem;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
-    white-space: nowrap;
-}
-
-.delete-bubble-content p {
-    margin: 0 0 6px;
-}
-
-.delete-bubble-actions {
-    display: flex;
-    gap: 6px;
-    justify-content: flex-end;
-}
-
-.delete-bubble-actions .delete-confirm,
-.delete-bubble-actions .delete-cancel {
-    padding: 2px 8px;
-    border-radius: 999px;
-    border: none;
-    box-shadow: none;
-    font-size: 0.75rem;
-    cursor: pointer;
-}
-
-.delete-bubble-actions .delete-confirm {
-    background: #e53935;
-    color: #fff;
-}
-
-.delete-bubble-actions .delete-cancel {
-    background: rgba(255,255,255,0.16);
-    color: #fff;
-}
-
-.flip {
-    animation: flip-card 0.4s ease;
-}
-
-@keyframes flip-card {
-    0% {
-        transform: rotateX(0deg);
-        opacity: 1;
-    }
-    50% {
-        transform: rotateX(90deg);
-        opacity: 0.2;
-    }
-    100% {
-        transform: rotateX(0deg);
-        opacity: 1;
-    }
-}
-/* 若 icon-button 被設定成正方形，統一視覺為圓形 */
-.icon-button[style*="width: 44px"],
-.icon-button[style*="height: 44px"] {
-    border-radius: 999px;
-}
-
-/* 手機版響應式版面調整 */
-@media (max-width: 1024px) {
-    body {
-        padding: 8px 10px; /* 左右預留安全距離，且左右對稱 */
-        font-size: 16px;
+    thead {
+        background: linear-gradient(135deg,
+                rgba(255, 235, 59, 0.92),
+                /* yellow */
+                rgba(160, 231, 160, 0.9),
+                /* green */
+                rgba(255, 200, 124, 0.9)
+                /* orange */
+            );
+        backdrop-filter: blur(22px);
+        -webkit-backdrop-filter: blur(22px);
     }
 
-    .container {
-        flex-direction: column;
-        gap: 16px;
-        align-items: stretch;
+    /* 加班總時數與出差天數使用與表頭相同漸層底色，文字改黑色 */
+    #totalOT,
+    #travelDays {
+        background: linear-gradient(135deg,
+                rgba(255, 235, 59, 0.92),
+                rgba(160, 231, 160, 0.9),
+                rgba(255, 200, 124, 0.9));
+        color: #111;
     }
 
-    .left-panel {
-        position: static;
-        width: 100%;
-        gap: 10px;
-    }
-
-    .card,
-    .logo-card {
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-    }
-
-    .right-panel {
-        width: 100%;
-        flex: 1;
-    }
-
-    /* 手機版：避免內容超出螢幕寬度 */
-    .container,
-    .right-panel,
-    table {
-        max-width: 100%;
-        box-sizing: border-box;
-    }
-
-    /* 新增卡片在手機版不固定在畫面頂部，跟著內容往下 */
-    .add-card {
-        position: static;
-        top: auto;
-        margin-top: 4px;
-    }
-
-    /* 手機版：新增列日期輸入欄縮短，避免擠壓其他欄位 */
-    .add-card input[type="date"] {
-        flex: 0 0 130px;
-        max-width: 130px;
-        width: 130px;
-    }
-
-    /* 手機版顯示「查看加班明細」按鈕 */
-    .mobile-table-toggle {
+    /* 儲存到 Google Sheet 圓形 icon 按鈕（使用 material icon：雲端） */
+    #saveToSheetBtn {
+        align-self: flex-start;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        border-radius: 999px;
         display: inline-flex;
-        margin-top: 4px;
-        width: 100%;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg,
+                rgba(255, 235, 59, 0.96),
+                rgba(255, 235, 59, 0.8));
+        color: #000;
+        border-color: rgba(255, 235, 59, 0.9);
     }
 
-    .mobile-table-toggle-label {
+    /* 儲存按鈕內的雲端圖示大小 */
+    #saveToSheetBtn .material-symbols-outlined {
+        font-size: 20px;
+        line-height: 1;
+    }
+
+    th,
+    td {
+        padding: 10px 12px;
+        text-align: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+        border-right: none;
+        position: relative;
+        /* 讓刪除按鈕在每個儲存格內定位，避免 Safari 例外行為 */
+    }
+
+    th {
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #111;
         font-size: 0.9rem;
     }
 
-    /* 手機版表格更緊湊（僅套用在主 OT 表格） */
-    #tableSection th,
-    #tableSection td {
-        padding: 6px 4px;
-        font-size: 0.78rem;
+    thead th {
+        position: sticky;
+        /* 標題固定 */
+        top: 0;
+        /* 以 #tableSection 捲動容器的頂端為準 */
+        z-index: 5;
     }
 
+    tbody {
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+    }
+
+    tbody tr {
+        transition: background 0.18s ease, transform 0.12s ease;
+        position: relative;
+    }
+
+    /* 尚未載入資料時的占位列 */
+    .placeholder-row td {
+        padding: 16px 12px;
+        background: rgba(255, 255, 255, 0.06);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .placeholder-row:last-child td {
+        border-bottom: none;
+    }
+
+    .placeholder-row {
+        transition: background 0.18s ease, transform 0.18s ease;
+    }
+
+    .placeholder-row:hover {
+        background: rgba(255, 255, 255, 0.12);
+        transform: translateY(-1px) scale(1.01);
+    }
+
+    /* 假表上顯示「載入 CSV」提示（置中大字） */
+    .placeholder-load-cell {
+        position: relative;
+        text-align: center;
+        padding: 32px 0;
+        overflow: visible;
+    }
+
+    /* 載入 CSV 膠囊 */
+    .placeholder-pill {
+        display: inline-block;
+        padding: 10px 24px;
+        border-radius: 999px;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #fff;
+        background: rgba(0, 0, 0, 0.35);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+        transition: transform 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+        opacity: 0.96;
+    }
+
+    .placeholder-load-cell:hover .placeholder-pill {
+        transform: scale(0.94);
+        background: rgba(0, 0, 0, 0.5);
+    }
+
+    tbody tr:hover {
+        background: rgba(255, 255, 255, 0.14);
+        transform: translateY(-1px);
+    }
+
+    /* 合併費用Total表頭，內容拆分兩欄 */
+    th.total-header {
+        text-align: center;
+    }
+
+    td.total-value {
+        font-weight: bold;
+        font-size: 1rem;
+    }
+
+    td.salary-value {
+        /* 月薪數字與 Total 一致 */
+        font-weight: bold;
+        font-size: 1rem;
+    }
+
+    /* 週日列深灰底 */
+    tr.sunday,
+    .sunday-row td {
+        background: rgba(0, 0, 0, 0.52);
+        color: #fff;
+        backdrop-filter: blur(22px) saturate(180%);
+        -webkit-backdrop-filter: blur(22px) saturate(180%);
+    }
+
+    /* 膠囊樣式 */
     .capsule {
-        padding: 2px 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        margin: 2px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        backdrop-filter: blur(14px) saturate(140%);
+        -webkit-backdrop-filter: blur(14px) saturate(140%);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    }
+
+    .capsule.green {
+        background: linear-gradient(135deg,
+                rgba(160, 231, 160, 0.9),
+                rgba(160, 231, 160, 0.6));
+        color: #0f2a0f;
+        border-color: rgba(160, 231, 160, 0.9);
+    }
+
+    .capsule.orange {
+        background: linear-gradient(135deg,
+                rgba(255, 200, 124, 0.9),
+                rgba(255, 200, 124, 0.6));
+        color: #4a2c07;
+        border-color: rgba(255, 200, 124, 0.9);
+    }
+
+    .capsule.gray {
+        background: linear-gradient(135deg,
+                rgba(224, 224, 224, 0.9),
+                rgba(224, 224, 224, 0.5));
+        color: #111;
+        border-color: rgba(224, 224, 224, 0.9);
+    }
+
+    /* OT 與總計字體加粗 */
+    .ot-value {
+        font-weight: bold;
+        font-size: 1rem;
+    }
+
+    .total-value {
+        font-weight: bold;
+        font-size: 1rem;
+    }
+
+    /* Dashboard 專用數值膠囊 */
+    .dashboard-value {
+        font-weight: bold;
+        font-size: 1rem;
+        display: inline-block;
+        transform-origin: center bottom;
+    }
+
+    .detail-row>td {
+        padding: 0;
+        border-bottom: none;
+        background: rgba(230, 230, 230, 0.95);
+        /* 子清單淺灰底 */
+    }
+
+    .detail-wrapper {
+        display: flex;
+        gap: 8px;
+        padding: 8px 16px 12px;
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(-4px);
+        transition: max-height 0.22s ease, opacity 0.22s ease, transform 0.22s ease;
+        justify-content: space-between;
+    }
+
+    .detail-row.open .detail-wrapper {
+        max-height: 200px;
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    /* 讓 label 與膠囊改成左右排列 */
+    .detail-chip {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 6px;
+        flex: 1;
+        /* 平均分配可用寬度 */
+    }
+
+    /* 子清單內 Travel 左側小 toggle */
+    .travel-toggle-inline {
+        width: 22px;
+        height: 22px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg,
+                rgba(160, 160, 160, 0.95),
+                rgba(120, 120, 120, 0.85));
+        cursor: pointer;
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+        padding: 0;
+    }
+
+    .travel-toggle-inline.on {
+        background: linear-gradient(135deg,
+                rgba(0, 122, 255, 0.95),
+                rgba(0, 122, 255, 0.75));
+    }
+
+    .detail-label {
+        font-size: 0.8rem;
+        opacity: 1;
+        margin-left: 0;
+        color: #191919;
+    }
+
+    /* 每列右側刪除小圓點與確認氣泡 */
+    .row-delete-wrapper {
+        position: absolute;
+        top: 50%;
+        right: 2px;
+        /* 保持貼齊儲存格右側，避免被瀏覽器裁切 */
+        left: auto;
+        transform: translateY(-50%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        /* 由內部按鈕接收事件 */
+        z-index: 15;
+        /* 確保浮在列背景之上 */
+    }
+
+
+    .row-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        padding: 0;
+        border: none;
+        background: #b4b4b4;
+        box-shadow: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: transparent;
+        /* 隱藏原文字，改用 ::before 顯示 */
+        pointer-events: auto;
+    }
+
+    .row-dot::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #6d6d6d;
+        display: block;
+    }
+
+    .row-dot:hover {
+        background: #e53935;
+        transform: scale(3);
+    }
+
+    .row-dot:hover::before {
+        content: '×';
+        padding-left: 14px;
+        width: auto;
+        height: auto;
+        background: transparent;
+        color: #fff;
+        font-size: 0.4rem;
+        line-height: 1;
+    }
+
+    /* 刪除確認氣泡 */
+    .delete-bubble {
+        position: absolute;
+        top: 50%;
+        right: 26px;
+        transform: translateY(-50%) translateX(8px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.18s ease, transform 0.18s ease;
+        z-index: 20;
+    }
+
+    .delete-bubble.open {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(-50%) translateX(0);
+    }
+
+    .delete-bubble-content {
+        background: rgba(0, 0, 0, 0.82);
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 12px;
         font-size: 0.78rem;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+        white-space: nowrap;
     }
 
-    /* 手機版加班時數調整箭頭放大，點擊區域更友善 */
-    .ot-arrow {
-        font-size: 1.15rem;
-        padding: 3px;
+    .delete-bubble-content p {
+        margin: 0 0 6px;
     }
 
-    .ot-arrow .material-symbols-outlined {
-        font-size: 1.6rem;
+    .delete-bubble-actions {
+        display: flex;
+        gap: 6px;
+        justify-content: flex-end;
     }
 
-    /* 手機版隱藏備註欄位（假設為最後一欄，限定主 OT 表格） */
-    #tableSection thead th:last-child,
-    #tableSection tbody td:last-child {
+    .delete-bubble-actions .delete-confirm,
+    .delete-bubble-actions .delete-cancel {
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: none;
+        box-shadow: none;
+        font-size: 0.75rem;
+        cursor: pointer;
+    }
+
+    .delete-bubble-actions .delete-confirm {
+        background: #e53935;
+        color: #fff;
+    }
+
+    .delete-bubble-actions .delete-cancel {
+        background: rgba(255, 255, 255, 0.16);
+        color: #fff;
+    }
+
+    .flip {
+        animation: flip-card 0.4s ease;
+    }
+
+    @keyframes flip-card {
+        0% {
+            transform: rotateX(0deg);
+            opacity: 1;
+        }
+
+        50% {
+            transform: rotateX(90deg);
+            opacity: 0.2;
+        }
+
+        100% {
+            transform: rotateX(0deg);
+            opacity: 1;
+        }
+    }
+
+    /* 若 icon-button 被設定成正方形，統一視覺為圓形 */
+    .icon-button[style*="width: 44px"],
+    .icon-button[style*="height: 44px"] {
+        border-radius: 999px;
+    }
+
+    /* 手機版響應式版面調整 */
+    @media (max-width: 1024px) {
+        body {
+            padding: 8px 10px;
+            /* 左右預留安全距離，且左右對稱 */
+            font-size: 16px;
+        }
+
+        .container {
+            flex-direction: column;
+            gap: 16px;
+            align-items: stretch;
+        }
+
+        .left-panel {
+            position: static;
+            width: 100%;
+            gap: 10px;
+        }
+
+        .card,
+        .logo-card {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        .right-panel {
+            width: 100%;
+            flex: 1;
+        }
+
+        /* 手機版：避免內容超出螢幕寬度 */
+        .container,
+        .right-panel,
+        table {
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* 新增卡片在手機版不固定在畫面頂部，跟著內容往下 */
+        .add-card {
+            position: static;
+            top: auto;
+            margin-top: 4px;
+        }
+
+        /* 手機版：新增列日期輸入欄縮短，避免擠壓其他欄位 */
+        .add-card input[type="date"] {
+            flex: 0 0 130px;
+            max-width: 130px;
+            width: 130px;
+        }
+
+        /* 手機版顯示「查看加班明細」按鈕 */
+        .mobile-table-toggle {
+            display: inline-flex;
+            margin-top: 4px;
+            width: 100%;
+        }
+
+        .mobile-table-toggle-label {
+            font-size: 0.9rem;
+        }
+
+        /* 手機版表格更緊湊（僅套用在主 OT 表格） */
+        #tableSection th,
+        #tableSection td {
+            padding: 6px 4px;
+            font-size: 0.78rem;
+        }
+
+        .capsule {
+            padding: 2px 6px;
+            font-size: 0.78rem;
+        }
+
+        /* 手機版加班時數調整箭頭放大，點擊區域更友善 */
+        .ot-arrow {
+            font-size: 1.15rem;
+            padding: 3px;
+        }
+
+        .ot-arrow .material-symbols-outlined {
+            font-size: 1.6rem;
+        }
+
+        /* 手機版隱藏備註欄位（假設為最後一欄，限定主 OT 表格） */
+        #tableSection thead th:last-child,
+        #tableSection tbody td:last-child {
+            display: none;
+        }
+
+        thead th {
+            top: 0;
+        }
+    }
+
+    /* 桌機版預設隱藏 mobile-table-toggle（上面 media query 會覆蓋） */
+    /* 通知氣泡內文左右排版：標題靠左，數字靠右 */
+    .ot-notify-bubble .notify-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+        margin: 2px 0;
+    }
+
+    .ot-notify-bubble .notify-label {
+        flex: 1;
+        text-align: left;
+        white-space: nowrap;
+        font-size: 0.9em;
+        opacity: 0.9;
+    }
+
+    .ot-notify-bubble .notify-value {
+        text-align: right;
+        font-size: 1em;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        margin-left: 12px;
+    }
+
+    .mobile-table-toggle {
         display: none;
     }
 
-    thead th {
-        top: 0;
+    /* ========== Analytics 頁面樣式 ========== */
+    .analytics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        padding: 0 20px;
     }
-}
 
-/* 桌機版預設隱藏 mobile-table-toggle（上面 media query 會覆蓋） */
-/* 通知氣泡內文左右排版：標題靠左，數字靠右 */
-.ot-notify-bubble .notify-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 12px;
-    margin: 2px 0;
-}
+    .month-selector-card {
+        grid-column: 1 / -1;
+    }
 
-.ot-notify-bubble .notify-label {
-    flex: 1;
-    text-align: left;
-    white-space: nowrap;
-    font-size: 0.9em;
-    opacity: 0.9;
-}
+    .month-picker {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 12px;
+    }
 
-.ot-notify-bubble .notify-value {
-    text-align: right;
-    font-size: 1em;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-    margin-left: 12px;
-}
+    .month-picker select {
+        flex: 1;
+        padding: 10px 16px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        background: rgba(207, 207, 207, 0.95);
+        font-family: var(--font-system);
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #111;
+        outline: none;
+        transition: all var(--duration-fast) var(--easing-standard);
+    }
 
-.mobile-table-toggle {
-    display: none;
-}
+    .month-nav {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: none;
+        background: var(--color-primary);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: var(--elevation-2);
+    }
 
+    .stats-cards-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+        grid-column: 1 / -1;
+    }
+
+    .stat-card {
+        padding: 20px 16px;
+        background: rgba(255, 255, 255, 0.16);
+        backdrop-filter: blur(20px) saturate(160%);
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: var(--elevation-2);
+        text-align: center;
+        transition: all var(--duration-normal) var(--easing-standard);
+        cursor: pointer;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-6px) scale(1.02);
+        box-shadow: var(--elevation-4);
+    }
+
+    .stat-icon {
+        font-size: 2.8rem;
+        display: block;
+        margin-bottom: 10px;
+    }
+
+    .stat-value {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: var(--color-primary);
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        color: rgba(0, 0, 0, 0.65);
+        font-weight: 600;
+    }
+
+    .chart-card {
+        grid-column: span 2;
+        min-height: 420px;
+        padding: 24px;
+    }
+
+    .chart-card canvas {
+        max-height: 360px;
+        width: 100% !important;
+    }
+
+    /* Number Stepper */
+    .number-stepper {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        background: rgba(255, 255, 255, 0.18);
+        backdrop-filter: blur(12px);
+        border-radius: 999px;
+        box-shadow: var(--elevation-1);
+    }
+
+    .stepper-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: none;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        box-shadow: var(--elevation-1);
+        padding: 0;
+        margin: 0;
+    }
+
+    .stepper-btn:hover {
+        transform: scale(1.15);
+    }
+
+    .stepper-btn.minus {
+        background: linear-gradient(135deg, #FF6B6B, #EE5A6F);
+    }
+
+    .stepper-btn.plus {
+        background: linear-gradient(135deg, var(--color-success), #2ecc71);
+    }
+
+    .stepper-value {
+        min-width: 42px;
+        text-align: center;
+        font-weight: 700;
+        font-size: 1.15rem;
+    }
+
+    /* Ripple */
+    .ripple {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.7);
+        transform: scale(0);
+        animation: ripple-animation 0.6s var(--easing-decelerate);
+        pointer-events: none;
+    }
+
+    @keyframes ripple-animation {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+
+    /* Number Stepper 玻璃風格 */
+    .number-stepper {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        background: rgba(255,255,255,0.18);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,0.35);
+        box-shadow: var(--elevation-1);
+    }
+
+    .stepper-btn {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        border-radius: 50%;
+        border: 1px solid rgba(255,255,255,0.4);
+        background: rgba(255,255,255,0.25);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        color: rgba(0,0,0,0.75);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all var(--duration-fast) var(--easing-standard);
+        position: relative;
+        overflow: hidden;
+        box-shadow: var(--elevation-1);
+        padding: 0;
+        margin: 0;
+    }
+
+    .stepper-btn:hover {
+        transform: scale(1.15);
+        box-shadow: var(--elevation-3);
+        background: rgba(255,255,255,0.35);
+    }
+
+    .stepper-btn:active {
+        transform: scale(0.92);
+        box-shadow: var(--elevation-1);
+    }
+
+    .stepper-btn.minus:hover {
+        background: rgba(255,107,107,0.25);
+        border-color: rgba(255,107,107,0.4);
+    }
+
+    .stepper-btn.plus:hover {
+        background: rgba(52,199,89,0.25);
+        border-color: rgba(52,199,89,0.4);
+    }
+
+    .stepper-btn .material-symbols-outlined {
+        font-size: 20px;
+        line-height: 1;
+        font-weight: 600;
+    }
+
+    .stepper-value {
+        min-width: 42px;
+        text-align: center;
+        font-weight: 700;
+        font-size: 1.15rem;
+        color: #111;
+        font-family: var(--font-system);
+        user-select: none;
+    }
+
+    /* Analytics 優化 - 減少空白 */
+    .analytics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+        padding: 0 16px;
+    }
+
+    .chart-card {
+        grid-column: span 2;
+        min-height: 380px;
+        padding: 20px;
+    }
+
+    .stat-icon {
+        font-size: 2.4rem !important;
+        display: block;
+        margin-bottom: 8px;
+        color: var(--color-primary);
+    }
+
+    /* Spin 動畫 */
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+
+    /* ========== UX 優化樣式 ========== */
+
+    /* Stepper 按鈕：預設透明白色，hover 才顯示顏色 */
+    .stepper-btn {
+        width: 34px !important;
+        height: 34px !important;
+        border: 1px solid rgba(255,255,255,0.4) !important;
+        background: rgba(255,255,255,0.2) !important;
+        color: rgba(0,0,0,0.5) !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.12) !important;
+    }
+
+    .stepper-btn:hover {
+        transform: scale(1.15) !important;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.16) !important;
+    }
+
+    .stepper-btn.minus:hover {
+        background: rgba(255,107,107,0.3) !important;
+        border-color: rgba(255,107,107,0.6) !important;
+        color: rgba(255,59,48,0.9) !important;
+    }
+
+    .stepper-btn.plus:hover {
+        background: rgba(52,199,89,0.3) !important;
+        border-color: rgba(52,199,89,0.6) !important;
+        color: rgba(52,199,89,0.9) !important;
+    }
+
+    /* 數字：0時為灰色細字，>0才為黑色粗體 */
+    .stepper-value {
+        font-weight: 400 !important;
+        color: rgba(0,0,0,0.4) !important;
+    }
+
+    .stepper-value.has-value {
+        font-weight: 700 !important;
+        color: #111 !important;
+    }
+
+    /* 分頁導航固定頂部 */
+    body > .tab-navigation {
+        margin: 20px auto !important;
+        max-width: 400px !important;
+        position: sticky;
+        top: 20px;
+        z-index: 100;
+    }
+
+    /* Analytics 緊湊布局 */
+    .analytics-grid {
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
+        gap: 14px !important;
+        padding: 0 14px !important;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .month-selector-card {
+        padding: 16px !important;
+    }
+
+    .stats-cards-row {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
+        gap: 10px !important;
+    }
+
+    .stat-card {
+        padding: 16px 12px !important;
+    }
+
+    .chart-card {
+        grid-column: span 1 !important;
+        min-height: 320px !important;
+        padding: 18px !important;
+    }
+
+    .chart-card canvas {
+        max-height: 280px !important;
+    }
+
+    @media (min-width: 1024px) {
+        .chart-card {
+            grid-column: span 2 !important;
+        }
+    }
+
+    /* 優化刪除按鈕 */
+    .row-dot {
+        width: 28px !important;
+        height: 28px !important;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.35);
+        backdrop-filter: blur(8px);
+        transition: all 0.2s ease;
+        font-size: 16px;
+        color: rgba(0,0,0,0.4);
+    }
+
+    .row-dot:hover {
+        background: rgba(255,59,48,0.15) !important;
+        border-color: rgba(255,59,48,0.4) !important;
+        color: rgba(255,59,48,0.9) !important;
+        transform: scale(1.1);
+    }
+
+    .delete-confirm {
+        background: rgba(255,59,48,0.9) !important;
+        color: white !important;
+        border-color: rgba(255,59,48,1) !important;
+    }
 
 </style>

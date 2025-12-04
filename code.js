@@ -3,6 +3,51 @@
 // 裡面的 XXXXXXXXXXXXXXXXXXXXXXX 就是要填的 ID
 var SPREADSHEET_ID = '1TG9aAty0ShJYhTQiB7yP_S4jcKRj57vOTFy0ZS9fHEk';
 
+/**
+ * 獲取最新匯率（使用 ExchangeRate-API）
+ * @param {string} baseCurrency - 基準貨幣代碼（例如 'USD'）
+ * @param {string} targetCurrency - 目標貨幣代碼（例如 'TWD'）
+ * @return {number} 匯率數值
+ */
+function getExchangeRate(baseCurrency, targetCurrency) {
+  baseCurrency = baseCurrency || 'USD';
+  targetCurrency = targetCurrency || 'TWD';
+  
+  // 使用 CacheService 快取匯率（6 小時有效）
+  var cache = CacheService.getScriptCache();
+  var cacheKey = 'rate_' + baseCurrency + '_' + targetCurrency;
+  var cached = cache.get(cacheKey);
+  
+  if (cached) {
+    Logger.log('[getExchangeRate] 使用快取匯率: %s', cached);
+    return parseFloat(cached);
+  }
+  
+  try {
+    // 呼叫 ExchangeRate-API（免費版，無需 API Key）
+    var url = 'https://open.er-api.com/v6/latest/' + baseCurrency;
+    var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    var data = JSON.parse(response.getContentText());
+    
+    if (data.result === 'success' && data.rates && data.rates[targetCurrency]) {
+      var rate = data.rates[targetCurrency];
+      Logger.log('[getExchangeRate] API 返回匯率: %s', rate);
+      
+      // 快取 6 小時（21600 秒）
+      cache.put(cacheKey, String(rate), 21600);
+      return rate;
+    } else {
+      Logger.log('[getExchangeRate] API 回應異常: %s', JSON.stringify(data));
+    }
+  } catch (err) {
+    Logger.log('[getExchangeRate] API 呼叫失敗: %s', err);
+  }
+  
+  // Fallback: 返回預設匯率
+  Logger.log('[getExchangeRate] 使用預設匯率 30.9');
+  return 30.9;
+}
+
 function getOvertimeData() {
   // 一定要先確認這裡的 ID 是你剛剛確認過、真的有 OT 資料的那張 Sheet
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
