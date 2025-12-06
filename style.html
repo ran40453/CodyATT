@@ -52,25 +52,55 @@
     /* 全局樣式 */
     body {
         font-family: var(--font-system);
-        background: #f0f0f5;
-        padding: 20px;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+        padding: 0;
+        /* 移除預設 padding */
         margin: 0;
         max-width: 100%;
         overflow-x: hidden;
     }
 
-    /* 分頁導航列 */
+    /* 分頁導航列 (Sidebar for Desktop) */
     .tab-navigation {
         display: flex;
-        gap: 8px;
-        margin: 20px 0;
-        padding: 6px;
-        background: rgba(255, 255, 255, 0.14);
-        backdrop-filter: blur(18px) saturate(160%);
-        -webkit-backdrop-filter: blur(18px) saturate(160%);
-        border-radius: 16px;
-        box-shadow: var(--elevation-2);
-        border: 1px solid rgba(255, 255, 255, 0.35);
+        flex-direction: column;
+        gap: 12px;
+        padding: 20px 16px;
+        background: rgba(245, 247, 250, 0.95);
+        /* 更柔和的背景 */
+        backdrop-filter: blur(30px) saturate(180%);
+        -webkit-backdrop-filter: blur(30px) saturate(180%);
+        border-right: 1px solid rgba(200, 210, 220, 0.3);
+        box-shadow: 2px 0 30px rgba(0, 0, 0, 0.03);
+
+        /* 固定在左側 */
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 240px;
+        z-index: 1000;
+        margin: 0;
+        border-radius: 0;
+    }
+
+    @media (max-width: 768px) {
+        .tab-navigation {
+            flex-direction: row;
+            position: sticky;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: auto;
+            width: 100%;
+            height: auto;
+            padding: 10px 16px;
+            border-right: none;
+            border-bottom: 1px solid rgba(200, 210, 220, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+            background: rgba(255, 255, 255, 0.95);
+            z-index: 1000;
+        }
     }
 
     .tab-btn {
@@ -387,51 +417,251 @@
     }
 
 
-    /* 新增卡片 */
-    .add-card {
+    /* 新增卡片 - Smart Stepper 統一設計 */
+    .add-card-circular {
         display: flex;
-        gap: 5px;
+        gap: 8px;
+        align-items: flex-end;
+        justify-content: center;
         margin-bottom: 10px;
         position: sticky;
         top: 0;
-        background: rgba(255, 255, 255, 0.14);
-        padding: 10px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 12px;
         border-radius: 18px;
         z-index: 10;
-        backdrop-filter: blur(18px) saturate(160%);
-        -webkit-backdrop-filter: blur(18px) saturate(160%);
-        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
-        border: 1px solid rgba(255, 255, 255, 0.35);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        flex-wrap: nowrap;
+        overflow-x: auto;
     }
 
-    /* 新增列輸入框：類 ChatGPT 輸入樣式 */
-    .add-card input[type="number"],
-    .add-card input[type="text"],
-    .add-card input[type="date"] {
-        flex: 1;
-        min-width: 0;
-        margin: 0 4px 0 0;
-        padding: 8px 10px;
-        border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.45);
-        background: rgba(207, 207, 207, 0.95);
+    .add-card-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+    }
+
+    .add-card-item label {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #8e8e93;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    /* Smart Stepper for Add Card */
+    .smart-stepper-add {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        border: 2px solid rgba(0, 0, 0, 0.08);
+        background: rgba(255, 255, 255, 0.95);
+        text-align: center;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #1d1d1f;
         outline: none;
-        font-size: 0.85rem;
-        color: #111;
-    }
-
-    .add-card input[type="number"]:focus,
-    .add-card input[type="text"]:focus,
-    .add-card input[type="date"]:focus {
-        box-shadow: 0 0 0 1px rgba(0, 122, 255, 0.7);
-    }
-
-    /* 新增列的新增 icon 縮小，保留空間給輸入框 */
-    .add-card .icon-button {
-        flex: 0 0 40px;
-        width: 40px;
-        height: 40px;
+        cursor: ns-resize;
+        transition: all 0.2s ease;
         padding: 0;
+        user-select: none;
+    }
+
+    .smart-stepper-add:hover {
+        background: rgba(255, 255, 255, 1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .smart-stepper-add.active {
+        background: var(--color-primary);
+        color: white;
+        border-color: transparent;
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+        cursor: grabbing;
+    }
+
+    .smart-stepper-add.has-value {
+        background: rgba(255, 255, 255, 1);
+        border-color: rgba(0, 122, 255, 0.3);
+    }
+
+    .smart-stepper-add[data-type="date"] {
+        border-color: rgba(0, 122, 255, 0.2);
+    }
+
+    .smart-stepper-add[data-type="travel"] {
+        border-color: rgba(255, 149, 0, 0.2);
+        color: var(--color-warning);
+    }
+
+    /* 圓形新增按鈕（與其他按鈕同列） */
+    .circular-add-btn-round {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        border: none;
+        background: linear-gradient(135deg, var(--color-primary) 0%, #5AC8FA 100%);
+        color: white;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+        flex-shrink: 0;
+    }
+
+    .circular-add-btn-round:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4);
+    }
+
+    .circular-add-btn-round:active {
+        transform: scale(0.95);
+    }
+
+    .circular-add-btn-round .material-symbols-outlined {
+        font-size: 20px;
+    }
+
+    @media (max-width: 768px) {
+        .add-card-circular {
+            padding: 10px;
+            gap: 6px;
+        }
+    }
+
+
+    /* 扁平新增按鈕 (全寬第二行) */
+    .circular-add-btn-wide {
+        width: 100%;
+        height: 40px;
+        border-radius: 12px;
+        border: none;
+        background: linear-gradient(135deg, var(--color-primary) 0%, #5AC8FA 100%);
+        color: white;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    .circular-add-btn-wide:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 122, 255, 0.35);
+    }
+
+    .circular-add-btn-wide:active {
+        transform: translateY(0);
+    }
+
+    .circular-add-btn-wide .material-symbols-outlined {
+        font-size: 18px;
+    }
+
+    @media (max-width: 768px) {
+        .add-card-circular {
+            padding: 10px;
+            gap: 10px;
+        }
+
+        .add-card-row-inputs {
+            gap: 6px;
+        }
+    }
+
+    .add-card-row-inputs {
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        gap: 8px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+
+    /* 圓形日期輸入 */
+    .circular-date-input {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 2px solid rgba(0, 122, 255, 0.2);
+        background: rgba(255, 255, 255, 0.95);
+        text-align: center;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #1d1d1f;
+        outline: none;
+        transition: all 0.2s ease;
+        padding: 0;
+    }
+
+    .circular-date-input:focus {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+        background: white;
+    }
+
+    /* 圓形數字輸入 */
+    .circular-number-input {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        border: 2px solid rgba(0, 0, 0, 0.08);
+        background: rgba(255, 255, 255, 0.95);
+        text-align: center;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #1d1d1f;
+        outline: none;
+        transition: all 0.2s ease;
+        padding: 0;
+    }
+
+    .circular-number-input:focus {
+        border-color: var(--color-success);
+        box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.1);
+        background: white;
+    }
+
+    /* 圓形下拉選單 */
+    .circular-select {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 149, 0, 0.2);
+        background: rgba(255, 255, 255, 0.95);
+        text-align: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--color-warning);
+        outline: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        appearance: none;
+        -webkit-appearance: none;
+        padding: 0;
+    }
+
+    .circular-select:focus {
+        border-color: var(--color-warning);
+        box-shadow: 0 0 0 3px rgba(255, 149, 0, 0.1);
+        background: white;
+    }
+
+    .add-card-row-inputs {
+        gap: 6px;
+    }
     }
 
     /* 新增列中的 Travel toggle 按鈕 */
@@ -640,6 +870,378 @@
         -webkit-backdrop-filter: blur(22px) saturate(180%);
     }
 
+    /* =========================================
+       Material Design 3 Design System
+       ========================================= */
+    :root {
+        /* Color Palette (Material You inspired) */
+        --md-sys-color-surface: #ffffff;
+        --md-sys-color-surface-container: #f0f4f8;
+        /* Light blue-grey tint */
+        --md-sys-color-on-surface: #191c20;
+        --md-sys-color-on-surface-variant: #444746;
+        --md-sys-color-primary: #0061a4;
+        --md-sys-color-on-primary: #ffffff;
+        --md-sys-color-primary-container: #d1e4ff;
+        --md-sys-color-on-primary-container: #001d36;
+        --md-sys-color-secondary-container: #dbe4f0;
+        --md-sys-color-on-secondary-container: #101c2b;
+        --md-sys-color-outline: #747775;
+        --md-sys-color-outline-variant: #c4c7c5;
+
+        /* Elevation */
+        --md-sys-elevation-0: 0px 0px 0px 0px rgba(0, 0, 0, 0);
+        --md-sys-elevation-1: 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+        --md-sys-elevation-2: 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 2px 6px 2px rgba(0, 0, 0, 0.15);
+
+        /* Shape */
+        --md-sys-shape-corner-medium: 16px;
+        --md-sys-shape-corner-large: 24px;
+        --md-sys-shape-corner-full: 999px;
+
+        /* Typography */
+        --md-sys-typescale-title-medium: 500 1rem/1.5rem 'Inter', sans-serif;
+        --md-sys-typescale-body-medium: 400 0.875rem/1.25rem 'Inter', sans-serif;
+        --md-sys-typescale-body-small: 400 0.75rem/1rem 'Inter', sans-serif;
+        --md-sys-typescale-label-large: 500 0.875rem/1.25rem 'Inter', sans-serif;
+    }
+
+    /* Container Reset */
+    #tableContainer {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px 0;
+        width: 100%;
+        max-width: 800px;
+        /* Optimal reading width */
+        margin: 0 auto;
+    }
+
+    /* Weekday Header (Desktop Only) */
+    .calendar-header {
+        display: none;
+        /* Hidden on mobile */
+        grid-template-columns: repeat(7, 1fr);
+        gap: 12px;
+        margin-bottom: 8px;
+        padding: 0;
+        /* Match container padding (0) for alignment */
+    }
+
+    .calendar-weekday-label {
+        text-align: center;
+        font: var(--md-sys-typescale-label-large);
+        color: var(--md-sys-color-on-surface-variant);
+        text-transform: uppercase;
+    }
+
+    /* =========================================
+       Data Card Component
+       ========================================= */
+    .data-card {
+        background-color: var(--md-sys-color-surface);
+        border-radius: var(--md-sys-shape-corner-medium);
+        box-shadow: var(--md-sys-elevation-1);
+        padding: 0;
+        /* Inner layout handles padding */
+        overflow: hidden;
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+        position: relative;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .data-card:active {
+        box-shadow: var(--md-sys-elevation-2);
+        transform: scale(0.995);
+    }
+
+    /* Card Header (Always Visible) */
+    .card-header {
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        background: transparent;
+        flex-wrap: wrap;
+        /* Allow wrapping for small screens if needed */
+        gap: 8px;
+    }
+
+    .card-primary-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+    }
+
+    .card-date {
+        font: var(--md-sys-typescale-title-medium);
+        font-size: 1.1rem;
+        color: var(--md-sys-color-on-surface);
+        font-weight: 600;
+    }
+
+    /* Scoreboard Badge */
+    .scoreboard-badge {
+        background: #000000;
+        color: #ffffff;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-family: 'Inter', monospace;
+        /* Monospace for numbers */
+        font-weight: 700;
+        font-size: 0.9rem;
+        min-width: 40px;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Scoreboard Colors */
+    .scoreboard-badge.green {
+        color: #4ade80;
+    }
+
+    /* 2 */
+    .scoreboard-badge.yellow {
+        color: #facc15;
+    }
+
+    /* 3 */
+    .scoreboard-badge.orange {
+        color: #fb923c;
+    }
+
+    /* 4 */
+    .scoreboard-badge.red {
+        color: #f87171;
+    }
+
+    /* 5 */
+    .scoreboard-badge.purple {
+        color: #c084fc;
+    }
+
+    /* >6 */
+
+    .card-secondary-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .info-chip {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.85rem;
+        color: var(--md-sys-color-on-surface-variant);
+        background: var(--md-sys-color-surface-container);
+        padding: 4px 8px;
+        border-radius: 8px;
+    }
+
+    /* Daily OT Salary Style */
+    .info-chip.yellow {
+        background: #facc15;
+        color: #000000;
+        font-weight: 600;
+    }
+
+    .info-chip .material-symbols-outlined {
+        font-size: 16px;
+    }
+
+    .card-expand-icon {
+        color: var(--md-sys-color-on-surface-variant);
+        transition: transform 0.3s ease;
+        margin-left: auto;
+        /* Push to right */
+    }
+
+    .data-card.expanded .card-expand-icon {
+        transform: rotate(180deg);
+    }
+
+    /* Card Body (Expandable) */
+    .card-body {
+        display: none;
+        /* Toggled via JS */
+        padding: 0 16px 16px 16px;
+        animation: slideDown 0.3s ease forwards;
+        border-top: 1px solid var(--md-sys-color-surface-container);
+        margin-top: -8px;
+        /* Visual tweak */
+        padding-top: 16px;
+    }
+
+    .data-card.expanded .card-body {
+        display: block;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Grid Layout for Hours - Now 2 columns for circular steppers (2x2) */
+    .hours-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        /* 2 columns */
+        gap: 12px;
+        margin-bottom: 16px;
+        justify-items: center;
+        max-width: 200px;
+        /* Limit width to keep them close */
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .hour-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        /* background: var(--md-sys-color-surface-container); Removed container bg for cleaner look with circles */
+        padding: 4px;
+        border-radius: 12px;
+        width: 100%;
+    }
+
+    .hour-label {
+        font: var(--md-sys-typescale-body-small);
+        color: var(--md-sys-color-on-surface-variant);
+        font-size: 0.7rem;
+    }
+
+    /* Circular Smart Stepper */
+    .hour-item .smart-stepper {
+        width: 44px;
+        /* Fixed size */
+        height: 44px;
+        border-radius: 50%;
+        /* Circle */
+        font-size: 0.9rem;
+        padding: 0;
+        /* Reset padding */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Footer Actions */
+    .card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px dashed var(--md-sys-color-outline-variant);
+    }
+
+    .remark-text {
+        font: var(--md-sys-typescale-body-medium);
+        color: var(--md-sys-color-on-surface-variant);
+        font-style: italic;
+    }
+
+    .card-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .action-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        color: var(--md-sys-color-on-surface-variant);
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .action-btn:hover {
+        background: var(--md-sys-color-surface-container);
+        color: var(--md-sys-color-on-surface);
+    }
+
+    .action-btn.delete {
+        color: #ba1a1a;
+    }
+
+    .action-btn.delete:hover {
+        background: #ffdad6;
+        color: #410002;
+    }
+
+    /* Desktop Adaptation (Calendar View) */
+    @media (min-width: 1024px) {
+        #tableContainer {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            /* Sun - Sat */
+            grid-auto-flow: dense;
+            /* Fix staircase effect */
+            gap: 12px;
+            max-width: 1400px;
+            /* Wider for calendar */
+        }
+
+        .calendar-header {
+            display: grid;
+            max-width: 1400px;
+            margin: 0 auto 12px auto;
+        }
+
+        .data-card {
+            min-width: 0;
+            /* Allow shrinking */
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            /* Uniform height */
+        }
+
+        /* Desktop Card Layout Override */
+        .card-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .card-primary-info {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .card-secondary-info {
+            width: 100%;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .card-expand-icon {
+            display: none;
+            /* Hide expand icon on desktop if we want cleaner look, or keep it */
+        }
+    }
+
     /* 膠囊樣式 */
     .capsule {
         padding: 4px 10px;
@@ -698,29 +1300,38 @@
         transform-origin: center bottom;
     }
 
+    /* 子列（Base / Travel / OT Salary 細節區） */
+    .detail-row {
+        background: transparent;
+    }
+
     .detail-row>td {
-        padding: 0;
+        padding: 0 !important;
         border-bottom: none;
         background: rgba(230, 230, 230, 0.95);
-        /* 子清單淺灰底 */
+        width: 100%;
     }
 
     .detail-wrapper {
-        display: flex;
+        display: none;
+        flex-direction: row;
+        flex-wrap: wrap;
         gap: 8px;
         padding: 8px 16px 12px;
-        max-height: 0;
-        overflow: hidden;
+        width: 100%;
+        min-height: 50px;
         opacity: 0;
         transform: translateY(-4px);
-        transition: max-height 0.22s ease, opacity 0.22s ease, transform 0.22s ease;
-        justify-content: space-between;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        justify-content: flex-start;
     }
 
-    .detail-row.open .detail-wrapper {
-        max-height: 200px;
-        opacity: 1;
-        transform: translateY(0);
+    /* 展開狀態 - 增加優先級 */
+    .detail-row.open .detail-wrapper,
+    tr.detail-row.open .detail-wrapper {
+        display: flex !important;
+        opacity: 1 !important;
+        transform: translateY(0) !important;
     }
 
     /* 讓 label 與膠囊改成左右排列 */
@@ -729,8 +1340,8 @@
         flex-direction: row;
         align-items: center;
         gap: 6px;
-        flex: 1;
-        /* 平均分配可用寬度 */
+        min-width: 80px;
+        flex-shrink: 0;
     }
 
     /* 子清單內 Travel 左側小 toggle */
@@ -761,6 +1372,18 @@
         opacity: 1;
         margin-left: 0;
         color: #191919;
+    }
+
+    .detail-value {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #1d1d1f;
+        padding: 4px 12px;
+        border-radius: 12px;
+        min-height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     /* 每列右側刪除小圓點與確認氣泡 */
@@ -1207,11 +1830,11 @@
         align-items: center;
         gap: 8px;
         padding: 6px 10px;
-        background: rgba(255,255,255,0.18);
+        background: rgba(255, 255, 255, 0.18);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         border-radius: 999px;
-        border: 1px solid rgba(255,255,255,0.35);
+        border: 1px solid rgba(255, 255, 255, 0.35);
         box-shadow: var(--elevation-1);
     }
 
@@ -1220,11 +1843,11 @@
         height: 34px;
         min-width: 34px;
         border-radius: 50%;
-        border: 1px solid rgba(255,255,255,0.4);
-        background: rgba(255,255,255,0.25);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        background: rgba(255, 255, 255, 0.25);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
-        color: rgba(0,0,0,0.75);
+        color: rgba(0, 0, 0, 0.75);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -1240,7 +1863,7 @@
     .stepper-btn:hover {
         transform: scale(1.15);
         box-shadow: var(--elevation-3);
-        background: rgba(255,255,255,0.35);
+        background: rgba(255, 255, 255, 0.35);
     }
 
     .stepper-btn:active {
@@ -1249,13 +1872,13 @@
     }
 
     .stepper-btn.minus:hover {
-        background: rgba(255,107,107,0.25);
-        border-color: rgba(255,107,107,0.4);
+        background: rgba(255, 107, 107, 0.25);
+        border-color: rgba(255, 107, 107, 0.4);
     }
 
     .stepper-btn.plus:hover {
-        background: rgba(52,199,89,0.25);
-        border-color: rgba(52,199,89,0.4);
+        background: rgba(52, 199, 89, 0.25);
+        border-color: rgba(52, 199, 89, 0.4);
     }
 
     .stepper-btn .material-symbols-outlined {
@@ -1297,8 +1920,13 @@
 
     /* Spin 動畫 */
     @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
     }
 
 
@@ -1308,33 +1936,33 @@
     .stepper-btn {
         width: 34px !important;
         height: 34px !important;
-        border: 1px solid rgba(255,255,255,0.4) !important;
-        background: rgba(255,255,255,0.2) !important;
-        color: rgba(0,0,0,0.5) !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.12) !important;
+        border: 1px solid rgba(255, 255, 255, 0.4) !important;
+        background: rgba(255, 255, 255, 0.2) !important;
+        color: rgba(0, 0, 0, 0.5) !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12) !important;
     }
 
     .stepper-btn:hover {
         transform: scale(1.15) !important;
-        box-shadow: 0 3px 6px rgba(0,0,0,0.16) !important;
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16) !important;
     }
 
     .stepper-btn.minus:hover {
-        background: rgba(255,107,107,0.3) !important;
-        border-color: rgba(255,107,107,0.6) !important;
-        color: rgba(255,59,48,0.9) !important;
+        background: rgba(255, 107, 107, 0.3) !important;
+        border-color: rgba(255, 107, 107, 0.6) !important;
+        color: rgba(255, 59, 48, 0.9) !important;
     }
 
     .stepper-btn.plus:hover {
-        background: rgba(52,199,89,0.3) !important;
-        border-color: rgba(52,199,89,0.6) !important;
-        color: rgba(52,199,89,0.9) !important;
+        background: rgba(52, 199, 89, 0.3) !important;
+        border-color: rgba(52, 199, 89, 0.6) !important;
+        color: rgba(52, 199, 89, 0.9) !important;
     }
 
     /* 數字：0時為灰色細字，>0才為黑色粗體 */
     .stepper-value {
         font-weight: 400 !important;
-        color: rgba(0,0,0,0.4) !important;
+        color: rgba(0, 0, 0, 0.4) !important;
     }
 
     .stepper-value.has-value {
@@ -1343,7 +1971,7 @@
     }
 
     /* 分頁導航固定頂部 */
-    body > .tab-navigation {
+    body>.tab-navigation {
         margin: 20px auto !important;
         max-width: 400px !important;
         position: sticky;
@@ -1394,25 +2022,401 @@
         width: 28px !important;
         height: 28px !important;
         border-radius: 50%;
-        background: rgba(255,255,255,0.2);
-        border: 1px solid rgba(255,255,255,0.35);
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.35);
         backdrop-filter: blur(8px);
         transition: all 0.2s ease;
         font-size: 16px;
-        color: rgba(0,0,0,0.4);
+        color: rgba(0, 0, 0, 0.4);
     }
 
     .row-dot:hover {
-        background: rgba(255,59,48,0.15) !important;
-        border-color: rgba(255,59,48,0.4) !important;
-        color: rgba(255,59,48,0.9) !important;
+        background: rgba(255, 59, 48, 0.15) !important;
+        border-color: rgba(255, 59, 48, 0.4) !important;
+        color: rgba(255, 59, 48, 0.9) !important;
         transform: scale(1.1);
     }
 
     .delete-confirm {
-        background: rgba(255,59,48,0.9) !important;
+        background: rgba(255, 59, 48, 0.9) !important;
         color: white !important;
-        border-color: rgba(255,59,48,1) !important;
+        border-color: rgba(255, 59, 48, 1) !important;
     }
 
+    /* 手機版響應式優化 */
+    @media (max-width: 768px) {
+        /* 隱藏次要欄位 */
+        th:nth-child(6),
+        td:nth-child(6),
+        /* 費用 Total */
+        th:nth-child(7),
+        td:nth-child(7),
+        /* 月薪 */
+        th:nth-child(8),
+        td:nth-child(8)
+
+        /* 備註 */
+            {
+            display: none;
+        }
+
+        /* 調整表格容器 */
+        #tableContainer {
+            overflow-x: hidden;
+            /* 禁止橫向捲動 */
+            width: 100%;
+        }
+
+        table {
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        /* 調整欄寬分配 */
+        th:nth-child(1) {
+            width: 25%;
+        }
+
+        /* 日期 */
+        th:nth-child(2),
+        th:nth-child(3),
+        th:nth-child(4),
+        th:nth-child(5) {
+            width: 15%;
+        }
+
+        /* OT */
+        th:last-child {
+            width: 15%;
+        }
+
+        /* 刪除 */
+
+        /* 在子選單顯示隱藏的資訊 */
+        .mobile-detail-item {
+            display: flex !important;
+        }
+    }
+
+    /* 桌面版隱藏手機專用資訊 */
+    .mobile-detail-item {
+        display: none;
+    }
+
+    /* Mobile Toggle Button for Table Rows */
+    .mobile-toggle-btn {
+        display: none;
+        position: absolute;
+        left: 4px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border: none;
+        background: rgba(0, 122, 255, 0.1);
+        border-radius: 50%;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        z-index: 10;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .mobile-toggle-btn .material-symbols-outlined {
+        font-size: 20px;
+        color: var(--color-primary);
+        transition: transform 0.2s ease;
+    }
+
+    .mobile-toggle-btn.open .material-symbols-outlined {
+        transform: rotate(180deg);
+    }
+
+    .mobile-toggle-btn:active {
+        background: rgba(0, 122, 255, 0.2);
+        transform: translateY(-50%) scale(0.95);
+    }
+
+    @media (max-width: 768px) {
+        .mobile-toggle-btn {
+            display: flex;
+        }
+
+        /* 確保日期欄位有足夠空間容納按鈕 */
+        table td:first-child {
+            padding-left: 40px !important;
+        }
+    }
+
+    /* Smart Stepper (Drag-to-Adjust) */
+    .smart-stepper {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 32px;
+        background: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 16px;
+        font-weight: 600;
+        font-size: 14px;
+        color: #333;
+        cursor: ns-resize;
+        /* 上下拖曳游標 */
+        user-select: none;
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .smart-stepper:hover {
+        background: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .smart-stepper.active {
+        background: var(--color-primary);
+        color: white;
+        border-color: transparent;
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+        cursor: grabbing;
+    }
+
+    .smart-stepper.has-value {
+        background: rgba(255, 255, 255, 0.9);
+        color: #000;
+        border-color: rgba(0, 0, 0, 0.2);
+        font-weight: 700;
+    }
+
+    /* Analytics macOS Style Grid */
+    .analytics-container {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 24px;
+        padding: 32px 24px;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .analytics-header {
+        grid-column: span 12;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+
+    .analytics-header h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1d1d1f;
+        margin: 0;
+    }
+
+    /* 篩選 Bar 優化 */
+    .month-filter-wrapper {
+        position: relative;
+    }
+
+    .month-select {
+        appearance: none;
+        -webkit-appearance: none;
+        padding: 12px 40px 12px 20px;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 12px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #1d1d1f;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        min-width: 180px;
+    }
+
+    .month-select:hover {
+        background: rgba(255, 255, 255, 1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        border-color: rgba(0, 122, 255, 0.3);
+    }
+
+    .month-select:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 4px 16px rgba(0, 122, 255, 0.15);
+    }
+
+    .stats-columns {
+        grid-column: span 12;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+
+    .stat-column-card {
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(30px);
+        -webkit-backdrop-filter: blur(30px);
+        border-radius: 20px;
+        padding: 28px;
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+        transition: all 0.3s ease;
+    }
+
+    .stat-column-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .column-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .column-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1d1d1f;
+    }
+
+    .column-header .material-symbols-outlined {
+        font-size: 28px;
+    }
+
+    .icon-blue {
+        color: var(--color-primary);
+    }
+
+    .icon-green {
+        color: var(--color-success);
+    }
+
+    .icon-orange {
+        color: var(--color-warning);
+    }
+
+    .stat-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .stat-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background: rgba(0, 0, 0, 0.02);
+        border-radius: 12px;
+        transition: all 0.2s ease;
+    }
+
+    .stat-item:hover {
+        background: rgba(0, 122, 255, 0.05);
+        transform: translateX(4px);
+    }
+
+    .stat-item .label {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #6e6e73;
+    }
+
+    .stat-item .value {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #1d1d1f;
+        font-variant-numeric: tabular-nums;
+        background: linear-gradient(135deg, #007AFF 0%, #5AC8FA 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .stat-item .value.highlight {
+        font-size: 1.6rem;
+        background: linear-gradient(135deg, #FF9500 0%, #FF3B30 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .chart-section {
+        grid-column: span 12;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+
+    .chart-card {
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(30px);
+        -webkit-backdrop-filter: blur(30px);
+        border-radius: 20px;
+        padding: 28px;
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+        min-height: 360px;
+    }
+
+    .chart-card h3 {
+        margin: 0 0 20px 0;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #1d1d1f;
+    }
+
+    @media (max-width: 1024px) {
+        .stats-columns {
+            grid-template-columns: 1fr;
+        }
+
+        .chart-section {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* 配合左側導航調整主內容區域 */
+    @media (min-width: 769px) {
+        body {
+            padding-left: 260px;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        .tab-navigation {
+            top: 0;
+            left: 0;
+            border-radius: 0;
+        }
+
+        .left-panel {
+            padding-top: 0;
+        }
+
+        .analytics-container {
+            padding-top: 32px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            padding: 16px;
+        }
+
+        .analytics-container {
+            padding: 20px 16px;
+        }
+    }
 </style>

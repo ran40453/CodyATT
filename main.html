@@ -29,20 +29,19 @@
       return `${yyyy}-${mm}-${dd}`;
     }
 
-    // 根據輸入設定的國家，決定每日 Travel USD（China:33, Vietnam:40, India:80）
-    function getTravelUsdByCountry() {
-      const select = document.getElementById('travelCountry');
-      const country = select?.value || 'Vietnam';
+    // 根據國家代碼取得每日 Travel USD
+    function getTravelUsdByCountry(country) {
+      if (!country || country === 'None') return 0;
       if (country === 'China') return 33;
-      if (country === 'India') return 80;
+      if (country === 'India') return 70;
       return 40; // Vietnam 預設
     }
 
     // 更新: 重新計算所有資料，並重新渲染
     function updateAll(openIndex = null, skipRender = false) {
-      const salary = parseFloat(document.getElementById('salary')?.value) || 60000;
-      const rate = parseFloat(document.getElementById('usdRate')?.value) || 30.9;
-      const travelUsdPerDay = getTravelUsdByCountry();
+      const salary = parseFloat(document.getElementById('salary')?.value) || 68000;
+      const rate = parseFloat(document.getElementById('usdRate')?.value) || 31.;
+      // const travelUsdPerDay = getTravelUsdByCountry(); // 不再使用全域設定
 
       let accum = 0;
       const monthTravelSums = {}; // key: 'YYYY-MM' -> 該月 Travel 加總
@@ -56,12 +55,15 @@
           (Number(entry.v166) || 0) * 1.66 +
           (Number(entry.v267) || 0) * 2.67;
 
-        if (typeof entry.travelEnabled === 'undefined') {
-          entry.travelEnabled = true;
+        // 資料遷移：舊資料 travelEnabled=true 轉為 Vietnam，false 轉為 None
+        if (!entry.travelCountry) {
+          if (entry.travelEnabled === false) entry.travelCountry = 'None';
+          else entry.travelCountry = 'Vietnam';
         }
 
         const base = salary / 30;
-        const travel = entry.travelEnabled ? travelUsdPerDay * rate : 0;
+        const travelUsd = getTravelUsdByCountry(entry.travelCountry);
+        const travel = travelUsd * rate;
         const otSalary = (salary / 30 / 8) * otSum;
         const total = base + travel + otSalary;
 
@@ -97,7 +99,7 @@
       });
 
       if (!skipRender) {
-        renderTable(openIndex);
+        renderDataList(openIndex);
       } else {
         // 只更新表格內現有的數值，不重新渲染
         updateTableValues();
@@ -263,35 +265,75 @@
         bubble.style.transform = 'translate(-50%, -50%)';
         bubble.style.maxWidth = '320px';
         bubble.style.padding = '16px 18px';
+        // 移除舊的
+        const old = document.querySelector('.ot-notify-bubble');
+        if (old) old.remove();
+
+        const bubble = document.createElement('div');
+        bubble.classList.add('ot-notify-bubble');
+
+        // 樣式設定
+        bubble.style.position = 'fixed';
+        bubble.style.padding = '12px 24px';
         bubble.style.borderRadius = '12px';
-        bubble.style.backgroundColor = '#222';
         bubble.style.color = '#fff';
-        bubble.style.fontSize = '16px';
-        bubble.style.lineHeight = '1.5';
-        bubble.style.textAlign = 'center';
-        bubble.style.boxShadow = '0 4px 12px rgba(0,0,0,0.25)';
+        bubble.style.fontWeight = '500';
+        bubble.style.boxShadow = '0 8px 24px rgba(0,0,0,0.25)';
         bubble.style.zIndex = '9999';
-        bubble.style.whiteSpace = 'pre-line';
+        bubble.style.backdropFilter = 'blur(10px)';
+        bubble.style.webkitBackdropFilter = 'blur(10px)';
+        bubble.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        bubble.style.opacity = '0';
+        bubble.style.pointerEvents = 'none';
+
+        if (isError) {
+          bubble.style.background = 'rgba(255, 59, 48, 0.9)';
+        } else {
+          bubble.style.background = 'rgba(0, 0, 0, 0.8)';
+        }
+
+        bubble.textContent = message;
         document.body.appendChild(bubble);
-      }
 
-      bubble.classList.remove('error');
-      if (isError) {
-        bubble.classList.add('error');
-        bubble.style.backgroundColor = '#b3261e';
-      } else {
-        bubble.style.backgroundColor = '#222';
-      }
+        // 定位計算
+        const logoCard = document.querySelector('.logo-card');
+        if (logoCard) {
+          const rect = logoCard.getBoundingClientRect();
+          bubble.style.left = rect.left + 'px';
+          bubble.style.width = rect.width + 'px'; // 與 Logo 同寬
+          bubble.style.boxSizing = 'border-box'; // 確保 padding 不撐大
+          bubble.style.textAlign = 'center';
 
-      bubble.textContent = message;
-      bubble.style.display = 'block';
+          // 初始位置：在 Logo 底部上方一點（隱藏狀態）
+          const startTop = rect.bottom - 20;
+          const endTop = rect.bottom + 10;
 
-      if (bubble._hideTimer) {
-        clearTimeout(bubble._hideTimer);
+          bubble.style.top = endTop + 'px';
+          bubble.style.transform = `translateY(-${endTop - startTop}px) scale(0.9)`;
+
+          // 觸發重繪
+          requestAnimationFrame(() => {
+            bubble.style.opacity = '1';
+            bubble.style.transform = 'translateY(0) scale(1)';
+          });
+        } else {
+          // Fallback: 置中顯示
+          bubble.style.top = '20px';
+          bubble.style.left = '50%';
+          bubble.style.transform = 'translateX(-50%) translateY(-20px)';
+          requestAnimationFrame(() => {
+            bubble.style.opacity = '1';
+            bubble.style.transform = 'translateX(-50%) translateY(0)';
+          });
+        }
+
+        // 自動消失
+        setTimeout(() => {
+          bubble.style.opacity = '0';
+          bubble.style.transform = 'translateY(-20px) scale(0.9)'; // 向上收回
+          setTimeout(() => bubble.remove(), 400);
+        }, 3000);
       }
-      bubble._hideTimer = setTimeout(() => {
-        bubble.style.display = 'none';
-      }, 5000);
     }
 
     // 同步 Travel Toggle UI（新增列上的 Travel 按鈕）
@@ -306,363 +348,267 @@
       }
     }
 
-    // 渲染表格
-    function renderTable(openIndex = null) {
+    // 渲染資料列表 (Material Design 3 Card List with Calendar View)
+    function renderDataList(openIndex = null) {
       const container = document.getElementById('tableContainer');
       container.innerHTML = '';
 
-      const table = document.createElement('table');
-      table.id = 'tableSection'; // 
-      const thead = document.createElement('thead');
-      const tbody = document.createElement('tbody');
+      // 添加桌面版星期標題 (只顯示一次)
+      if (window.innerWidth >= 1024) {
+        const header = document.createElement('div');
+        header.classList.add('calendar-header');
+        ['Sun', 'Mon', 'Tue', 'Thu', 'Fri', 'Sat', 'Sun'].forEach(day => { // Corrected: Tue, Wed, Thu, Fri, Sat, Sun
+          const el = document.createElement('div');
+          el.classList.add('calendar-weekday-label');
+          el.textContent = day;
+          header.appendChild(el);
+        });
+        // 插入到 container 之前，或者作為 container 的第一個元素？
+        // 由於 container 是 grid，header 應該在 container 外部或作為第一行
+        // 這裡我們把 header 插入到 container 之前 (需確保只插入一次)
+        const existingHeader = document.querySelector('.calendar-header');
+        if (existingHeader) existingHeader.remove();
+        container.parentNode.insertBefore(header, container);
+      }
 
-      // 標題（刪除欄放在最後一欄）
-      const headerRow = document.createElement('tr');
-      const headers = ['日期', '1.67', '1.34', '1.66', '2.67', '費用 Total', '月薪', '備註', ''];
-
-      headers.forEach((h) => {
-        const th = document.createElement('th');
-        th.textContent = h;
-        headerRow.appendChild(th);
-      });
-      thead.appendChild(headerRow);
-
-      // 若尚未載入任何資料，渲染簡單的占位假表（只顯示一列，整列作為載入按鈕）
+      // 若尚未載入任何資料，渲染空狀態卡片
       if (tableData.length === 0) {
-        const tr = document.createElement('tr');
-        tr.classList.add('placeholder-row');
+        const card = document.createElement('div');
+        card.classList.add('data-card');
+        card.style.textAlign = 'center';
+        card.style.padding = '32px';
+        card.style.cursor = 'pointer';
+        card.style.display = 'flex';
+        card.style.flexDirection = 'column';
+        card.style.alignItems = 'center';
+        card.style.justifyContent = 'center';
+        // 讓空卡片在桌面版佔滿全寬或置中
+        if (window.innerWidth >= 1024) card.style.gridColumn = '1 / -1';
 
-        const td = document.createElement('td');
-        td.colSpan = headers.length;
-        td.classList.add('placeholder-load-cell');
-        td.style.cursor = 'pointer';
+        card.innerHTML = `
+          <div style="color: var(--md-sys-color-primary); margin-bottom: 16px;">
+            <span class="material-symbols-outlined" style="font-size: 48px;">upload_file</span>
+          </div>
+          <div style="font: var(--md-sys-typescale-title-medium); margin-bottom: 8px;">No Data Available</div>
+          <div style="font: var(--md-sys-typescale-body-medium); color: var(--md-sys-color-on-surface-variant);">
+            Tap here to import CSV or add a new entry above
+          </div>
+        `;
 
-        // 中央的「載入 CSV」膠囊
-        const pill = document.createElement('span');
-        pill.classList.add('placeholder-pill');
-        pill.textContent = '📂 載入 CSV';
-        td.appendChild(pill);
-
-        td.addEventListener('click', () => {
+        card.addEventListener('click', () => {
           const importInput = document.getElementById('importCSVCard');
           if (importInput) {
             importInput.click();
           }
         });
 
-        tr.appendChild(td);
-        tbody.appendChild(tr);
-
-        table.appendChild(thead);
-        table.appendChild(tbody);
-        container.appendChild(table);
+        container.appendChild(card);
         updateDashboard();
         return;
       }
 
       tableData.forEach((entry, index) => {
-        // ===== 主列 =====
-        const tr = document.createElement('tr');
-        tr.classList.add('data-row');
-        if (entry.weekday === '日') tr.classList.add('sunday-row');
+        const card = document.createElement('div');
+        card.classList.add('data-card');
+        if (openIndex === index) card.classList.add('expanded');
 
-        // 日期（點擊可修改）
-        const dateTd = document.createElement('td');
-        dateTd.textContent = `${entry.date} (${entry.weekday})`;
-        tr.appendChild(dateTd);
+        // Desktop Calendar Alignment
+        if (window.innerWidth >= 1024) {
+          const weekdayMap = { '日': 1, '一': 2, '二': 3, '三': 4, '四': 5, '五': 6, '六': 7 };
+          const col = weekdayMap[entry.weekday] || 1;
+          card.style.gridColumn = `${col} / span 1`;
+        }
 
-        dateTd.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (dateTd.querySelector('input')) return;
+        // --- Header (Card Content) ---
+        const header = document.createElement('div');
+        header.classList.add('card-header');
 
-          const input = document.createElement('input');
-          input.type = 'date';
-          input.value = entry.date;
-          input.classList.add('date-inline-input');
+        // Primary Info: Date & Scoreboard
+        const primaryInfo = document.createElement('div');
+        primaryInfo.classList.add('card-primary-info');
 
-          dateTd.innerHTML = '';
-          dateTd.appendChild(input);
-          input.focus();
+        const dateEl = document.createElement('div');
+        dateEl.classList.add('card-date');
+        const dateObj = new Date(entry.date);
+        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const dd = String(dateObj.getDate()).padStart(2, '0');
+        dateEl.textContent = `${mm}/${dd}`;
 
-          const finish = (commit) => {
-            if (!commit) {
-              // 取消修改，還原顯示
-              dateTd.innerHTML = `${entry.date} (${entry.weekday})`;
-              return;
-            }
-            const newVal = input.value;
-            if (!newVal) {
-              dateTd.innerHTML = `${entry.date} (${entry.weekday})`;
-              return;
-            }
-            entry.date = newVal;
-            entry.weekday = getWeekdayChar(newVal);
-            tableData.sort((a, b) => new Date(b.date) - new Date(a.date));
-            updateAll();
-          };
+        // OT Scoreboard Badge
+        const otTotal = (entry.v167 + entry.v134 + entry.v166 + entry.v267);
+        const val = Math.round(otTotal); // Integer only
 
-          input.addEventListener('blur', () => finish(true));
-          input.addEventListener('keydown', (evt) => {
-            if (evt.key === 'Enter') finish(true);
-            if (evt.key === 'Escape') finish(false);
-          });
-        });
+        const scoreboard = document.createElement('div');
+        scoreboard.classList.add('scoreboard-badge');
 
-        // OT 四個欄位
-        ['v167', 'v134', 'v166', 'v267'].forEach((key) => {
-          const td = document.createElement('td');
+        // Color Logic
+        if (val === 2) scoreboard.classList.add('green');
+        else if (val === 3) scoreboard.classList.add('yellow');
+        else if (val === 4) scoreboard.classList.add('orange');
+        else if (val === 5) scoreboard.classList.add('red');
+        else if (val >= 6) scoreboard.classList.add('purple');
 
-          // 建立 Number Stepper
-          const stepper = document.createElement('div');
-          stepper.classList.add('number-stepper');
+        scoreboard.textContent = val;
 
-          // 減號按鈕
-          const minusBtn = document.createElement('button');
-          minusBtn.type = 'button';
-          minusBtn.classList.add('stepper-btn', 'minus');
-          const minusIcon = document.createElement('span');
-          minusIcon.classList.add('material-symbols-outlined');
-          minusIcon.textContent = 'remove';
-          minusBtn.appendChild(minusIcon);
+        primaryInfo.appendChild(dateEl);
+        primaryInfo.appendChild(scoreboard);
 
-          // 數值顯示
-          const valueSpan = document.createElement('span');
-          valueSpan.classList.add('stepper-value');
-          valueSpan.textContent = entry[key];
-          // 如果數值>0，加入 has-value class
-          if (entry[key] > 0) {
-            valueSpan.classList.add('has-value');
-          }
-          // 加號按鈕
-          const plusBtn = document.createElement('button');
-          plusBtn.type = 'button';
-          plusBtn.classList.add('stepper-btn', 'plus');
-          const plusIcon = document.createElement('span');
-          plusIcon.classList.add('material-symbols-outlined');
-          plusIcon.textContent = 'add';
-          plusBtn.appendChild(plusIcon);
+        // Secondary Info: Salary & Daily OT
+        const secondaryInfo = document.createElement('div');
+        secondaryInfo.classList.add('card-secondary-info');
 
-          // 點擊事件
-          minusBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            adjustOTValue(entry, key, -1);
-            createRipple(e, minusBtn);
-          });
+        // Monthly Salary
+        const salaryChip = document.createElement('div');
+        salaryChip.classList.add('info-chip');
+        salaryChip.innerHTML = `<span class="material-symbols-outlined">monetization_on</span> <span>${Math.round(entry.monthSLR)}</span>`;
 
-          plusBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            adjustOTValue(entry, key, +1);
-            createRipple(e, plusBtn);
-          });
-
-          // 長按快速增減
-          let longPressTimer = null;
-          const startLongPress = (btn, delta) => {
-            longPressTimer = setInterval(() => {
-              adjustOTValue(entry, key, delta);
-            }, 150);
-          };
-          const stopLongPress = () => {
-            if (longPressTimer) {
-              clearInterval(longPressTimer);
-              longPressTimer = null;
-            }
-          };
-
-          minusBtn.addEventListener('mousedown', () => startLongPress(minusBtn, -1));
-          minusBtn.addEventListener('mouseup', stopLongPress);
-          minusBtn.addEventListener('mouseleave', stopLongPress);
-
-          plusBtn.addEventListener('mousedown', () => startLongPress(plusBtn, +1));
-          plusBtn.addEventListener('mouseup', stopLongPress);
-          plusBtn.addEventListener('mouseleave', stopLongPress);
-
-          // 組裝
-          stepper.appendChild(minusBtn);
-          stepper.appendChild(valueSpan);
-          stepper.appendChild(plusBtn);
-          td.appendChild(stepper);
-          tr.appendChild(td);
-        });
-
-        // 費用 Total
-        const totalTd = document.createElement('td');
-        const totalSpan = document.createElement('span');
-        totalSpan.classList.add('capsule', 'black', 'total-value');
-        totalSpan.textContent = Math.round(entry.total);
-        totalTd.appendChild(totalSpan);
-        tr.appendChild(totalTd);
-
-        // 月薪（每月第一筆黃底，其餘深灰）
-        const monthTd = document.createElement('td');
-        const monthSpan = document.createElement('span');
-        monthSpan.classList.add('capsule', 'salary-value', 'total-value');
-
+        // Highlight first of month
         const monthKey = entry.date ? entry.date.slice(0, 7) : '';
-        const firstIndex = tableData.findIndex(
-          (e) => e.date && e.date.slice(0, 7) === monthKey
-        );
-        const isFirstOfMonth = firstIndex === index;
-
-        if (isFirstOfMonth) {
-          monthSpan.classList.add('yellow');
-        } else {
-          monthSpan.classList.add('dark-gray');
+        const firstIndex = tableData.findIndex(e => e.date && e.date.slice(0, 7) === monthKey);
+        if (firstIndex === index) {
+          salaryChip.style.background = '#fff9c4'; // Yellow tint
+          salaryChip.style.color = '#5f5200';
         }
 
-        monthSpan.textContent = Math.round(entry.monthSLR);
-        monthTd.appendChild(monthSpan);
-        tr.appendChild(monthTd);
+        // Daily OT Salary
+        const dailyTotalChip = document.createElement('div');
+        dailyTotalChip.classList.add('info-chip', 'yellow'); // Added yellow class
+        dailyTotalChip.innerHTML = `<span>+${Math.round(entry.total)}</span>`;
 
-        // Remark
-        const remarkTd = document.createElement('td');
-        remarkTd.textContent = entry.remark;
-        tr.appendChild(remarkTd);
+        // Travel Icon
+        const travelChip = document.createElement('div');
+        travelChip.classList.add('info-chip');
+        const countryMap = { 'Vietnam': 'VN', 'China': 'CN', 'India': 'IN', 'None': '--' };
+        const countryCode = countryMap[entry.travelCountry] || '--';
 
-        // 刪除列小圓點與確認氣泡（放在最右側欄位）
-        const deleteTd = document.createElement('td');
-        const deleteWrapper = document.createElement('div');
-        deleteWrapper.classList.add('row-delete-wrapper');
+        if (entry.travelCountry && entry.travelCountry !== 'None') {
+          travelChip.style.background = 'var(--md-sys-color-primary-container)';
+          travelChip.style.color = 'var(--md-sys-color-on-primary-container)';
+          travelChip.innerHTML = `<span class="material-symbols-outlined">flight</span> <span>${countryCode}</span>`;
+        } else {
+          travelChip.innerHTML = `<span class="material-symbols-outlined" style="opacity:0.5">flight</span> <span>--</span>`;
+        }
 
-        const dotBtn = document.createElement('button');
-        dotBtn.type = 'button';
-        dotBtn.classList.add('row-dot');
-        dotBtn.textContent = '●';
+        secondaryInfo.appendChild(salaryChip);
+        secondaryInfo.appendChild(dailyTotalChip);
+        secondaryInfo.appendChild(travelChip);
 
-        const bubble = document.createElement('div');
-        bubble.classList.add('delete-bubble');
-        bubble.innerHTML = `
-            <div class="delete-bubble-content">
-                <p>刪除這一列？</p>
-                <div class="delete-bubble-actions">
-                    <button type="button" class="delete-confirm">確認</button>
-                    <button type="button" class="delete-cancel">取消</button>
-                </div>
-            </div>
-        `;
+        const expandIcon = document.createElement('span');
+        expandIcon.classList.add('material-symbols-outlined', 'card-expand-icon');
+        expandIcon.textContent = 'expand_more';
 
-        deleteWrapper.appendChild(dotBtn);
-        deleteWrapper.appendChild(bubble);
-        deleteTd.appendChild(deleteWrapper);
-        tr.appendChild(deleteTd);
+        header.appendChild(primaryInfo);
+        header.appendChild(secondaryInfo);
+        header.appendChild(expandIcon);
 
-        dotBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          // 關閉其他列的氣泡
-          tbody.querySelectorAll('.delete-bubble.open').forEach((el) => {
-            el.classList.remove('open');
-          });
-          bubble.classList.add('open');
+        // --- Body ---
+        const body = document.createElement('div');
+        body.classList.add('card-body');
+
+        // Hours Grid (Circular Steppers)
+        const grid = document.createElement('div');
+        grid.classList.add('hours-grid');
+
+        ['v167', 'v134', 'v166', 'v267'].forEach(key => {
+          const item = document.createElement('div');
+          item.classList.add('hour-item');
+
+          const label = document.createElement('div');
+          label.classList.add('hour-label');
+          const labelText = key.replace('v', '').replace(/(\d)(\d{2})/, '$1.$2');
+          label.textContent = labelText;
+
+          const stepper = document.createElement('div');
+          stepper.classList.add('smart-stepper');
+          if (entry[key] > 0) stepper.classList.add('has-value');
+          stepper.textContent = entry[key].toFixed(1);
+          stepper.dataset.entryIndex = index;
+          stepper.dataset.key = key;
+
+          item.appendChild(label);
+          item.appendChild(stepper);
+          grid.appendChild(item);
         });
 
-        const confirmBtn = bubble.querySelector('.delete-confirm');
-        const cancelBtn = bubble.querySelector('.delete-cancel');
+        // Travel Toggle (In Submenu)
+        const travelToggleRow = document.createElement('div');
+        travelToggleRow.style.marginTop = '12px';
+        travelToggleRow.style.display = 'flex';
+        travelToggleRow.style.alignItems = 'center';
+        travelToggleRow.style.justifyContent = 'space-between';
 
-        confirmBtn.addEventListener('click', (e) => {
+        const travelLabel = document.createElement('span');
+        travelLabel.textContent = 'Travel Location';
+        travelLabel.style.fontSize = '0.9rem';
+        travelLabel.style.color = 'var(--md-sys-color-on-surface-variant)';
+
+        const travelSelect = document.createElement('div');
+        travelSelect.classList.add('capsule');
+        travelSelect.style.cursor = 'pointer';
+        travelSelect.textContent = entry.travelCountry || 'None';
+        if (entry.travelCountry && entry.travelCountry !== 'None') {
+          travelSelect.style.background = 'var(--md-sys-color-primary-container)';
+          travelSelect.style.color = 'var(--md-sys-color-on-primary-container)';
+        }
+
+        travelSelect.addEventListener('click', (e) => {
           e.stopPropagation();
-          const idx = tableData.indexOf(entry);
-          if (idx !== -1) {
-            tableData.splice(idx, 1);
+          const countries = ['None', 'Vietnam', 'China', 'India'];
+          const currentIdx = countries.indexOf(entry.travelCountry || 'None');
+          const nextIdx = (currentIdx + 1) % countries.length;
+          entry.travelCountry = countries[nextIdx];
+          renderDataList(index); // Re-render keeping expanded
+        });
+
+        travelToggleRow.appendChild(travelLabel);
+        travelToggleRow.appendChild(travelSelect);
+
+        // Footer
+        const footer = document.createElement('div');
+        footer.classList.add('card-footer');
+
+        const remark = document.createElement('div');
+        remark.classList.add('remark-text');
+        remark.textContent = entry.remark || 'No remarks';
+
+        const actions = document.createElement('div');
+        actions.classList.add('card-actions');
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.classList.add('action-btn', 'delete');
+        deleteBtn.innerHTML = '<span class="material-symbols-outlined">delete</span>';
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (confirm('Delete this entry?')) {
+            tableData.splice(index, 1);
             updateAll();
           }
         });
 
-        cancelBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          bubble.classList.remove('open');
-        });
+        actions.appendChild(deleteBtn);
+        footer.appendChild(remark);
+        footer.appendChild(actions);
 
-        tbody.appendChild(tr);
+        body.appendChild(grid);
+        body.appendChild(travelToggleRow);
+        body.appendChild(footer);
 
-        // ===== 子列：Base / Travel / OT Salary =====
-        const detailTr = document.createElement('tr');
-        detailTr.classList.add('detail-row');
-        const detailTd = document.createElement('td');
-        detailTd.colSpan = headers.length;
+        card.appendChild(header);
+        card.appendChild(body);
+        container.appendChild(card);
 
-        const detailWrapper = document.createElement('div');
-        detailWrapper.classList.add('detail-wrapper');
+        // Expansion Logic
+        header.addEventListener('click', () => {
+          const isExpanded = card.classList.contains('expanded');
+          document.querySelectorAll('.data-card.expanded').forEach(c => c.classList.remove('expanded'));
 
-        const detailItems = [
-          { key: 'base', label: 'Base' },
-          { key: 'travel', label: 'Travel' },
-          { key: 'otSalary', label: 'OT Salary' },
-        ];
-
-        detailItems.forEach((item) => {
-          const block = document.createElement('div');
-          block.classList.add('detail-chip');
-
-          // 若為 Travel，加上可點擊的「此列專用」 toggle
-          if (item.key === 'travel') {
-            const travelToggleInline = document.createElement('button');
-            travelToggleInline.type = 'button';
-            travelToggleInline.classList.add('travel-toggle-inline');
-            if (entry.travelEnabled) {
-              travelToggleInline.classList.add('on');
-            }
-            travelToggleInline.addEventListener('click', (e) => {
-              e.stopPropagation();
-              entry.travelEnabled = !entry.travelEnabled;
-              updateAll(index); // 更新後維持該列子清單展開
-            });
-            block.appendChild(travelToggleInline);
-          }
-
-          const labelSpan = document.createElement('span');
-          labelSpan.classList.add('detail-label');
-          labelSpan.textContent = item.label;
-
-          const valueSpan = document.createElement('span');
-          valueSpan.classList.add('capsule', 'dark-gray');
-          valueSpan.textContent = Math.round(
-            parseFloat(entry[item.key]) || 0
-          );
-
-          block.appendChild(labelSpan);
-          block.appendChild(valueSpan);
-          detailWrapper.appendChild(block);
-        });
-
-        detailTd.appendChild(detailWrapper);
-        detailTr.appendChild(detailTd);
-        if (openIndex === index) {
-          detailTr.classList.add('open');
-        }
-        tbody.appendChild(detailTr);
-      });
-
-      table.appendChild(thead);
-      table.appendChild(tbody);
-      container.appendChild(table);
-
-      // 點擊主列展開/收合 Base / Travel / OT Salary 子清單
-      const dataRows = tbody.querySelectorAll('tr.data-row');
-      dataRows.forEach((row) => {
-        row.addEventListener('click', () => {
-          const detail = row.nextElementSibling;
-          if (!detail || !detail.classList.contains('detail-row')) return;
-
-          const isOpen = detail.classList.contains('open');
-
-          // 關閉其他已開啟的子列
-          tbody.querySelectorAll('tr.detail-row.open').forEach((dr) => {
-            dr.classList.remove('open');
-          });
-
-          // 如果原本是關閉的，就打開；如果原本是開啟就維持關閉
-          if (!isOpen) {
-            detail.classList.add('open');
+          if (!isExpanded) {
+            card.classList.add('expanded');
           }
         });
       });
 
-      updateDashboard(); // 每次渲染表格後更新總計
-      syncTravelToggleUI();
-      console.log(
-        '每列欄數:',
-        tbody.querySelector('tr.data-row')?.children.length
-      );
+      updateDashboard();
     }
 
     // 新增按鈕事件
@@ -1042,19 +988,46 @@
         } else if (payload && Array.isArray(payload.data)) {
           rows = payload.data;
         }
-        console.log('[OT] loadFromSheet from template payload, rows:', rows.length, 'raw payload:', payload);
-        if (rows.length > 0) {
-          // 統一交給你原本的欄位轉換函式
+
+        console.log('[OT] Template payload:', payload);
+
+        if (rows && rows.length > 0) {
+          console.log('[OT] 使用 Template 資料初始化表格');
           initTableFromPayload({ data: rows });
+          showNotification(`✅ 已載入 ${rows.length} 筆資料`);
         } else {
-          // 沒拿到資料就顯示空表（假表）
-          renderTable();
-          syncTravelToggleUI();
+          console.warn('[OT] Template 資料為空，嘗試透過 API 重新抓取...');
+          // Fallback: 嘗試用 google.script.run 抓取
+          if (typeof google !== 'undefined' && google.script && google.script.run) {
+            google.script.run
+              .withSuccessHandler((res) => {
+                console.log('[OT] API 抓取成功:', res);
+                if (res && res.data && res.data.length > 0) {
+                  initTableFromPayload(res);
+                  showNotification(`✅ 透過 API 載入 ${res.data.length} 筆資料`);
+                } else {
+                  console.warn('[OT] API 資料也為空');
+                  renderDataList(); // 顯示空表
+                  showNotification('⚠️ 無法讀取資料，請檢查 Google Sheet 是否有資料', true);
+                }
+              })
+              .withFailureHandler((err) => {
+                console.error('[OT] API 抓取失敗:', err);
+                renderDataList(); // 顯示空表
+                showNotification('❌ 資料讀取失敗，請檢查網路或權限', true);
+              })
+              .getOvertimeData();
+          } else {
+            console.warn('[OT] 無法使用 google.script.run，顯示空表');
+            renderDataList();
+            syncTravelToggleUI();
+          }
         }
       } catch (e) {
-        console.warn('[OT] loadFromSheet 讀取 Template 初始資料失敗，顯示空表。', e);
-        renderTable();
+        console.error('[OT] loadFromSheet 發生錯誤:', e);
+        renderDataList();
         syncTravelToggleUI();
+        showNotification('❌ 初始化失敗: ' + e.message, true);
       }
     }
 
@@ -1133,7 +1106,217 @@
 
     // === End Google Sheet 相關工具 ===
 
-    // 綁定「回傳到 Google Sheet」按鈕（HTML 之後加上 id="saveToSheetBtn" 即可）
+    // === Smart Stepper Add Card 互動邏輯 ===
+    const newAddCardState = {
+      date: null, // YYYY-MM-DD
+      v167: 0,
+      v134: 0,
+      v166: 0,
+      v267: 0,
+      travel: 'Vietnam'
+    };
+
+    const travelOptions = ['None', 'Vietnam', 'China', 'India'];
+    const travelDisplay = { 'None': '-', 'Vietnam': 'VN', 'China': 'CN', 'India': 'IN' };
+
+    // 初始化 Smart Stepper Add按鈕
+    function initAddCardSteppers() {
+      const dateBtn = document.getElementById('newDate');
+      const travelBtn = document.getElementById('newTravelCountry');
+      const hourBtns = ['new167', 'new134', 'new166', 'new267'];
+
+      // 日期按鈕：點擊開啟日期選擇器
+      if (dateBtn) {
+        dateBtn.addEventListener('click', () => {
+          const input = document.createElement('input');
+          input.type = 'date';
+          input.value = newAddCardState.date || '';
+
+          // 直接插入到頁面並觸發
+          input.style.position = 'fixed';
+          input.style.top = '50%';
+          input.style.left = '50%';
+          input.style.transform = 'translate(-50%, -50%)';
+          input.style.zIndex = '10000';
+          document.body.appendChild(input);
+
+          input.addEventListener('change', () => {
+            if (input.value) {
+              newAddCardState.date = input.value;
+              const d = new Date(input.value);
+              const mm = String(d.getMonth() + 1).padStart(2, '0');
+              const dd = String(d.getDate()).padStart(2, '0');
+              dateBtn.textContent = `${mm}/${dd}`;
+              dateBtn.classList.add('has-value');
+            }
+            document.body.removeChild(input);
+          });
+
+          input.addEventListener('blur', () => {
+            setTimeout(() => {
+              if (document.body.contains(input)) {
+                document.body.removeChild(input);
+              }
+            }, 100);
+          });
+
+          // 延遲觸發以確保元素已插入DOM
+          setTimeout(() => {
+            input.focus();
+            input.click();
+          }, 50);
+        });
+      }
+
+      // Travel 按鈕：拖曳循環切換
+      if (travelBtn) {
+        let dragState = null;
+
+        travelBtn.addEventListener('mousedown', (e) => {
+          dragState = { startY: e.clientY, moved: false };
+          travelBtn.classList.add('active');
+        });
+
+        document.addEventListener('mousemove', (e) => {
+          if (!dragState) return;
+          const deltaY = dragState.startY - e.clientY;
+          if (Math.abs(deltaY) > 10) dragState.moved = true;
+
+          if (Math.abs(deltaY) > 30) {
+            const currentIdx = travelOptions.indexOf(newAddCardState.travel);
+            const newIdx = deltaY > 0
+              ? (currentIdx + 1) % travelOptions.length
+              : (currentIdx - 1 + travelOptions.length) % travelOptions.length;
+            newAddCardState.travel = travelOptions[newIdx];
+            travelBtn.textContent = travelDisplay[newAddCardState.travel];
+            dragState.startY = e.clientY;
+          }
+        });
+
+        document.addEventListener('mouseup', () => {
+          if (dragState && !dragState.moved) {
+            // 點擊：切換到下一個
+            const currentIdx = travelOptions.indexOf(newAddCardState.travel);
+            const newIdx = (currentIdx + 1) % travelOptions.length;
+            newAddCardState.travel = travelOptions[newIdx];
+            travelBtn.textContent = travelDisplay[newAddCardState.travel];
+          }
+          if (dragState) {
+            travelBtn.classList.remove('active');
+            dragState = null;
+          }
+        });
+      }
+
+      // 小時按鈕：拖曳調整（即時顯示，單位1）
+      hourBtns.forEach(id => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+
+        const key = btn.dataset.key;
+        let dragState = null;
+
+        btn.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          dragState = {
+            startY: e.clientY,
+            lastY: e.clientY,
+            accumulatedDelta: 0
+          };
+          btn.classList.add('active');
+        });
+
+        document.addEventListener('mousemove', (e) => {
+          if (!dragState) return;
+          e.preventDefault();
+
+          const deltaY = dragState.lastY - e.clientY;
+          dragState.lastY = e.clientY;
+          dragState.accumulatedDelta += deltaY;
+
+          const threshold = 30;
+          if (Math.abs(dragState.accumulatedDelta) >= threshold) {
+            const steps = Math.floor(Math.abs(dragState.accumulatedDelta) / threshold);
+            const direction = dragState.accumulatedDelta > 0 ? 1 : -1;
+
+            for (let i = 0; i < steps; i++) {
+              newAddCardState[key] = Math.max(0, newAddCardState[key] + direction);
+            }
+
+            // 即時更新顯示
+            btn.textContent = newAddCardState[key].toFixed(1);
+            if (newAddCardState[key] > 0) {
+              btn.classList.add('has-value');
+            } else {
+              btn.classList.remove('has-value');
+            }
+
+            dragState.accumulatedDelta = dragState.accumulatedDelta % threshold;
+          }
+        });
+
+        document.addEventListener('mouseup', () => {
+          if (dragState) {
+            btn.classList.remove('active');
+            dragState = null;
+          }
+        });
+      });
+    }
+
+    // 綁定新增按鈕
+    const addBtn = document.getElementById('addRowCard');
+    if (addBtn) {
+      addBtn.addEventListener('click', () => {
+        if (!newAddCardState.date) {
+          showNotification('請選擇日期', true);
+          return;
+        }
+
+        // 檢查日期是否重複
+        const exists = tableData.some((d) => d.date === newAddCardState.date);
+        if (exists) {
+          showNotification('該日期已存在', true);
+          return;
+        }
+
+        const newEntry = {
+          date: newAddCardState.date,
+          v167: newAddCardState.v167,
+          v134: newAddCardState.v134,
+          v166: newAddCardState.v166,
+          v267: newAddCardState.v267,
+          remark: '',
+          travelCountry: newAddCardState.travel,
+        };
+
+        addNewEntry(newEntry);
+
+        // 重置狀態
+        newAddCardState.date = null;
+        newAddCardState.v167 = 0;
+        newAddCardState.v134 = 0;
+        newAddCardState.v166 = 0;
+        newAddCardState.v267 = 0;
+        newAddCardState.travel = 'Vietnam';
+
+        document.getElementById('newDate').textContent = '--/--';
+        document.getElementById('newDate').classList.remove('has-value');
+        document.getElementById('new167').textContent = '0.0';
+        document.getElementById('new167').classList.remove('has-value');
+        document.getElementById('new134').textContent = '0.0';
+        document.getElementById('new134').classList.remove('has-value');
+        document.getElementById('new166').textContent = '0.0';
+        document.getElementById('new166').classList.remove('has-value');
+        document.getElementById('new267').textContent = '0.0';
+        document.getElementById('new267').classList.remove('has-value');
+        document.getElementById('newTravelCountry').textContent = 'VN';
+
+        showNotification('✅ 已新增一筆資料');
+      });
+    }
+
+    // 綁定「回傳到 Google Sheet」按鈕（HTML 之後加上 id="saveToSheetBtn"）
     const saveBtn = document.getElementById('saveToSheetBtn');
     if (saveBtn) {
       saveBtn.addEventListener('click', async () => {
@@ -1175,286 +1358,448 @@
       global.updateAll = updateAll;
       global.showNotification = showNotification;
     }
-  })(typeof globalThis !== 'undefined' ? globalThis : this); // ← 這一行是整個 wrapper 的結尾
-</script>
+    // ========== Analytics 升級功能 (已合併至同一 Scope) ==========
+    // 由於 analytics.js 需要存取 tableData 等全域變數，直接在此內嵌
 
-<!-- 載入 Analytics 升級功能 -->
-<script>
-  // 由於 analytics.js 需要存取 tableData 等全域變數，直接在此內嵌
+    // ========== 分頁切換 ==========
+    function initTabNavigation() {
+      const tabBtns = document.querySelectorAll('.tab-btn');
+      const tabContents = document.querySelectorAll('.tab-content');
 
-  // ========== 分頁切換 ==========
-  function initTabNavigation() {
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
+      tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const targetTab = btn.dataset.tab;
 
-    tabBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const targetTab = btn.dataset.tab;
+          tabBtns.forEach(b => b.classList.remove('active'));
+          tabContents.forEach(c => c.classList.remove('active'));
 
-        tabBtns.forEach(b => b.classList.remove('active'));
-        tabContents.forEach(c => c.classList.remove('active'));
+          btn.classList.add('active');
+          const targetContent = document.getElementById(`${targetTab}-tab`);
+          if (targetContent) {
+            targetContent.classList.add('active');
+          }
 
-        btn.classList.add('active');
-        const targetContent = document.getElementById(`${targetTab}-tab`);
-        if (targetContent) {
-          targetContent.classList.add('active');
-        }
-
-        if (targetTab === 'analytics') {
-          updateCharts();
-          updateAnalyticsStats();
-        }
-      });
-    });
-  }
-
-  // ========== 月份過濾 ==========
-  function populateMonthFilter() {
-    const monthSet = new Set();
-    tableData.forEach(entry => {
-      if (entry.date) {
-        const monthKey = entry.date.slice(0, 7);
-        monthSet.add(monthKey);
-      }
-    });
-
-    availableMonths = Array.from(monthSet).sort().reverse();
-
-    const select = document.getElementById('monthFilter');
-    if (!select) return;
-
-    select.innerHTML = '<option value="">全部月份</option>';
-    availableMonths.forEach(month => {
-      const option = document.createElement('option');
-      option.value = month;
-      const [year, monthNum] = month.split('-');
-      option.textContent = `${year}年${monthNum}月`;
-      select.appendChild(option);
-    });
-
-    select.addEventListener('change', (e) => {
-      selectedMonth = e.target.value || null;
-      updateAll();
-      updateCharts();
-      updateAnalyticsStats();
-    });
-  }
-
-  // ========== Chart.js 圖表 ==========
-  function initCharts() {
-    if (typeof Chart === 'undefined') return;
-
-    const ctx1 = document.getElementById('overtimeChart');
-    if (ctx1) {
-      charts.overtime = new Chart(ctx1, {
-        type: 'bar',
-        data: {
-          labels: [],
-          datasets: [{
-            label: '加班時數',
-            data: [],
-            backgroundColor: 'rgba(160,231,160,0.8)',
-            borderColor: 'rgba(160,231,160,1)',
-            borderWidth: 2,
-            borderRadius: 8
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } }
-        }
+          if (targetTab === 'analytics') {
+            setTimeout(() => {
+              if (window.charts && window.charts.overtime) window.charts.overtime.resize();
+              if (window.charts && window.charts.income) window.charts.income.resize();
+              updateCharts();
+              updateAnalyticsStats();
+            }, 50);
+          }
+        });
       });
     }
 
-    const ctx2 = document.getElementById('incomeChart');
-    if (ctx2) {
-      charts.income = new Chart(ctx2, {
-        type: 'doughnut',
-        data: {
-          labels: ['Base 薪資', 'Travel 津貼', 'OT 加班費'],
-          datasets: [{
-            data: [0, 0, 0],
-            backgroundColor: [
-              'rgba(100,100,100,0.8)',
-              'rgba(255,200,124,0.8)',
-              'rgba(160,231,160,0.8)'
-            ],
-            borderWidth: 2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom' } }
-        }
+    // ========== 月份過濾 ==========
+    function populateMonthFilter() {
+      const filter = document.getElementById('monthFilter');
+      if (!filter) return;
+
+      // 收集所有月份
+      const months = new Set();
+      tableData.forEach(e => {
+        if (e.date) months.add(e.date.slice(0, 7));
+      });
+
+      // 排序（新到舊）
+      const sortedMonths = Array.from(months).sort().reverse();
+      availableMonths = sortedMonths;
+
+      // 清空並重建
+      filter.innerHTML = '<option value="">全部月份</option>';
+      sortedMonths.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        filter.appendChild(opt);
+      });
+
+      // 綁定事件
+      filter.addEventListener('change', (e) => {
+        selectedMonth = e.target.value || null;
+        updateAll();
+        updateCharts();
+        updateAnalyticsStats();
       });
     }
-  }
 
-  function updateCharts() {
-    if (!charts.overtime || !charts.income) return;
+    // ========== Chart.js 圖表 ==========
+    function initCharts() {
+      if (typeof Chart === 'undefined') return;
 
-    const filteredData = selectedMonth
-      ? tableData.filter(e => e.date && e.date.slice(0, 7) === selectedMonth)
-      : tableData;
-
-    const monthlyData = {};
-    filteredData.forEach(entry => {
-      const key = entry.date ? entry.date.slice(0, 7) : '';
-      if (!key) return;
-
-      if (!monthlyData[key]) {
-        monthlyData[key] = { ot: 0, base: 0, travel: 0, otSalary: 0 };
+      const ctx1 = document.getElementById('overtimeChart');
+      if (ctx1) {
+        charts.overtime = new Chart(ctx1, {
+          type: 'bar',
+          data: {
+            labels: [],
+            datasets: [{
+              label: '加班時數',
+              data: [],
+              backgroundColor: 'rgba(160,231,160,0.8)',
+              borderColor: 'rgba(160,231,160,1)',
+              borderWidth: 2,
+              borderRadius: 8
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
       }
 
-      monthlyData[key].ot += parseFloat(entry.otSum || 0);
-      monthlyData[key].base += parseFloat(entry.base || 0);
-      monthlyData[key].travel += parseFloat(entry.travel || 0);
-      monthlyData[key].otSalary += parseFloat(entry.otSalary || 0);
-    });
+      const ctx2 = document.getElementById('incomeChart');
+      if (ctx2) {
+        charts.income = new Chart(ctx2, {
+          type: 'doughnut',
+          data: {
+            labels: ['Base 薪資', 'Travel 津貼', 'OT 加班費'],
+            datasets: [{
+              data: [0, 0, 0],
+              backgroundColor: [
+                'rgba(100,100,100,0.8)',
+                'rgba(255,200,124,0.8)',
+                'rgba(160,231,160,0.8)'
+              ],
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } }
+          }
+        });
+      }
+    }
 
-    const months = Object.keys(monthlyData).sort();
-    charts.overtime.data.labels = months.map(m => m.slice(5));
-    charts.overtime.data.datasets[0].data = months.map(m => monthlyData[m].ot);
-    charts.overtime.update('none');
+    // 更新圖表數據
+    function updateCharts() {
+      if (!charts.overtime || !charts.income) return;
 
-    let totalBase = 0, totalTravel = 0, totalOTSalary = 0;
-    Object.values(monthlyData).forEach(d => {
-      totalBase += d.base;
-      totalTravel += d.travel;
-      totalOTSalary += d.otSalary;
-    });
+      // 收入結構數據 (受 filter 影響)
+      let totalBase = 0;
+      let totalTravel = 0;
+      let totalOtPay = 0;
 
-    charts.income.data.datasets[0].data = [
-      Math.round(totalBase),
-      Math.round(totalTravel),
-      Math.round(totalOTSalary)
-    ];
-    charts.income.update('none');
-  }
+      tableData.forEach(entry => {
+        const mKey = entry.date.slice(0, 7);
+        if (selectedMonth && mKey !== selectedMonth) return;
 
-  function updateAnalyticsStats() {
-    const filteredData = selectedMonth
-      ? tableData.filter(e => e.date && e.date.slice(0, 7) === selectedMonth)
-      : tableData;
+        totalBase += parseFloat(entry.base || 0);
+        totalTravel += parseFloat(entry.travel || 0);
+        totalOtPay += parseFloat(entry.otSalary || 0);
+      });
 
-    const workDays = filteredData.length;
-    const travelDays = filteredData.filter(e => e.travelEnabled).length;
+      // 趨勢圖數據 (永遠顯示所有月份)
+      const allMonthsData = {};
+      tableData.forEach(e => {
+        const k = e.date.slice(0, 7);
+        if (!allMonthsData[k]) allMonthsData[k] = 0;
+        allMonthsData[k] += parseFloat(e.otSum || 0);
+      });
 
-    let totalOT = 0, totalIncome = 0;
-    filteredData.forEach(entry => {
-      totalOT += parseFloat(entry.otSum || 0);
-      totalIncome += parseFloat(entry.total || 0);
-    });
+      const sortedMonths = Object.keys(allMonthsData).sort();
+      charts.overtime.data.labels = sortedMonths;
+      charts.overtime.data.datasets[0].data = sortedMonths.map(m => allMonthsData[m]);
 
-    const avgDaily = workDays > 0 ? totalIncome / workDays : 0;
+      // 高亮選擇的月份 (橘紅色)
+      const bgColors = sortedMonths.map(m =>
+        m === selectedMonth ? 'rgba(255, 59, 48, 0.9)' : 'rgba(52, 199, 89, 0.6)'
+      );
+      const borderColors = sortedMonths.map(m =>
+        m === selectedMonth ? 'rgba(255, 59, 48, 1)' : 'rgba(52, 199, 89, 1)'
+      );
 
-    const setEl = (id, val) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = val;
-    };
+      charts.overtime.data.datasets[0].backgroundColor = bgColors;
+      charts.overtime.data.datasets[0].borderColor = borderColors;
 
-    setEl('statWorkDays', workDays);
-    setEl('statOTHours', totalOT.toFixed(1));
-    setEl('statTravelDays', travelDays);
-    setEl('statTotalIncome', Math.round(totalIncome).toLocaleString());
-    setEl('statAvgDaily', Math.round(avgDaily).toLocaleString());
-  }
+      charts.overtime.update();
 
-  // ========== 匯率更新 ==========
-  const refreshBtn = document.getElementById('refreshRateBtn');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', async () => {
-      refreshBtn.disabled = true;
-      try {
-        if (typeof google !== 'undefined' && google.script && google.script.run) {
-          google.script.run
-            .withSuccessHandler((rate) => {
-              document.getElementById('usdRate').value = rate.toFixed(2);
-              updateAll();
-              showNotification(`✅ 匯率已更新: 1 USD = ${rate.toFixed(2)} TWD`);
-              refreshBtn.disabled = false;
-            })
-            .withFailureHandler(() => {
-              showNotification('❌ 匯率更新失敗', true);
-              refreshBtn.disabled = false;
-            })
-            .getExchangeRate('USD', 'TWD');
-        } else {
-          showNotification('⚠️ 僅在 Apps Script 環境中可用', true);
-          refreshBtn.disabled = false;
+      // 更新收入結構圖
+      charts.income.data.datasets[0].data = [totalBase, totalTravel, totalOtPay];
+      charts.income.update();
+    }
+
+    // 更新統計卡片
+    function updateAnalyticsStats() {
+      let workDays = 0;
+      let totalOT = 0;
+      let travelDays = 0;
+      let totalIncome = 0;
+
+      let weekdayDays = 0;
+      let weekendDays = 0;
+      let thisMonthIncome = 0;
+
+      // 根據篩選器決定計算範圍
+      const targetData = selectedMonth
+        ? tableData.filter(e => e.date.startsWith(selectedMonth))
+        : tableData;
+
+      targetData.forEach(entry => {
+        workDays++;
+        totalOT += parseFloat(entry.otSum || 0);
+        // 檢查 travelCountry 是否為 None
+        if (entry.travelCountry && entry.travelCountry !== 'None') travelDays++;
+        else if (entry.travelEnabled) travelDays++; // 相容舊資料
+
+        const income = parseFloat(entry.total || 0);
+        totalIncome += income;
+
+        // 判斷平日/週末
+        const day = new Date(entry.date).getDay();
+        if (day === 0 || day === 6) weekendDays++;
+        else weekdayDays++;
+
+        // 本月收入
+        const currentMonthKey = formatDateYYYYMMDD(new Date()).slice(0, 7);
+        if (entry.date.startsWith(currentMonthKey)) {
+          thisMonthIncome += income;
         }
-      } catch (err) {
-        refreshBtn.disabled = false;
+      });
+
+      // 如果有選月份，「本月收入」就顯示該月收入
+      if (selectedMonth) {
+        thisMonthIncome = totalIncome;
       }
-    });
-  }
 
-  // Overview 頁面的匯率更新按鈕
-  const refreshOverviewBtn = document.getElementById('refreshRateOverviewBtn');
-  if (refreshOverviewBtn) {
-    refreshOverviewBtn.addEventListener('click', async () => {
-      refreshOverviewBtn.disabled = true;
-      const icon = refreshOverviewBtn.querySelector('.material-symbols-outlined');
-      if (icon) icon.style.animation = 'spin 1s linear infinite';
+      // 平均計算
+      const avgDaily = workDays > 0 ? totalIncome / workDays : 0;
+      // 平均時薪：總收入 / 總工時
+      const totalWorkHours = (workDays * 8) + totalOT;
+      const realAvgHourly = totalWorkHours > 0 ? totalIncome / totalWorkHours : 0;
 
-      try {
-        if (typeof google !== 'undefined' && google.script && google.script.run) {
-          google.script.run
-            .withSuccessHandler((rate) => {
-              document.getElementById('usdRate').value = rate.toFixed(2);
-              updateAll();
-              showNotification(`✅ 匯率已更新: 1 USD = ${rate.toFixed(2)} TWD`);
-              refreshOverviewBtn.disabled = false;
-              if (icon) icon.style.animation = '';
-            })
-            .withFailureHandler(() => {
-              showNotification('❌ 匯率更新失敗，請檢查網路連線', true);
-              refreshOverviewBtn.disabled = false;
-              if (icon) icon.style.animation = '';
-            })
-            .getExchangeRate('USD', 'TWD');
-        } else {
-          showNotification('⚠️ 僅在 Apps Script 環境中可用', true);
+      // 平均月薪：總收入 / 月份數
+      const uniqueMonths = new Set(targetData.map(e => e.date.slice(0, 7))).size;
+      const avgMonthly = uniqueMonths > 0 ? totalIncome / uniqueMonths : totalIncome;
+
+      const setEl = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+      };
+
+      const fmt = (n) => Math.round(n).toLocaleString();
+
+      setEl('statWorkDays', workDays);
+      setEl('statTravelDays', travelDays);
+      setEl('statWeekdayDays', weekdayDays);
+      setEl('statWeekendDays', weekendDays);
+
+      setEl('statAvgDaily', fmt(avgDaily));
+      setEl('statAvgHourly', fmt(realAvgHourly));
+      setEl('statAvgMonthly', fmt(avgMonthly));
+
+      setEl('statTotalIncome', fmt(totalIncome));
+      setEl('statThisMonthIncome', fmt(thisMonthIncome));
+      setEl('statOTHours', totalOT.toFixed(1));
+    }
+
+    // Overview 頁面的匯率更新按鈕
+    const refreshOverviewBtn = document.getElementById('refreshRateOverviewBtn');
+    if (refreshOverviewBtn) {
+      refreshOverviewBtn.addEventListener('click', async () => {
+        refreshOverviewBtn.disabled = true;
+        const icon = refreshOverviewBtn.querySelector('.material-symbols-outlined');
+        if (icon) icon.style.animation = 'spin 1s linear infinite';
+
+        try {
+          if (typeof google !== 'undefined' && google.script && google.script.run) {
+            google.script.run
+              .withSuccessHandler((rate) => {
+                document.getElementById('usdRate').value = rate.toFixed(2);
+                updateAll();
+                showNotification(`✅ 匯率已更新: 1 USD = ${rate.toFixed(2)} TWD`);
+                refreshOverviewBtn.disabled = false;
+                if (icon) icon.style.animation = '';
+              })
+              .withFailureHandler(() => {
+                showNotification('❌ 匯率更新失敗，請檢查網路連線', true);
+                refreshOverviewBtn.disabled = false;
+                if (icon) icon.style.animation = '';
+              })
+              .getExchangeRate('USD', 'TWD');
+          } else {
+            showNotification('⚠️ 僅在 Apps Script 環境中可用', true);
+            refreshOverviewBtn.disabled = false;
+            if (icon) icon.style.animation = '';
+          }
+        } catch (err) {
           refreshOverviewBtn.disabled = false;
           if (icon) icon.style.animation = '';
         }
-      } catch (err) {
-        refreshOverviewBtn.disabled = false;
-        if (icon) icon.style.animation = '';
-      }
+      });
+    }
+
+    // Ripple 效果函數
+    function createRipple(event, button) {
+      const ripple = document.createElement('span');
+      ripple.classList.add('ripple');
+
+      const rect = button.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height);
+      const x = event.clientX - rect.left - size / 2;
+      const y = event.clientY - rect.top - size / 2;
+
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = x + 'px';
+      ripple.style.top = y + 'px';
+
+      button.appendChild(ripple);
+
+      setTimeout(() => ripple.remove(), 600);
+    }
+
+    // 暴露給全域
+    window.updateCharts = updateCharts;
+    window.updateAnalyticsStats = updateAnalyticsStats;
+    window.populateMonthFilter = populateMonthFilter;
+    window.initCharts = initCharts;
+
+    // ========== Smart Stepper 拖曳互動 ==========
+    let dragState = null;
+
+    function initSmartStepperEvents() {
+      const container = document.getElementById('tableContainer');
+      if (!container) return;
+
+      container.addEventListener('mousedown', (e) => {
+        const stepper = e.target.closest('.smart-stepper');
+        if (!stepper) return;
+
+        e.preventDefault();
+        const entryIndex = parseInt(stepper.dataset.entryIndex);
+        const key = stepper.dataset.key;
+        const entry = tableData[entryIndex];
+
+        dragState = {
+          stepper,
+          entry,
+          key,
+          startY: e.clientY,
+          lastY: e.clientY,
+          accumulatedDelta: 0,
+        };
+
+        stepper.classList.add('active');
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!dragState) return;
+
+        e.preventDefault();
+        const deltaY = dragState.lastY - e.clientY; // 上拉為正，下拉為負
+        dragState.lastY = e.clientY;
+        dragState.accumulatedDelta += deltaY;
+
+        // 每移動30px觸發一次調整（0.5小時）
+        const threshold = 30;
+        if (Math.abs(dragState.accumulatedDelta) >= threshold) {
+          const steps = Math.floor(Math.abs(dragState.accumulatedDelta) / threshold);
+          const direction = dragState.accumulatedDelta > 0 ? 1 : -1;
+
+          for (let i = 0; i < steps; i++) {
+            adjustOTValue(dragState.entry, dragState.key, direction);
+          }
+
+          // 更新視覺
+          dragState.stepper.textContent = dragState.entry[dragState.key].toFixed(1);
+          if (dragState.entry[dragState.key] > 0) {
+            dragState.stepper.classList.add('has-value');
+          } else {
+            dragState.stepper.classList.remove('has-value');
+          }
+
+          dragState.accumulatedDelta = dragState.accumulatedDelta % threshold;
+        }
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (dragState) {
+          dragState.stepper.classList.remove('active');
+          dragState = null;
+        }
+      });
+
+      // 觸控支援
+      container.addEventListener('touchstart', (e) => {
+        const stepper = e.target.closest('.smart-stepper');
+        if (!stepper) return;
+
+        const touch = e.touches[0];
+        const entryIndex = parseInt(stepper.dataset.entryIndex);
+        const key = stepper.dataset.key;
+        const entry = tableData[entryIndex];
+
+        dragState = {
+          stepper,
+          entry,
+          key,
+          startY: touch.clientY,
+          lastY: touch.clientY,
+          accumulatedDelta: 0,
+        };
+
+        stepper.classList.add('active');
+      });
+
+      document.addEventListener('touchmove', (e) => {
+        if (!dragState) return;
+
+        e.preventDefault();
+        const touch = e.touches[0];
+        const deltaY = dragState.lastY - touch.clientY;
+        dragState.lastY = touch.clientY;
+        dragState.accumulatedDelta += deltaY;
+
+        const threshold = 30;
+        if (Math.abs(dragState.accumulatedDelta) >= threshold) {
+          const steps = Math.floor(Math.abs(dragState.accumulatedDelta) / threshold);
+          const direction = dragState.accumulatedDelta > 0 ? 1 : -1;
+
+          for (let i = 0; i < steps; i++) {
+            adjustOTValue(dragState.entry, dragState.key, direction);
+          }
+
+          dragState.stepper.textContent = dragState.entry[dragState.key].toFixed(1);
+          if (dragState.entry[dragState.key] > 0) {
+            dragState.stepper.classList.add('has-value');
+          } else {
+            dragState.stepper.classList.remove('has-value');
+          }
+
+          dragState.accumulatedDelta = dragState.accumulatedDelta % threshold;
+        }
+      }, { passive: false });
+
+      document.addEventListener('touchend', () => {
+        if (dragState) {
+          dragState.stepper.classList.remove('active');
+          dragState = null;
+        }
+      });
+    }
+
+
+    // ========== DOM 載入後初始化 ==========
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        initTabNavigation();
+        populateMonthFilter();
+        initCharts();
+        updateCharts();
+        updateAnalyticsStats();
+        initSmartStepperEvents(); // 初始化拖曳事件
+        initAddCardSteppers(); // 初始化新增卡片拖曳
+        console.log('[OT] 升級功能已載入 ✅');
+      }, 800);
     });
-  }
-
-  // Ripple 效果函數
-  function createRipple(event, button) {
-    const ripple = document.createElement('span');
-    ripple.classList.add('ripple');
-
-    const rect = button.getBoundingClientRect();
-    const size = Math.max(rect.width, rect.height);
-    const x = event.clientX - rect.left - size / 2;
-    const y = event.clientY - rect.top - size / 2;
-
-    ripple.style.width = ripple.style.height = size + 'px';
-    ripple.style.left = x + 'px';
-    ripple.style.top = y + 'px';
-
-    button.appendChild(ripple);
-
-    setTimeout(() => ripple.remove(), 600);
-  }
-
-  // ========== DOM 載入後初始化 ==========
-  document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-      initTabNavigation();
-      populateMonthFilter();
-      initCharts();
-      updateCharts();
-      updateAnalyticsStats();
-      console.log('[OT] 升級功能已載入 ✅');
-    }, 800);
-  });
+  })(typeof globalThis !== 'undefined' ? globalThis : this);
 </script>

@@ -20,7 +20,11 @@
 <body>
 
   <!-- 分頁導航列（固定顯示） -->
+  <!-- 分頁導航列（桌面版為左側邊欄，手機版為頂部導航） -->
   <nav class="tab-navigation">
+    <div class="nav-logo-area" style="padding: 10px; margin-bottom: 20px; display: none;">
+      <!-- 桌面版可在這裡放 Logo -->
+    </div>
     <button class="tab-btn active" data-tab="overview">
       <span class="material-symbols-outlined">dashboard</span>
       Overview
@@ -127,18 +131,38 @@
       <!-- 右側區域 -->
       <div class="right-panel">
 
-        <!-- 新增資料卡片 -->
-        <div class="add-card">
-          <input type="date" id="newDate">
-          <input type="number" id="new167" placeholder="1.67">
-          <input type="number" id="new134" placeholder="1.34">
-          <input type="number" id="new166" placeholder="1.66">
-          <input type="number" id="new267" placeholder="2.67">
-          <button id="travelToggle" class="icon-button">Travel</button>
-          <input type="text" id="newRemark" placeholder="Remark">
-          <button id="addRowCard" class="icon-button">
-            <span class="material-symbols-outlined">add</span>
-          </button>
+        <!-- 新增資料卡片 (Smart Stepper 統一設計) -->
+        <div class="add-card add-card-circular">
+          <div class="add-card-item">
+            <label>日期</label>
+            <button type="button" id="newDate" class="smart-stepper-add" data-type="date">--/--</button>
+          </div>
+          <div class="add-card-item">
+            <label>1.67</label>
+            <button type="button" id="new167" class="smart-stepper-add" data-key="v167">0.0</button>
+          </div>
+          <div class="add-card-item">
+            <label>1.34</label>
+            <button type="button" id="new134" class="smart-stepper-add" data-key="v134">0.0</button>
+          </div>
+          <div class="add-card-item">
+            <label>1.66</label>
+            <button type="button" id="new166" class="smart-stepper-add" data-key="v166">0.0</button>
+          </div>
+          <div class="add-card-item">
+            <label>2.67</label>
+            <button type="button" id="new267" class="smart-stepper-add" data-key="v267">0.0</button>
+          </div>
+          <div class="add-card-item">
+            <label>Travel</label>
+            <button type="button" id="newTravelCountry" class="smart-stepper-add" data-type="travel">VN</button>
+          </div>
+          <div class="add-card-item">
+            <label>&nbsp;</label>
+            <button id="addRowCard" class="circular-add-btn-round">
+              <span class="material-symbols-outlined">add</span>
+            </button>
+          </div>
         </div>
 
         <!-- 表格容器 -->
@@ -152,69 +176,109 @@
   </div>
   <!-- End of Overview Tab -->
 
-  <!-- Analytics Tab (新增的分析頁面) -->
+  <!-- Analytics Tab -->
   <div class="tab-content" id="analytics-tab">
-    <div class="analytics-grid">
+    <div class="analytics-container">
 
-      <!-- 月份選擇器 -->
-      <div class="card month-selector-card">
-        <h3>📅 月份篩選</h3>
-        <div class="month-picker">
-          <button class="month-nav prev" id="prevMonthBtn">
-            <span class="material-symbols-outlined">chevron_left</span>
-          </button>
-          <select id="monthFilter">
+      <!-- 頂部控制列 -->
+      <div class="analytics-header">
+        <h2>Analytics</h2>
+        <div class="month-filter-wrapper">
+          <select id="monthFilter" class="month-select">
             <option value="">全部月份</option>
-            <!-- 動態生成選項 -->
           </select>
-          <button class="month-nav next" id="nextMonthBtn">
-            <span class="material-symbols-outlined">chevron_right</span>
-          </button>
-        </div>
-        <button id="refreshRateBtn" class="icon-button" style="margin-top: 12px;">
-          <span class="material-symbols-outlined">refresh</span>
-          更新匯率
-        </button>
-      </div>
-
-      <!-- 統計摘要卡片組 -->
-      <div class="stats-cards-row">
-        <div class="stat-card">
-          <span class="material-symbols-outlined stat-icon">event</span>
-          <div class="stat-value" id="statWorkDays">0</div>
-          <div class="stat-label">工作天數</div>
-        </div>
-        <div class="stat-card">
-          <span class="material-symbols-outlined stat-icon">schedule</span>
-          <div class="stat-value" id="statOTHours">0</div>
-          <div class="stat-label">總加班時數</div>
-        </div>
-        <div class="stat-card">
-          <span class="material-symbols-outlined stat-icon">flight</span>
-          <div class="stat-value" id="statTravelDays">0</div>
-          <div class="stat-label">出差天數</div>
-        </div>
-        <div class="stat-card">
-          <span class="material-symbols-outlined stat-icon">payments</span>
-          <div class="stat-value" id="statTotalIncome">0</div>
-          <div class="stat-label">總收入</div>
-        </div>
-        <div class="stat-card">
-          <span class="material-symbols-outlined stat-icon">trending_up</span>
-          <div class="stat-value" id="statAvgDaily">0</div>
-          <div class="stat-label">平均日薪</div>
         </div>
       </div>
 
-      <!-- 圖表區 -->
-      <div class="card chart-card">
-        <h3>📈 月度加班趨勢</h3>
-        <canvas id="overtimeChart"></canvas>
+      <!-- 統計專欄區 (Grid 佈局) -->
+      <div class="stats-columns">
+
+        <!-- 天數專欄 -->
+        <div class="stat-column-card">
+          <div class="column-header">
+            <span class="material-symbols-outlined icon-blue">calendar_month</span>
+            <h3>天數統計</h3>
+          </div>
+          <div class="stat-list">
+            <div class="stat-item">
+              <span class="label">工作天數</span>
+              <span class="value" id="statWorkDays">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="label">出差天數</span>
+              <span class="value" id="statTravelDays">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="label">平日加班</span>
+              <span class="value" id="statWeekdayDays">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="label">週末加班</span>
+              <span class="value" id="statWeekendDays">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 薪資專欄 -->
+        <div class="stat-column-card">
+          <div class="column-header">
+            <span class="material-symbols-outlined icon-green">payments</span>
+            <h3>薪資概況</h3>
+          </div>
+          <div class="stat-list">
+            <div class="stat-item">
+              <span class="label">平均日薪</span>
+              <span class="value" id="statAvgDaily">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="label">平均時薪</span>
+              <span class="value" id="statAvgHourly">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="label">平均月薪</span>
+              <span class="value" id="statAvgMonthly">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 收入專欄 -->
+        <div class="stat-column-card">
+          <div class="column-header">
+            <span class="material-symbols-outlined icon-orange">savings</span>
+            <h3>收入分析</h3>
+          </div>
+          <div class="stat-list">
+            <div class="stat-item">
+              <span class="label">總收入</span>
+              <span class="value highlight" id="statTotalIncome">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="label">本月收入</span>
+              <span class="value" id="statThisMonthIncome">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="label">加班總時數</span>
+              <span class="value" id="statOTHours">0</span>
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      <div class="card chart-card">
-        <h3>🥧 收入結構分析</h3>
-        <canvas id="incomeChart"></canvas>
+      <!-- 圖表區 (Grid 佈局) -->
+      <div class="chart-section">
+        <div class="chart-card">
+          <h3>月度加班趨勢</h3>
+          <div style="position: relative; height: 100%; width: 100%;">
+            <canvas id="overtimeChart"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h3>收入結構</h3>
+          <div style="position: relative; height: 100%; width: 100%;">
+            <canvas id="incomeChart"></canvas>
+          </div>
+        </div>
       </div>
 
     </div>
