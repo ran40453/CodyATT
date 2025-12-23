@@ -1544,11 +1544,11 @@
           // Leave: Dark Red
           cell.style.background = '#8B0000';
         } else if (travel > 0) {
-          // Travel: Sky Blue Shades (Lighter Palette)
-          if (ot >= 4) cell.style.background = '#7ed6f7';
-          else if (ot >= 2) cell.style.background = '#a1e3f9';
-          else if (ot > 0) cell.style.background = '#c4f0fb';
-          else cell.style.background = '#e7fdfd';
+          // Travel: Vibrant Blue Shades (Matching Settings Buttons)
+          if (ot >= 4) cell.style.background = '#004ea2';
+          else if (ot >= 2) cell.style.background = '#007AFF';
+          else if (ot > 0) cell.style.background = '#80bdff';
+          else cell.style.background = '#e0f0ff';
         } else if (ot >= 4) {
           // OT >= 4h: Even Darker Green
           cell.style.background = '#004d00';
@@ -1965,27 +1965,29 @@
         });
       }
 
+      const updateTravelUI = () => {
+        if (!travelBtn) return;
+        const isTraveling = newAddCardState.travel !== 'None';
+        const iconColor = isTraveling ? 'var(--color-primary)' : 'rgba(0,0,0,0.5)';
+        const bgColor = isTraveling ? 'rgba(0, 122, 255, 0.15)' : 'rgba(0,0,0,0.05)';
+        travelBtn.style.background = bgColor;
+
+        let badgeHtml = '';
+        if (isTraveling) {
+          const shortCode = getCountryAbbr(newAddCardState.travel);
+          badgeHtml = `<span style="position:absolute; bottom:2px; right:2px; font-size:8px; font-weight:800; color:var(--color-primary); background:white; padding:1px 2px; border-radius:3px; line-height:1;">${shortCode}</span>`;
+        }
+        travelBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 24px; color: ${iconColor}">flight</span>${badgeHtml}`;
+      };
+
       // Travel 按鈕 logic
       if (travelBtn) {
-        const updateTravelUI = () => {
-          const isTraveling = newAddCardState.travel !== 'None';
-          const iconColor = isTraveling ? 'var(--color-primary)' : 'rgba(0,0,0,0.5)';
-          const bgColor = isTraveling ? 'rgba(0, 122, 255, 0.15)' : 'rgba(0,0,0,0.05)';
-          travelBtn.style.background = bgColor;
-
-          let badgeHtml = '';
-          if (isTraveling) {
-            const shortCode = { 'Vietnam': 'VN', 'China': 'CN', 'India': 'IN' }[newAddCardState.travel] || '';
-            badgeHtml = `<span style="position:absolute; bottom:2px; right:2px; font-size:8px; font-weight:800; color:var(--color-primary); background:white; padding:1px 2px; border-radius:3px; line-height:1;">${shortCode}</span>`;
-          }
-          travelBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 24px; color: ${iconColor}">flight</span>${badgeHtml}`;
-        };
 
         let dragState = null;
-        const travels = ['None', 'Vietnam', 'China', 'India'];
 
         travelBtn.addEventListener('mousedown', (e) => {
-          dragState = { startY: e.clientY, moved: false };
+          const travels = ['None', ...Object.keys(getTravelRates())];
+          dragState = { startY: e.clientY, moved: false, travels };
           travelBtn.classList.add('active');
         });
 
@@ -1994,6 +1996,7 @@
           const delta = dragState.startY - e.clientY;
           if (Math.abs(delta) > 10) dragState.moved = true;
           if (Math.abs(delta) > 40) {
+            const travels = dragState.travels;
             const curr = travels.indexOf(newAddCardState.travel);
             const next = delta > 0 ? (curr + 1) % travels.length
               : (curr - 1 + travels.length) % travels.length;
@@ -2001,9 +2004,10 @@
             updateTravelUI();
             dragState.startY = e.clientY;
           }
-        }
+        };
         const onUp = () => {
           if (dragState) {
+            const travels = dragState.travels;
             if (!dragState.moved) {
               const curr = travels.indexOf(newAddCardState.travel);
               const next = (curr + 1) % travels.length;
@@ -2015,8 +2019,9 @@
           }
           document.removeEventListener('mousemove', onMove);
           document.removeEventListener('mouseup', onUp);
-        }
+        };
         travelBtn.addEventListener('mousedown', () => {
+          // Note: mousedown is also handled above to init travels list
           document.addEventListener('mousemove', onMove);
           document.addEventListener('mouseup', onUp);
         });
@@ -2176,7 +2181,7 @@
           const isLeave = newAddCardState.isLeave || false;
           const res = isLeave
             ? { v134: 0, v167: 0, v166: 0, v267: 0, total: 0 }
-            : calculateOvertime(newAddCardState.hour, newAddCardState.minute, newAddCardState.date, isHoliday);
+            : calculateOvertime(newAddCardState.hour, newAddCardState.minute, newAddCardState.date, newAddCardState.isHoliday);
 
           const newEntry = {
             date: newAddCardState.date,
@@ -2206,21 +2211,25 @@
           }
           if (hourBtn) hourBtn.textContent = '17';
           if (minBtn) minBtn.textContent = '30';
-          if (travelBtn) travelBtn.textContent = 'VN';
+
           const leaveToggleBtn = document.getElementById('newLeaveToggle');
           if (leaveToggleBtn) {
             leaveToggleBtn.classList.remove('on');
             const icon = leaveToggleBtn.querySelector('.material-symbols-outlined');
-            if (icon) icon.style.color = 'rgba(0,0,0,0.5)';
+            if (icon) {
+              icon.textContent = 'person';
+              icon.style.color = 'rgba(0,0,0,0.5)';
+            }
           }
           if (holidayToggleBtn) {
             holidayToggleBtn.classList.remove('on');
             const icon = holidayToggleBtn.querySelector('.material-symbols-outlined');
-            if (icon) icon.style.color = 'rgba(0,0,0,0.5)';
+            if (icon) {
+              icon.textContent = 'event_busy';
+              icon.style.color = 'rgba(0,0,0,0.5)';
+            }
           }
-          if (travelBtn) {
-            travelBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 20px;">flight</span>';
-          }
+          updateTravelUI();
 
           showNotification('✅ 已新增一筆資料');
         });
