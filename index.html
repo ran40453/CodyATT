@@ -8,6 +8,7 @@
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
   <script id="init-payload" type="application/json"><?!= INIT_DATA_JSON || '{"data":[]}' ?></script>
   <script>
     // 版本標籤（防止本地環境報錯）
@@ -110,27 +111,45 @@
         </div>
 
 
-        <!-- 輸入設定卡片 (可收合) -->
-        <div class="card settings-card" id="settingsCard">
-          <div class="card-header" onclick="toggleSettingsCard()"
+        <!-- 系統工具卡片 (Prominent Buttons, Collapsible) -->
+        <div class="card toolbox-card" id="toolboxCard"
+          style="background: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.2)); border: 1px solid rgba(255,255,255,0.3);">
+          <div class="card-header" onclick="toggleToolboxCard()"
             style="padding: 16px 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin: 0; text-align: left;">輸入設定</h3>
-            <span class="material-symbols-outlined card-expand-icon" id="settingsExpandIcon">expand_more</span>
-          </div>
-          <div class="expand-wrapper" id="settingsBody">
-            <div class="expand-inner">
-              <label>薪資設定</label>
-              <button onclick="openSalaryModal()" class="icon-button"
-                style="width: 100%; border-radius: 12px; margin: 8px 0; gap: 8px;">
-                <span class="material-symbols-outlined">payments</span>
-                <span>薪資調整明細</span>
+            <h3 style="margin: 0;">系統工具</h3>
+            <div style="display: flex; gap: 8px; align-items: center;" onclick="event.stopPropagation()">
+              <label style="font-size: 0.8rem; opacity: 0.7;">匯率</label>
+              <input type="number" id="usdRate" value="30.9"
+                style="width: 60px; height: 32px; font-size: 0.9rem; padding: 4px 8px;">
+              <button id="refreshRateOverviewBtn" class="icon-button"
+                style="width: 32px; height: 32px; margin: 0; padding: 0;" title="更新全部數據">
+                <span class="material-symbols-outlined" style="font-size: 18px;">refresh</span>
               </button>
-              <label>美元匯率</label>
-              <div style="display: flex; gap: 8px; align-items: center;">
-                <input type="number" id="usdRate" value="30.9" style="flex: 1;">
-                <button id="refreshRateOverviewBtn" class="icon-button" style="width: 44px; height: 44px; margin: 0;"
-                  title="更新匯率">
-                  <span class="material-symbols-outlined">refresh</span>
+            </div>
+            <span class="material-symbols-outlined card-expand-icon" id="toolboxExpandIcon">expand_less</span>
+          </div>
+          <div class="expand-wrapper open" id="toolboxBody">
+            <div class="expand-inner">
+              <div style="display: flex; flex-direction: column; gap: 12px; padding-top: 8px;">
+                <button onclick="openSalaryModal()" class="icon-button"
+                  style="width: 100%; height: 50px; border-radius: 16px; margin: 0; gap: 12px; background: linear-gradient(135deg, #007AFF, #0056b3); color: white; border: none; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,122,255,0.25);">
+                  <span class="material-symbols-outlined">payments</span>
+                  <span>薪資紀錄管理</span>
+                </button>
+                <button onclick="openTravelRateModal()" class="icon-button"
+                  style="width: 100%; height: 50px; border-radius: 16px; margin: 0; gap: 12px; background: linear-gradient(135deg, #007AFF, #0056b3); color: white; border: none; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,122,255,0.25);">
+                  <span class="material-symbols-outlined">flight_takeoff</span>
+                  <span>出差費率設定</span>
+                </button>
+                <button onclick="openLeaveManagementModal()" class="icon-button"
+                  style="width: 100%; height: 50px; border-radius: 16px; margin: 0; gap: 12px; background: linear-gradient(135deg, #007AFF, #0056b3); color: white; border: none; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,122,255,0.25);">
+                  <span class="material-symbols-outlined">event_available</span>
+                  <span>特休給假管理</span>
+                </button>
+                <button onclick="openRulesModal()" class="icon-button"
+                  style="width: 100%; height: 50px; border-radius: 16px; margin: 0; gap: 12px; background: linear-gradient(135deg, #007AFF, #0056b3); color: white; border: none; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,122,255,0.25);">
+                  <span class="material-symbols-outlined">calculate</span>
+                  <span>加班計算規則</span>
                 </button>
               </div>
             </div>
@@ -187,43 +206,20 @@
               <span class="material-symbols-outlined" style="font-size: 20px;">event_busy</span>
             </button>
           </div>
-          <div class="add-card-item">
+          <div class="add-card-item" id="newLeaveItem">
             <label>Leave</label>
-            <button type="button" id="newLeaveToggle" class="smart-stepper-add" title="切換請假狀態">
-              <span class="material-symbols-outlined">person</span>
-            </button>
-          </div>
-          <div class="add-card-item" id="leaveInfoRow" style="display:none; width: 100%; margin-top: 8px;">
-            <div style="display: flex; gap: 8px; width: 100%;">
-              <select id="newLeaveType" class="smart-stepper-add"
-                style="flex: 2; height: 38px; border-radius: 10px; font-size: 13px; padding: 0 8px;">
-                <option value="特休">特休</option>
-                <option value="事假">事假</option>
-                <option value="病假">病假</option>
-                <option value="公假">公假</option>
-                <option value="婚假">婚假</option>
-                <option value="公傷假">公傷假</option>
-                <option value="喪假">喪假</option>
-                <option value="有薪產假">有薪產假</option>
-                <option value="無薪產假">無薪產假</option>
-                <option value="補休">補休</option>
-                <option value="產檢假">產檢假</option>
-                <option value="陪產檢及陪產假">陪產檢及陪產假</option>
-                <option value="駐地休假">駐地休假</option>
-                <option value="生理假">生理假</option>
-                <option value="家庭照顧假">家庭照顧假</option>
-                <option value="住院病假">住院病假</option>
-                <option value="健檢假">健檢假</option>
-              </select>
-              <select id="newLeaveAmount" class="smart-stepper-add"
-                style="flex: 1; height: 38px; border-radius: 10px; font-size: 13px; padding: 0 8px;">
-                <option value="1">1.0 天</option>
-                <option value="0.5">0.5 天</option>
-                <option value="0.125">1 小時</option>
-                <option value="0.25">2 小時</option>
-                <option value="0.375">3 小時</option>
-                <option value="0.5">4 小時</option>
-              </select>
+            <div class="leave-capsule-unit" id="leaveCapsuleUnit">
+              <button type="button" id="newLeaveToggle" class="smart-stepper-add" title="切換請假狀態">
+                <span class="material-symbols-outlined">person</span>
+              </button>
+              <div class="expandable-wrapper" id="leaveInfoWrapper">
+                <div class="expandable-content" style="display: flex; align-items: center; height: 100%;">
+                  <div class="add-card-item" id="leaveInfoRow"
+                    style="flex-direction: row; gap: 8px; margin-top: 0; padding-top: 0; white-space: nowrap; min-width: 150px !important;">
+                    <!-- Capsules dynamically injected here -->
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <div class="add-card-item">
@@ -343,9 +339,9 @@
               <span class="label">出差補貼佔比</span>
               <span class="value" id="statTravelRatio">0%</span>
             </div>
-            <div class="stat-item">
-              <span class="label">加班貢獻度</span>
-              <span class="value" id="statOTImpact">0%</span>
+            <div class="stat-item highlight-alt" style="background: rgba(var(--color-primary-rgb), 0.1);">
+              <span class="label">平均年薪 (估算)</span>
+              <span class="value" id="statAvgAnnual">0</span>
             </div>
           </div>
         </div>
@@ -366,73 +362,230 @@
             <canvas id="incomeChart"></canvas>
           </div>
         </div>
+        <!-- Attendance Analysis (Merged Office & Travel) -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="material-symbols-outlined icon-blue">analytics</span>
+            <h3>月度出勤統計 (Office vs Travel)</h3>
+          </div>
+          <div class="chart-container" style="position: relative; height: 100%; width: 100%;">
+            <canvas id="attendanceChart"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h3>月度薪資趨勢</h3>
+          <div style="position: relative; height: 100%; width: 100%;">
+            <canvas id="salaryTrendChart"></canvas>
+          </div>
+        </div>
       </div>
 
     </div>
   </div>
   <!-- End of Analytics Tab -->
 
-  <!-- 薪資調整明細彈窗 (Modal) -->
+  <!-- 薪資紀錄彈窗 -->
   <div id="salaryModal" class="modal-overlay">
     <div class="modal-content glass-window">
       <div class="modal-header">
-        <h3>薪資調整明細</h3>
+        <h3>薪資紀錄管理</h3>
         <button class="icon-button close-btn" onclick="closeSalaryModal()">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
       <div class="modal-body">
         <section class="salary-section">
-          <h4
-            style="margin: 0 0 12px 0; color: var(--primary); font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
-            <span class="material-symbols-outlined">payments</span> 薪資紀錄
-          </h4>
-          <div id="salaryList" class="salary-record-list">
-            <!-- 紀錄將由 JS 動態生成 -->
-          </div>
+          <div id="salaryList" class="salary-record-list"></div>
           <button class="add-salary-btn" onclick="addSalaryRecord()">
             <span class="material-symbols-outlined">add</span>
             <span>新增調薪紀錄</span>
           </button>
         </section>
+        <div class="modal-footer">
+          <button class="icon-button" onclick="closeSalaryModal()" style="width: 100%; background: #666;">
+            <span>關閉視窗</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        <hr style="border: none; border-top: 1px solid rgba(0, 0, 0, 0.05); margin: 24px 0;">
-
+  <!-- 出差費率彈窗 -->
+  <div id="travelRateModal" class="modal-overlay">
+    <div class="modal-content glass-window">
+      <div class="modal-header">
+        <h3>出差費率設定 (USD)</h3>
+        <button class="icon-button close-btn" onclick="closeTravelRateModal()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
         <section class="travel-rate-section">
-          <h4
-            style="margin: 0 0 12px 0; color: var(--primary); font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
-            <span class="material-symbols-outlined">flight_takeoff</span> 出差費率設定 (USD)
-          </h4>
-          <div id="travelRateList" class="salary-record-list">
-            <!-- 費率將由 JS 動態生成 -->
-          </div>
+          <div id="travelRateList" class="salary-record-list"></div>
           <button class="add-salary-btn" onclick="addTravelRateRecord()">
             <span class="material-symbols-outlined">add</span>
             <span>新增出差地區</span>
           </button>
         </section>
-        <section class="salary-section" style="border-top: 1px solid #eee; padding-top: 16px;">
-          <h4
-            style="margin: 0 0 12px 0; color: var(--primary); font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
-            <span class="material-symbols-outlined">event_available</span> 特休管理
-          </h4>
-          <div style="background: rgba(0,122,255,0.05); padding: 12px; border-radius: 12px; margin-bottom: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <span style="font-size: 0.9rem; font-weight: 600;">核給總時數 (天)</span>
-              <input type="number" id="annualLeaveQuoata" value="5.25" step="0.125"
-                onchange="saveLeaveQuota(this.value)" style="width: 80px; text-align: right;">
-            </div>
-            <div id="leaveSummaryUI" style="font-size: 0.85rem; color: #666; line-height: 1.5;">
-              <!-- 由 JS 更新: 已請 3 天 / 剩餘 2.25 天 -->
-            </div>
-          </div>
-        </section>
-
-        <div class="modal-footer" style="padding: 16px 0 0 0; border-top: 1px solid #eee; margin-top: 16px;">
-          <button class="icon-button" onclick="closeSalaryModal()" style="width: 100%; background: #666;">
+        <div class="modal-footer">
+          <button class="icon-button" onclick="closeTravelRateModal()" style="width: 100%; background: #666;">
             <span>關閉視窗</span>
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 特休管理彈窗 -->
+  <div id="leaveManagementModal" class="modal-overlay">
+    <div class="modal-content glass-window">
+      <div class="modal-header">
+        <h3>特休給假管理</h3>
+        <button class="icon-button close-btn" onclick="closeLeaveManagementModal()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <section class="salary-section">
+          <div style="background: rgba(0,122,255,0.05); padding: 16px; border-radius: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <span style="font-weight: 600;">核給總時數 (天)</span>
+              <input type="number" id="annualLeaveQuoata" value="5.25" step="0.125"
+                onchange="saveLeaveQuota(this.value)" style="width: 100px; text-align: right;">
+            </div>
+            <div id="leaveSummaryUI" style="font-size: 0.9rem; color: #555; line-height: 1.6;"></div>
+          </div>
+        </section>
+        <div class="modal-footer">
+          <button class="icon-button" onclick="closeLeaveManagementModal()" style="width: 100%; background: #666;">
+            <span>關閉視窗</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 加班計算規則彈窗 -->
+  <div id="rulesModal" class="modal-overlay">
+    <div class="modal-content glass-window rules-modal-content">
+      <div class="modal-header">
+        <h3 style="display: flex; align-items: center; gap: 8px;">
+          <span class="material-symbols-outlined">calculate</span>
+          <span>加班計算規則</span>
+        </h3>
+        <button class="icon-button close-btn" onclick="closeRulesModal()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body no-scrollbar" style="max-height: 75vh; overflow-y: auto;">
+
+        <div class="rules-section">
+          <div class="rules-grid">
+            <!-- Weekdays -->
+            <div class="rule-card">
+              <div class="rule-card-header">
+                <div class="rule-icon-box blue">
+                  <span class="material-symbols-outlined">work</span>
+                </div>
+                <div>
+                  <h4>平日 (Weekdays)</h4>
+                  <p>17:30 起算</p>
+                </div>
+              </div>
+              <div class="rule-items">
+                <div class="rule-item">
+                  <span>前 2 小時 (First 2h)</span>
+                  <div class="multiplier-badge green" onclick="editMultiplier('weekday_134')" id="m_weekday_134">1.34x
+                  </div>
+                </div>
+                <div class="rule-item">
+                  <span>之後 (Thereafter)</span>
+                  <div class="multiplier-badge green" onclick="editMultiplier('weekday_167')" id="m_weekday_167">1.67x
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Rest Days -->
+            <div class="rule-card">
+              <div class="rule-card-header">
+                <div class="rule-icon-box purple">
+                  <span class="material-symbols-outlined">weekend</span>
+                </div>
+                <div>
+                  <h4>例假日 (Rest Days)</h4>
+                  <p>週末或休息日</p>
+                </div>
+              </div>
+              <div class="rule-items">
+                <div class="rule-item">
+                  <span>前 2 小時 (First 2h)</span>
+                  <div class="multiplier-badge green" onclick="editMultiplier('weekend_134')" id="m_weekend_134">1.34x
+                  </div>
+                </div>
+                <div class="rule-item">
+                  <span>3 - 8 小時</span>
+                  <div class="multiplier-badge green" onclick="editMultiplier('weekend_167')" id="m_weekend_167">1.67x
+                  </div>
+                </div>
+                <div class="rule-item">
+                  <span>9+ 小時</span>
+                  <div class="multiplier-badge green" onclick="editMultiplier('weekend_267')" id="m_weekend_267">2.67x
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Holidays -->
+            <div class="rule-card">
+              <div class="rule-card-header">
+                <div class="rule-icon-box amber">
+                  <span class="material-symbols-outlined">celebration</span>
+                </div>
+                <div>
+                  <h4>國定假日 (Holidays)</h4>
+                  <p>法定假日</p>
+                </div>
+              </div>
+              <div class="rule-items">
+                <div class="rule-item">
+                  <span>前 8 小時 (First 8h)</span>
+                  <div class="multiplier-badge green" onclick="editMultiplier('holiday_200')" id="m_holiday_200">2.00x
+                  </div>
+                </div>
+                <div class="rule-item">
+                  <span>之後 (Thereafter)</span>
+                  <div class="rate-link">
+                    <span class="material-symbols-outlined">arrow_outward</span>
+                    比照平日
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rules-section" style="margin-top: 24px;">
+          <div class="history-promo-card">
+            <div class="promo-header">
+              <span class="material-symbols-outlined history-icon">history</span>
+              <div>
+                <h5>薪資調整溯源</h5>
+                <p>Calculations automatically use the monthly salary effective on the specific overtime date.</p>
+              </div>
+            </div>
+            <button class="promo-action-btn" onclick="closeRulesModal(); openSalaryModal();">
+              查看或新增薪資紀錄
+              <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="icon-button" onclick="closeRulesModal()" style="width: 100%; background: #666;">
+          <span>關閉視窗</span>
+        </button>
       </div>
     </div>
   </div>

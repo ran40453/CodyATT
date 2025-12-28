@@ -4,6 +4,7 @@
   let newRowTravelEnabled = true;
   let selectedMonth = null;
   let charts = {};
+  let chartsInitialized = false;
   let availableMonths = [];
 
   ; (function (global) {
@@ -11,16 +12,68 @@
     if (!global || !global.document) {
       return;
     }
-    global.__BUILD_TAG__ = '2025-12-21-v2-FIXED';
+    global.__BUILD_TAG__ = '2025-12-28-v2';
     console.log('[OT] BUILD', global.__BUILD_TAG__);
 
     // 變數已移至全域
+    // --- Helper Functions ---
+    function safeParseFloat(val) {
+      if (val === undefined || val === null || val === '') return 0;
+      if (typeof val === 'number') return val;
+      // 移除逗號後再轉換
+      const clean = val.toString().replace(/,/g, '');
+      return parseFloat(clean) || 0;
+    }
+
+    // iOS Safari 兼容的日期解析 (YYYY/MM/DD 或 YYYY-MM-DD)
+    function parseDateSafe(dateStr) {
+      if (!dateStr) return new Date();
+      if (dateStr instanceof Date) return dateStr;
+      let s = String(dateStr).trim();
+      if (s.indexOf('T') !== -1) return new Date(s);
+      // 將 - 替換為 / 是 iOS Safari 最保險的做法
+      return new Date(s.replace(/-/g, '/'));
+    }
+
+    // 強化版本 localStorage 存取 (避免 GAS iframe 或無痕模式失效)
+    const storage = {
+      get: (key) => {
+        try {
+          return localStorage.getItem(key);
+        } catch (e) {
+          console.warn(`[OT] localStorage.get(${key}) failed:`, e);
+          return null;
+        }
+      },
+      set: (key, val) => {
+        try {
+          localStorage.setItem(key, val);
+          return true;
+        } catch (e) {
+          console.warn(`[OT] localStorage.set(${key}) failed:`, e);
+          return false;
+        }
+      }
+    };
 
     function getWeekdayChar(dateStr) {
-      const date = new Date(dateStr);
+      const date = parseDateSafe(dateStr);
       const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
       return weekdays[date.getDay()];
     }
+
+    function debounce(func, wait) {
+      let timeout;
+      return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+      };
+    }
+
+    const debouncedUpdateAnalytics = debounce(() => {
+      updateCharts();
+      updateAnalyticsStats();
+    }, 300);
 
     function formatDateYYYYMMDD(d) {
       const yyyy = d.getFullYear();
@@ -33,11 +86,11 @@
     function getTravelUsdByCountry(country) {
       if (!country || country === 'None') return 0;
       const rates = getTravelRates();
-      return parseFloat(rates[country]) || 40; // Default to 40 if not found
+      return safeParseFloat(rates[country]) || 40; // Default to 40 if not found
     }
 
     function getTravelRates() {
-      const stored = localStorage.getItem('travelRates');
+      const stored = storage.get('travelRates');
       if (stored) return JSON.parse(stored);
 
       // Default initial rates (China: 250 HKD -> ~32 USD)
@@ -46,12 +99,12 @@
         'China': 32.05,
         'India': 75
       };
-      localStorage.setItem('travelRates', JSON.stringify(defaults));
+      storage.set('travelRates', JSON.stringify(defaults));
       return defaults;
     }
 
     function saveTravelRates(rates) {
-      localStorage.setItem('travelRates', JSON.stringify(rates));
+      storage.set('travelRates', JSON.stringify(rates));
       updateAll();
     }
 
@@ -66,17 +119,22 @@
     // 更新: 重新計算所有資料，並重新渲染
     function updateAll(openIndex = null, skipRender = false) {
       try {
-        let salaryHistory = JSON.parse(localStorage.getItem('salaryHistory') || '[]');
+        let salaryHistory = [];
+        try {
+          const stored = storage.get('salaryHistory');
+          salaryHistory = JSON.parse(stored || '[]');
+        } catch (e) { salaryHistory = []; }
+
         if (salaryHistory.length === 0) {
           salaryHistory = [{ date: '2000-01', amount: 68000 }];
         }
         salaryHistory.sort((a, b) => b.date.localeCompare(a.date)); // Descending
 
-        const rate = parseFloat(document.getElementById('usdRate')?.value) || 32.5;
+        const rate = safeParseFloat(document.getElementById('usdRate')?.value) || 32.5;
         // const travelUsdPerDay = getTravelUsdByCountry(); // 不再使用全域設定
 
         // 1. 先按日期「由舊到新」排序，確保累加計算 (accum) 正確
-        tableData.sort((a, b) => new Date(a.date) - new Date(b.date));
+        tableData.sort((a, b) => parseDateSafe(a.date) - parseDateSafe(b.date));
 
         let accum = 0;
         const monthTravelSums = {}; // key: 'YYYY-MM' -> 該月 Travel 加總
@@ -84,11 +142,34 @@
 
         // 由前端依 salary / rate / travel 設定重新計算
         tableData.forEach((entry) => {
+          const date = parseDateSafe(entry.date);
+          const isWeekend = (date.getDay() === 0 || date.getDay() === 6);
+          const isHoliday = !!entry.isHoliday;
+
+          const mults = getOTMultipliers();
+          let m134 = mults.weekday_134;
+          let m167 = mults.weekday_167;
+          let m166 = mults.holiday_200; // Holiday base bucket
+          let m267 = mults.weekend_267; // Default for 9h+ if weekend? (logic below overrides)
+
+          if (isWeekend && !isHoliday) {
+            // Saturday/Sunday: Base (1.0) is already in monthly salary. 
+            // We use the configured weekend multipliers
+            m134 = mults.weekend_134 - 1.0; // i.e. 1.34 - 1.0 = 0.34
+            m167 = mults.weekend_167 - 1.0; // i.e. 1.67 - 1.0 = 0.67
+            m267 = mults.weekend_267; // 9h+ (no base usually)
+          } else if (isHoliday) {
+            // Holiday rules
+            m166 = mults.holiday_200 - 1.0; // i.e. 2.0 - 1.0 = 1.0
+            m134 = mults.weekday_134;
+            m167 = mults.weekday_167;
+          }
+
           const otSum =
-            (Number(entry.v167) || 0) * 1.67 +
-            (Number(entry.v134) || 0) * 1.34 +
-            (Number(entry.v166) || 0) * 2.0 +  // Changed: v166 is now 2.0x (Holiday)
-            (Number(entry.v267) || 0) * 2.67;
+            (safeParseFloat(entry.v167) || 0) * m167 +
+            (safeParseFloat(entry.v134) || 0) * m134 +
+            (safeParseFloat(entry.v166) || 0) * m166 +
+            (safeParseFloat(entry.v267) || 0) * m267;
 
           // 資料遷移：舊資料 travelEnabled=true 轉為 Vietnam，false 轉為 None
           if (!entry.travelCountry) {
@@ -101,14 +182,14 @@
             entry.leaveType = '特休';
             entry.leaveAmount = 1;
           }
-          const otHours = (parseFloat(entry.v167) || 0) + (parseFloat(entry.v134) || 0) + (parseFloat(entry.v166) || 0) + (parseFloat(entry.v267) || 0);
+          const otHours = (safeParseFloat(entry.v167) || 0) + (safeParseFloat(entry.v134) || 0) + (safeParseFloat(entry.v166) || 0) + (safeParseFloat(entry.v267) || 0);
 
           // Find applicable salary from history
           const entryMonth = entry.date ? entry.date.slice(0, 7) : '0000-00';
           const applicable = salaryHistory.find(h => h.date <= entryMonth) || salaryHistory[salaryHistory.length - 1];
-          const salary = applicable ? parseFloat(applicable.amount) : 68000;
+          const salary = applicable ? safeParseFloat(applicable.amount) : 68000;
 
-          const base = isLeave ? 0 : (salary / 30);
+          const base = (isLeave && entry.leaveType !== '特休') ? 0 : (salary / 30);
           const travelUsd = isLeave ? 0 : getTravelUsdByCountry(entry.travelCountry);
           const travel = travelUsd * rate;
           const otSalary = isLeave ? 0 : ((salary / 30 / 8) * otSum);
@@ -119,6 +200,7 @@
           entry.isLeave = isLeave; // Ensure boolean
           entry.otSum = (otSum || 0).toFixed(2);
           entry.otHours = (otHours || 0).toFixed(1);
+          entry.totalOtHoursNumeric = otHours; // Real number for display logic
           entry.base = (base || 0).toFixed(2);
           entry.travel = (travel || 0).toFixed(2);
           entry.otSalary = (otSalary || 0).toFixed(2);
@@ -142,7 +224,7 @@
             const otSalarySum = monthOtSalarySums[monthKey] || 0;
 
             const applicable = salaryHistory.find(h => h.date <= monthKey) || salaryHistory[salaryHistory.length - 1];
-            const salary = applicable ? parseFloat(applicable.amount) : 68000;
+            const salary = applicable ? safeParseFloat(applicable.amount) : 68000;
 
             entry.monthSLR = (salary + travelSum + otSalarySum).toFixed(0);
           }
@@ -150,8 +232,8 @@
 
         // 2. 計算完畢後，還原為「顯示用排序」：月份由新到舊，日期由舊到新 (Calendar Style)
         tableData.sort((a, b) => {
-          const dA = new Date(a.date);
-          const dB = new Date(b.date);
+          const dA = parseDateSafe(a.date);
+          const dB = parseDateSafe(b.date);
           const mA = dA.getFullYear() * 12 + dA.getMonth();
           const mB = dB.getFullYear() * 12 + dB.getMonth();
           if (mA !== mB) return mB - mA;
@@ -160,9 +242,10 @@
 
         if (!skipRender) {
           renderDataList(openIndex);
-        } else {
-          // 只更新表格內現有的數值，不重新渲染
           updateTableValues();
+          // Ensure charts and stats stay in sync
+          updateCharts();
+          updateAnalyticsStats();
         }
         // 更新全域 Month Header Chiplist
         if (global.updateMonthStatsDOM) {
@@ -170,6 +253,10 @@
         }
         updateDashboard();
         updateLeaveSummaryDOM();
+        debouncedUpdateAnalytics();
+
+        // [Audit Fix] Add local persistence fallback
+        storage.set('overtimeData', JSON.stringify(tableData));
       } catch (err) {
         console.error('[OT] updateAll 發生預期外錯誤:', err);
         showNotification('❌ 計算更新失敗，請檢查資料格式', true);
@@ -216,8 +303,7 @@
       let latest = null;
       tableData.forEach((entry) => {
         if (!entry.date) return;
-        const d = new Date(entry.date);
-        if (isNaN(d)) return;
+        const d = parseDateSafe(entry.date);
         if (!latest || d > latest) {
           latest = d;
         }
@@ -228,18 +314,18 @@
         return;
       }
 
-      // 從最新日期的下一天開始補到今天（含）
-      const startDate = new Date(latest.getFullYear(), latest.getMonth(), latest.getDate() + 1);
+      const latestDateStr = formatDateYYYYMMDD(latest); // Corrected this line
+      const latestDateObj = parseDateSafe(latestDateStr);
+      const startDate = new Date(latestDateObj.getFullYear(), latestDateObj.getMonth(), latestDateObj.getDate() + 1);
       const today = new Date();
       const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      let added = 0; // Initialize added counter
+      const addedDates = []; // Initialize addedDates array
 
       if (startDate > todayDateOnly) {
         showNotification('✅ 目前已補滿至今日，沒有新增資料');
         return;
       }
-
-      let added = 0;
-      const addedDates = [];
 
       for (let d = new Date(startDate); d <= todayDateOnly; d.setDate(d.getDate() + 1)) {
         const dateStr = formatDateYYYYMMDD(d);
@@ -311,12 +397,111 @@
 
     // 調整 OT 數值（不重新渲染表格，只更新數值）
     function adjustOTValue(entry, key, delta) {
+      if (key === 'vH' || key === 'vM') {
+        const timeStr = entry.endTime || '17:30';
+        let [h, m] = timeStr.split(':').map(Number);
+        if (key === 'vH') {
+          h = (h + delta + 24) % 24;
+        } else {
+          m = (m + delta * 10 + 60) % 60; // 10 min steps
+        }
+        entry.endTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+
+        // Recalculate buckets
+        const res = calculateOvertime(h, m, entry.date, entry.isHoliday);
+        entry.v134 = res.v134;
+        entry.v167 = res.v167;
+        entry.v267 = res.v267;
+        entry.v166 = res.v166;
+        entry.totalOtHoursNumeric = res.total;
+
+        updateAll(null, true);
+        return;
+      }
       const newVal = Math.max(0, (entry[key] || 0) + delta);
       entry[key] = newVal;
 
       // 只更新該列的數值和計算結果，不重新渲染整個表格
       updateAll(null, true); // 傳入 skipRender=true
     }
+
+    // --- Rules Modal Logic ---
+    function getOTMultipliers() {
+      const stored = storage.get('otMultipliers');
+      const defaults = {
+        weekday_134: 1.34,
+        weekday_167: 1.67,
+        weekend_134: 1.34,
+        weekend_167: 1.67,
+        weekend_267: 2.67,
+        holiday_200: 2.00
+      };
+      if (!stored) return defaults;
+      try {
+        return { ...defaults, ...JSON.parse(stored) };
+      } catch (e) {
+        return defaults;
+      }
+    }
+
+    function editMultiplier(key) {
+      const mults = getOTMultipliers();
+      const current = mults[key];
+      const newVal = prompt(`請輸入新的倍率 (目前: ${current}x):`, current);
+
+      if (newVal !== null) {
+        const floatVal = parseFloat(newVal);
+        if (isNaN(floatVal)) {
+          showNotification('❌ 請輸入有效的數字', true);
+          return;
+        }
+        mults[key] = floatVal;
+        storage.set('otMultipliers', JSON.stringify(mults));
+        renderMultiplierRules();
+        updateAll();
+        showNotification('✅ 倍率已更新並儲存');
+      }
+    }
+
+    function renderMultiplierRules() {
+      const mults = getOTMultipliers();
+      const mapping = {
+        'weekday_134': 'm_weekday_134',
+        'weekday_167': 'm_weekday_167',
+        'weekend_134': 'm_weekend_134',
+        'weekend_167': 'm_weekend_167',
+        'weekend_267': 'm_weekend_267',
+        'holiday_200': 'm_holiday_200'
+      };
+
+      for (const [key, id] of Object.entries(mapping)) {
+        const el = document.getElementById(id);
+        if (el) {
+          el.textContent = `${mults[key].toFixed(2)}x`;
+        }
+      }
+    }
+
+    function openRulesModal() {
+      const modal = document.getElementById('rulesModal');
+      if (modal) {
+        renderMultiplierRules();
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    function closeRulesModal() {
+      const modal = document.getElementById('rulesModal');
+      if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    }
+
+    global.openRulesModal = openRulesModal;
+    global.closeRulesModal = closeRulesModal;
+    global.editMultiplier = editMultiplier;
 
     // 數字翻牌動畫通用 helper（逐位數）
     function setAnimatedNumber(element, newValue) {
@@ -454,7 +639,7 @@
   * @param {boolean} isHoliday - Manually toggled National Holiday
   */
     function calculateOvertime(h, m, dateStr, isHoliday = false) {
-      const date = new Date(dateStr);
+      const date = parseDateSafe(dateStr);
       const isWeekend = (date.getDay() === 0 || date.getDay() === 6); // Sat or Sun
       const timeVal = h + (m / 60);
 
@@ -474,64 +659,40 @@
       // 8-10h: 1.34x -> Map to v134
       // 10h+: 1.67x -> Map to v167
 
+      const mults = getOTMultipliers();
+
       if (isHoliday) {
-        // National Holiday Logic
-        // Work duration? Assuming start time 8:00 like weekend? Or user inputs end time relative to what?
-        // Apps seems to assume inputs are "End Time" and work starts at standard times?
-        // Weekday offTime is 17:30. Weekend Start 8:00.
-        // For Holiday, let's assume it behaves like Weekend starting at 8:00?
-        // Or is it full day? Let's assume standard Weekend shift rules for start/break.
-
+        // ...規則與平日相同部分保持不變，但使用變量...
         let workDuration = 0;
-        const start = OT_RULES.weekend.startTime; // 8.0
-        const bStart = OT_RULES.weekend.breakStart; // 12.0
-        const bEnd = OT_RULES.weekend.breakEnd; // 13.5
+        const start = OT_RULES.weekend.startTime;
+        const bStart = OT_RULES.weekend.breakStart;
+        const bEnd = OT_RULES.weekend.breakEnd;
 
-        // Helper for duration
         if (timeVal <= start) workDuration = 0;
         else if (timeVal <= bStart) workDuration = timeVal - start;
         else if (timeVal <= bEnd) workDuration = bStart - start;
         else workDuration = (bStart - start) + (timeVal - bEnd);
 
         if (workDuration > 0) {
-          // First 8 hours -> 2.0x (v166 bucket)
           const v200Hours = Math.min(8, workDuration);
           const rem = Math.max(0, workDuration - 8);
-
-          // Next 2 hours (9-10) -> 1.34x (v134 bucket)
           const v134Hours = Math.min(2, rem);
-          const rem2 = Math.max(0, rem - 2);
-
-          // Rest -> 1.67x (v167 bucket)
-          const v167Hours = rem2;
-
-          // Note: The total hours sum might be useful, but for 'total' returned here user used simply sum of hours in previous code?
-          // "return { v134, v167, v267, total: (v134 + v167 + v267) };" -> This was sum of HOURS.
-          // Let's return sum of hours.
-          return { v134: v134Hours, v167: v167Hours, v166: v200Hours, v267: 0, total: workDuration };
+          const v167Hours = Math.max(0, rem - 2);
+          return { v134: v134Hours, v167: v167Hours, v166: v200Hours, v267: 0, total: (v134Hours + v167Hours + v200Hours) };
         }
         return { v134: 0, v167: 0, v166: 0, v267: 0, total: 0 };
 
       } else if (isWeekend) {
-        // Weekend (Sat/Sun): All work is OT (minus break)
         let workDuration = 0;
         const start = OT_RULES.weekend.startTime;
         const bStart = OT_RULES.weekend.breakStart;
         const bEnd = OT_RULES.weekend.breakEnd;
 
-        if (timeVal <= start) {
-          workDuration = 0;
-        } else if (timeVal <= bStart) {
-          workDuration = timeVal - start;
-        } else if (timeVal <= bEnd) {
-          // Left during break -> worked morning session
-          workDuration = bStart - start;
-        } else {
-          // Worked past break
-          workDuration = (bStart - start) + (timeVal - bEnd);
-        }
+        if (timeVal <= start) workDuration = 0;
+        else if (timeVal <= bStart) workDuration = timeVal - start;
+        else if (timeVal <= bEnd) workDuration = bStart - start;
+        else workDuration = (bStart - start) + (timeVal - bEnd);
 
-        // Rules: First 2h (1.34), Next 6h (1.67), Rest (2.67)
         if (workDuration > 0) {
           v134 = Math.min(2, workDuration);
           const rem1 = Math.max(0, workDuration - 2);
@@ -540,12 +701,11 @@
         }
         return { v134, v167, v267, v166: 0, total: workDuration };
       } else {
-        // Weekday: OT starts at 17:30
-        const otDuration = timeVal - OT_RULES.weekday.offTime;
+        let effectiveTime = timeVal;
+        if (effectiveTime < 6) effectiveTime += 24;
+        const otDuration = effectiveTime - OT_RULES.weekday.offTime;
         if (otDuration > 0) {
-          // First 2 hours = 1.34x
           v134 = Math.min(2, otDuration);
-          // Remaining = 1.67x
           v167 = Math.max(0, otDuration - 2);
         }
         return { v134, v167, v267: 0, v166: 0, total: (v134 + v167) };
@@ -564,26 +724,30 @@
       }
 
       // Otherwise derive from OT hours
-      const date = new Date(entry.date);
+      const date = parseDateSafe(entry.date);
       const isWeekend = (date.getDay() === 0 || date.getDay() === 6);
-      const otSum = (entry.v134 || 0) + (entry.v167 || 0) + (entry.v267 || 0) + (entry.v166 || 0);
-      // Note: v166 is legacy? Treating as v167 bucket sum for reverse
+      const isHoliday = !!entry.isHoliday;
+      const otSum = (safeParseFloat(entry.v134) || 0) + (safeParseFloat(entry.v167) || 0) + (safeParseFloat(entry.v267) || 0) + (safeParseFloat(entry.v166) || 0);
 
       let timeVal = 0;
 
-      if (!isWeekend) {
-        // Weekday: 17.5 + OT
-        timeVal = OT_RULES.weekday.offTime + otSum;
-      } else {
-        // Weekend: Reverse the buckets
-        // Work = OT Sum
-        // If Work <= 4 (Morning only): Time = 8 + Work
-        // If Work > 4: Time = 13.5 + (Work - 4)
+      if (isHoliday || isWeekend) {
+        // Holiday or Weekend: Reverse work duration
+        // For Holidays, otSum includes the first 8h. For Weekends, it depends on start time.
+        // Actually, let's treat BOTH as 8:00 start + sum of hours (including break if > 4h)
         if (otSum <= 4) {
           timeVal = OT_RULES.weekend.startTime + otSum;
         } else {
           timeVal = OT_RULES.weekend.breakEnd + (otSum - 4);
         }
+      } else {
+        // Normal Weekday: 17.5 + OT
+        timeVal = OT_RULES.weekday.offTime + otSum;
+      }
+
+      // If timeVal >= 24, it means it's next day morning
+      if (timeVal >= 24) {
+        // We still return the absolute hour, snapping logic will handle display
       }
 
       // Convert decimal to H:M (Round to nearest 10m)
@@ -594,14 +758,81 @@
       m = Math.round(m / 10) * 10;
       if (m === 60) { h++; m = 0; }
 
-      // Fix edges
-      if (h >= 24) h = 23;
-
+      // Fix edges: Allow up to 30.0 (6 AM) for internal tracking, but usually h % 24 for display
+      h = h % 24;
       return { h, m };
     }
 
+    function renderCapsuleSelector(options, currentValue, onSelect) {
+      const container = document.createElement('div');
+      container.className = 'capsule-container';
+
+      const toggle = document.createElement('button');
+      toggle.className = 'capsule-toggle';
+      toggle.textContent = currentValue || '請選擇';
+      container.appendChild(toggle);
+
+      const popup = document.createElement('div');
+      popup.className = 'capsule-popup';
+
+      options.forEach(opt => {
+        const optionEl = document.createElement('div');
+        optionEl.className = 'capsule-option';
+        const isSelected = (opt.value === currentValue || opt === currentValue);
+        if (isSelected) optionEl.classList.add('selected');
+        optionEl.textContent = opt.label || opt;
+        optionEl.onclick = (e) => {
+          e.stopPropagation();
+          onSelect(opt.value || opt);
+          toggle.textContent = opt.label || opt;
+          popup.classList.remove('open');
+          toggle.classList.remove('active');
+        };
+        popup.appendChild(optionEl);
+      });
+      container.appendChild(popup);
+
+      toggle.onclick = (e) => {
+        e.stopPropagation();
+        const isOpen = popup.classList.contains('open');
+
+        // Close other open popups
+        document.querySelectorAll('.capsule-popup.open').forEach(p => {
+          if (p !== popup) {
+            p.classList.remove('open');
+            p.previousElementSibling.classList.remove('active');
+          }
+        });
+
+        popup.classList.toggle('open');
+        toggle.classList.toggle('active');
+
+        if (!isOpen) {
+          // Scroll selected into view after opening
+          setTimeout(() => {
+            const selected = popup.querySelector('.capsule-option.selected');
+            if (selected) {
+              selected.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+            }
+          }, 50);
+        }
+      };
+
+      // Close on outside click
+      const closeHandler = (e) => {
+        if (!container.contains(e.target)) {
+          popup.classList.remove('open');
+        }
+      };
+      document.addEventListener('click', closeHandler);
+
+      return container;
+    }
+
     // 渲染資料列表 (Material Design 3 Card List with Calendar View & Month Grouping)
-    function renderDataList(openIndex = null) {
+    let openCardId = null;
+    function renderDataList(targetId = null) {
+      if (targetId) openCardId = targetId;
       const container = document.getElementById('tableContainer');
       container.innerHTML = '';
 
@@ -669,8 +900,8 @@
         e.originalIndex = idx;
         return e;
       }).sort((a, b) => {
-        const dA = new Date(a.date);
-        const dB = new Date(b.date);
+        const dA = parseDateSafe(a.date);
+        const dB = parseDateSafe(b.date);
         const monthA = dA.getFullYear() * 12 + dA.getMonth();
         const monthB = dB.getFullYear() * 12 + dB.getMonth();
         if (monthA !== monthB) return monthB - monthA; // 月份由新到舊
@@ -684,7 +915,7 @@
       const monthlyTravelMap = {}; // New: Trave summary
       const monthSalaryMap = {};
       tableData.forEach(entry => {
-        const d = new Date(entry.date);
+        const d = parseDateSafe(entry.date);
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 
         if (!monthlyOTMap[key]) monthlyOTMap[key] = 0;
@@ -704,7 +935,7 @@
       sortedEntries.forEach((entry, displayIdx) => {
         const index = entry.originalIndex;
         // Month Grouping Logic
-        const dateObj = new Date(entry.date);
+        const dateObj = parseDateSafe(entry.date);
         const currentMonthKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
 
         if (currentMonthKey !== lastMonthKey) {
@@ -713,8 +944,8 @@
           // monthHeader.classList.add('expand-wrapper'); // REMOVED: Headers should not be expand-wrappers themselves
           // Add data key for real-time updates
           monthHeader.dataset.monthKey = currentMonthKey;
-          // Default open for first month
-          if (index === 0) monthHeader.classList.add('open');
+          const isFirstMonth = (lastMonthKey === '');
+          if (isFirstMonth) monthHeader.classList.add('open');
           monthHeader.style.cursor = 'pointer'; // Clickable
           monthHeader.title = "Click to toggle month view";
 
@@ -737,7 +968,7 @@
           // 3. Contribution Calendar (Mini-grid)
           const monthEntries = tableData.filter(e => {
             if (!e.date) return false;
-            const d = new Date(e.date);
+            const d = parseDateSafe(e.date);
             const mKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
             return mKey === currentMonthKey;
           });
@@ -787,8 +1018,8 @@
 
           // Create Group Container (Wrapper)
           const thisMonthGroup = document.createElement('div');
-          thisMonthGroup.classList.add('month-group', 'expand-wrapper', 'open'); // Default open class
-          // thisMonthGroup.style.display = 'contents'; // REMOVED contents to allow animation
+          thisMonthGroup.classList.add('month-group', 'expand-wrapper');
+          if (isFirstMonth) thisMonthGroup.classList.add('open');
           container.appendChild(thisMonthGroup);
 
           // Create Inner Grid/Content Container
@@ -806,13 +1037,16 @@
             const isOpen = thisMonthGroup.classList.contains('open');
             expandIcon.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
           });
+          // Set initial rotation
+          expandIcon.style.transform = isFirstMonth ? 'rotate(0deg)' : 'rotate(-90deg)';
 
           lastMonthKey = currentMonthKey;
         }
 
         const card = document.createElement('div');
         card.classList.add('data-card');
-        if (openIndex === index) card.classList.add('expanded');
+        const cardUniqueId = entry.__id || entry.date;
+        if (openCardId === cardUniqueId) card.classList.add('expanded');
 
         // Desktop Calendar Alignment
         if (window.innerWidth >= 1024) {
@@ -851,18 +1085,19 @@
         dateWrapper.appendChild(dateWeekday);
 
         // OT Scoreboard Badge
-        const otTotal = (entry.v167 + entry.v134 + entry.v166 + entry.v267);
-        const val = Math.round(otTotal); // Integer only
+        const otTotal = entry.totalOtHoursNumeric || (Number(entry.v167 || 0) + Number(entry.v134 || 0) + Number(entry.v166 || 0) + Number(entry.v267 || 0));
+        const val = otTotal.toFixed(1); // One decimal precision
 
         const scoreboard = document.createElement('div');
         scoreboard.classList.add('scoreboard-badge');
 
         // Color Logic
-        if (val === 2) scoreboard.classList.add('green');
-        else if (val === 3) scoreboard.classList.add('yellow');
-        else if (val === 4) scoreboard.classList.add('orange');
-        else if (val === 5) scoreboard.classList.add('red');
-        else if (val >= 6) scoreboard.classList.add('purple');
+        const numericVal = parseFloat(val);
+        if (numericVal >= 2 && numericVal < 3) scoreboard.classList.add('green');
+        else if (numericVal >= 3 && numericVal < 4) scoreboard.classList.add('yellow');
+        else if (numericVal >= 4 && numericVal < 5) scoreboard.classList.add('orange');
+        else if (numericVal >= 5 && numericVal < 6) scoreboard.classList.add('red');
+        else if (numericVal >= 6) scoreboard.classList.add('purple');
 
         scoreboard.textContent = val;
 
@@ -909,7 +1144,7 @@
         // --- Body (Collapsible Wrapper) ---
         const bodyWrapper = document.createElement('div');
         bodyWrapper.className = 'expand-wrapper';
-        if (openIndex === index) bodyWrapper.classList.add('open');
+        if (openCardId === entry.date) bodyWrapper.classList.add('open');
 
         const body = document.createElement('div');
         body.classList.add('card-body', 'expand-inner');
@@ -940,26 +1175,28 @@
           entry.v167 = res.v167;
           entry.v267 = res.v267;
           entry.v166 = res.v166; // Update v166 for holiday
+          entry.totalOtHoursNumeric = res.total; // Consistent with Scoreboard
 
           // Update Local Card UI (Badge & Chips)
           // Scoreboard
           const otTotal = res.total;
-          const val = Math.round(otTotal);
+          const val = otTotal.toFixed(1);
           if (scoreboard) {
             scoreboard.textContent = val;
             scoreboard.className = 'scoreboard-badge'; // Reset
-            if (val === 2) scoreboard.classList.add('green');
-            else if (val === 3) scoreboard.classList.add('yellow');
-            else if (val === 4) scoreboard.classList.add('orange');
-            else if (val === 5) scoreboard.classList.add('red');
-            else if (val >= 6) scoreboard.classList.add('purple');
+            const numericVal = parseFloat(val);
+            if (numericVal >= 2 && numericVal < 3) scoreboard.classList.add('green');
+            else if (numericVal >= 3 && numericVal < 4) scoreboard.classList.add('yellow');
+            else if (numericVal >= 4 && numericVal < 5) scoreboard.classList.add('orange');
+            else if (numericVal >= 5 && numericVal < 6) scoreboard.classList.add('red');
+            else if (numericVal >= 6) scoreboard.classList.add('purple');
           }
 
           /* 
              Fix: Call updateAll with skipRender=true to prevent destroying the DOM 
              and causing the card to "collapse" (reset to closed state).
           */
-          updateAll(null, true);
+          updateAll(entry.date, true);
 
           // Daily Total Chip
           const dailyChip = document.getElementById(`chip-daily-${index}`);
@@ -978,36 +1215,13 @@
 
         const hourStepper = document.createElement('div');
         hourStepper.classList.add('smart-stepper');
+        hourStepper.dataset.entryIndex = index;
+        hourStepper.dataset.key = 'vH'; // For internal tracking if needed
         if (currH >= 0) hourStepper.classList.add('has-value'); // Always true
         hourStepper.textContent = String(currH).padStart(2, '0');
 
-        // Hour Events
-        let hDrag = null;
-        const startHDrag = (y) => {
-          hDrag = { startY: y, startVal: currH };
-          hourStepper.classList.add('active');
-        };
-        const moveHDrag = (y) => {
-          if (!hDrag) return;
-          const delta = Math.floor((hDrag.startY - y) / 10); // 10px per step
-          let newVal = (hDrag.startVal + delta) % 24;
-          if (newVal < 0) newVal += 24;
-
-          if (newVal !== currH) {
-            currH = newVal;
-            hourStepper.textContent = String(currH).padStart(2, '0');
-            updateTimeCalc();
-          }
-        };
-        const endHDrag = () => {
-          if (hDrag) {
-            hourStepper.classList.remove('active');
-            hDrag = null;
-          }
-        };
-
-        hourStepper.addEventListener('mousedown', e => { e.stopPropagation(); startHDrag(e.clientY); e.preventDefault(); });
-        hourStepper.addEventListener('touchstart', e => { e.stopPropagation(); startHDrag(e.touches[0].clientY); e.preventDefault(); });
+        hourStepper.addEventListener('mousedown', e => { /* Let global delegation handle it */ });
+        hourStepper.addEventListener('touchstart', e => { /* Let global delegation handle it */ });
 
         // --- Minute Stepper ---
         const minItem = document.createElement('div');
@@ -1019,37 +1233,13 @@
 
         const minStepper = document.createElement('div');
         minStepper.classList.add('smart-stepper');
+        minStepper.dataset.entryIndex = index;
+        minStepper.dataset.key = 'vM';
         if (currM >= 0) minStepper.classList.add('has-value');
         minStepper.textContent = String(currM).padStart(2, '0');
 
-        // Minute Events (Step = 10)
-        let mDrag = null;
-        const startMDrag = (y) => {
-          mDrag = { startY: y, startVal: currM };
-          minStepper.classList.add('active');
-        };
-        const moveMDrag = (y) => {
-          if (!mDrag) return;
-          const steps = Math.floor((mDrag.startY - y) / 10);
-          // 1 step = 10 minutes
-          let newVal = (mDrag.startVal + (steps * 10)) % 60;
-          if (newVal < 0) newVal += 60;
-
-          if (newVal !== currM) {
-            currM = newVal;
-            minStepper.textContent = String(currM).padStart(2, '0');
-            updateTimeCalc();
-          }
-        };
-        const endMDrag = () => {
-          if (mDrag) {
-            minStepper.classList.remove('active');
-            mDrag = null;
-          }
-        };
-
-        minStepper.addEventListener('mousedown', e => { e.stopPropagation(); startMDrag(e.clientY); e.preventDefault(); });
-        minStepper.addEventListener('touchstart', e => { e.stopPropagation(); startMDrag(e.touches[0].clientY); e.preventDefault(); });
+        minStepper.addEventListener('mousedown', e => { /* Let global delegation handle it */ });
+        minStepper.addEventListener('touchstart', e => { /* Let global delegation handle it */ });
 
         // Global Move/Up listeners for this specific card
         // Note: Adding global listeners repeatedly for every card is bad perf?
@@ -1166,49 +1356,46 @@
         // Leave Details UI (inside footer or body?)
         // Let's create a dedicated section for leave details in the card body if isLeave is true
         if (entry.isLeave) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'expandable-wrapper expanded'; // Standard expanded state for existing records
+          const content = document.createElement('div');
+          content.className = 'expandable-content';
+
           const leaveDetail = document.createElement('div');
           leaveDetail.style.display = 'flex';
+          leaveDetail.style.flexDirection = 'column';
           leaveDetail.style.gap = '8px';
-          leaveDetail.style.marginTop = '8px';
+          leaveDetail.style.paddingTop = '8px';
           leaveDetail.style.width = '100%';
 
-          const typeSel = document.createElement('select');
           const types = [
             '特休', '事假', '病假', '公假', '婚假', '公傷假', '喪假',
             '有薪產假', '無薪產假', '補休', '產檢假', '陪產檢及陪產假',
             '駐地休假', '生理假', '家庭照顧假', '住院病假', '健檢假'
           ];
-          types.forEach(t => {
-            const opt = document.createElement('option');
-            opt.value = t; opt.textContent = t;
-            if (entry.leaveType === t) opt.selected = true;
-            typeSel.appendChild(opt);
-          });
-          typeSel.style.flex = '2'; typeSel.style.height = '32px'; typeSel.style.borderRadius = '8px'; typeSel.style.fontSize = '12px';
-          typeSel.onchange = (e) => {
-            entry.leaveType = e.target.value;
+          const typeSelector = renderCapsuleSelector(types, entry.leaveType, (val) => {
+            entry.leaveType = val;
             updateAll(index);
-          };
+          });
 
-          const amtSel = document.createElement('select');
           const amts = [
-            { v: 1, l: '1.0 天' }, { v: 0.5, l: '0.5 天' }, { v: 0.125, l: '1 小時' }, { v: 0.25, l: '2 小時' }, { v: 0.375, l: '3 小時' }, { v: 0.5, l: '4 小時' }
+            { value: 1, label: '1.0 天' }, { value: 0.5, label: '0.5 天' }, { value: 0.125, label: '1 小時' }, { value: 0.25, label: '2 小時' }, { value: 0.375, label: '3 小時' }, { value: 0.5, label: '4 小時' }
           ];
-          amts.forEach(a => {
-            const opt = document.createElement('option');
-            opt.value = a.v; opt.textContent = a.l;
-            if (entry.leaveAmount == a.v) opt.selected = true;
-            amtSel.appendChild(opt);
-          });
-          amtSel.style.flex = '1'; amtSel.style.height = '32px'; amtSel.style.borderRadius = '8px'; amtSel.style.fontSize = '12px';
-          amtSel.onchange = (e) => {
-            entry.leaveAmount = parseFloat(e.target.value);
+          const amtSelector = renderCapsuleSelector(amts, entry.leaveAmount, (val) => {
+            entry.leaveAmount = parseFloat(val);
             updateAll(index);
-          };
+          });
+          const amtToggle = amtSelector.querySelector('.capsule-toggle');
+          const currentAmt = amts.find(a => a.value == entry.leaveAmount);
+          if (amtToggle && currentAmt) amtToggle.textContent = currentAmt.label;
 
-          leaveDetail.appendChild(typeSel);
-          leaveDetail.appendChild(amtSel);
-          body.appendChild(leaveDetail);
+          leaveDetail.appendChild(typeSelector);
+          leaveDetail.appendChild(amtSelector);
+          content.appendChild(leaveDetail);
+          wrapper.appendChild(content);
+          body.appendChild(wrapper);
+
+          // Trigger expansion after append if it was just toggled (hard to detect here, but updateAll(index) handles it)
         }
 
         leaveBtn.addEventListener('click', (e) => {
@@ -1333,8 +1520,8 @@
 
         // Expansion Logic (Animation)
         header.addEventListener('click', () => {
-          if (openIndex === index) {
-            openIndex = -1;
+          if (openCardId === cardUniqueId) {
+            openCardId = null;
             bodyWrapper.classList.remove('open');
             card.classList.remove('expanded');
           } else {
@@ -1345,7 +1532,7 @@
               if (wrapper) wrapper.classList.remove('open');
             });
 
-            openIndex = index;
+            openCardId = cardUniqueId;
             bodyWrapper.classList.add('open');
             card.classList.add('expanded');
           }
@@ -1412,8 +1599,7 @@
       let latestDate = null;
       tableData.forEach((entry) => {
         if (!entry.date) return;
-        const d = new Date(entry.date);
-        if (isNaN(d)) return;
+        const d = parseDateSafe(entry.date);
         if (!latestDate || d > latestDate) {
           latestDate = d;
         }
@@ -1589,7 +1775,9 @@
       // Create a map of date -> { ot, travel, presence, leave }
       const statMap = {};
       monthEntries.forEach(e => {
-        const d = new Date(e.date).getDate();
+        // [Audit Fix] Robust date parsing (avoid timezone offset issues)
+        const dStr = e.date.split('-')[2];
+        const d = parseInt(dStr, 10);
         if (!statMap[d]) statMap[d] = { ot: 0, travel: 0, presence: 0, leave: 0 };
 
         statMap[d].ot += (parseFloat(e.otSum) || 0);
@@ -1778,6 +1966,16 @@
       icon.textContent = isOpen ? 'expand_less' : 'expand_more';
     };
 
+    global.toggleToolboxCard = function () {
+      const body = document.getElementById('toolboxBody');
+      const icon = document.getElementById('toolboxExpandIcon');
+      if (!body || !icon) return;
+      body.classList.toggle('open');
+      const isOpen = body.classList.contains('open');
+      icon.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
+      icon.textContent = isOpen ? 'expand_less' : 'expand_more';
+    };
+
     // Privacy Mode Global Toggle
     function togglePrivacyMode() {
       document.body.classList.toggle('privacy-mode');
@@ -1801,7 +1999,10 @@
     // === Google Sheet 相關工具（HtmlService 版：優先走 google.script.run） ===
 
     // === Google Sheet 相關工具（HtmlService 版：直接吃 Template 注入的初始資料） ===
+    let isLoadingFromSheet = false;
     async function loadFromSheet() {
+      if (isLoadingFromSheet) return;
+      isLoadingFromSheet = true;
       try {
         let payload = window.__OT_INIT_PAYLOAD__;
 
@@ -1830,6 +2031,18 @@
           initTableFromPayload({ data: rows });
           showNotification(`✅ 已載入 ${rows.length} 筆資料`);
         } else {
+          // [Audit Fix] Try local cache if Template payload is empty
+          const cached = storage.get('overtimeData');
+          if (cached) {
+            const cachedRows = JSON.parse(cached);
+            if (cachedRows.length > 0) {
+              console.log('[OT] 使用本地快取資料初始化');
+              initTableFromPayload({ data: cachedRows });
+              showNotification(`✅ 已從本地快取載入 ${cachedRows.length} 筆資料`);
+              return; // Successfully loaded from cache
+            }
+          }
+
           console.warn('[OT] Template 資料為空，嘗試透過 API 重新抓取...');
           // Fallback: 嘗試用 google.script.run 抓取
           if (typeof google !== 'undefined' && google.script && google.script.run) {
@@ -1857,11 +2070,13 @@
             syncTravelToggleUI();
           }
         }
-      } catch (e) {
-        console.error('[OT] loadFromSheet 發生錯誤:', e);
+      } catch (err) {
+        console.error('[OT] loadFromSheet 發生錯誤:', err);
         renderDataList();
         syncTravelToggleUI();
-        showNotification('❌ 初始化失敗: ' + e.message, true);
+        showNotification('❌ 初始化失敗: ' + err.message, true);
+      } finally {
+        isLoadingFromSheet = false;
       }
     }
 
@@ -1911,34 +2126,59 @@
           let rawDate = row.date;
 
           // Apps Script 透過 google.script.run 傳過來，date 可能是 Date 物件，也可能是字串
-          if (rawDate instanceof Date) {
-            const d = rawDate;
+          // Normalize date to YYYY-MM-DD
+          function normalizeDate(val) {
+            if (!val) return '';
+            // If it's already a Date object
+            if (val instanceof Date) {
+              const yyyy = val.getFullYear();
+              const mm = String(val.getMonth() + 1).padStart(2, '0');
+              const dd = String(val.getDate()).padStart(2, '0');
+              return `${yyyy}-${mm}-${dd}`;
+            }
+
+            const s = val.toString().trim();
+
+            // Detect ISO strings like 2025-12-23T17:00:00.000Z
+            // If it has T and Z, parse normally and get LOCAL date parts
+            if (s.includes('T') && s.includes('Z')) {
+              const d = parseDateSafe(s);
+              if (!isNaN(d.getTime())) {
+                const yyyy = d.getFullYear(); // Local Year
+                const mm = String(d.getMonth() + 1).padStart(2, '0'); // Local Month
+                const dd = String(d.getDate()).padStart(2, '0'); // Local Date
+                return `${yyyy}-${mm}-${dd}`;
+              }
+            }
+
+            // Simple YYYY-MM-DD or YYYY/MM/DD
+            const match = s.match(/^(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})/);
+            if (match) {
+              const yyyy = match[1];
+              const mm = match[2].padStart(2, '0');
+              const dd = match[3].padStart(2, '0');
+              return `${yyyy}-${mm}-${dd}`;
+            }
+
+            // Fallback: replace dash with slash to avoid UTC interpretation for short date strings
+            const dateStr = s.includes('-') && !s.includes(':') ? s.replace(/-/g, '/') : s;
+            const d = parseDateSafe(dateStr);
+            if (isNaN(d.getTime())) return s.slice(0, 10);
             const yyyy = d.getFullYear();
             const mm = String(d.getMonth() + 1).padStart(2, '0');
             const dd = String(d.getDate()).padStart(2, '0');
-            rawDate = `${yyyy}-${mm}-${dd}`;
-          } else if (typeof rawDate === 'string') {
-            if (rawDate.includes('T')) {
-              const d = new Date(rawDate);
-              if (!isNaN(d)) {
-                const yyyy = d.getFullYear();
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
-                rawDate = `${yyyy}-${mm}-${dd}`;
-              } else {
-                rawDate = rawDate.slice(0, 10);
-              }
-            } else {
-              rawDate = rawDate.slice(0, 10);
-            }
-          } else {
-            rawDate = '';
+            return `${yyyy}-${mm}-${dd}`;
           }
+          rawDate = normalizeDate(rawDate);
 
-          const v167 = Number(row.v167 ?? row['1.67'] ?? 0);
-          const v134 = Number(row.v134 ?? row['1.34'] ?? 0);
-          const v166 = Number(row.v166 ?? row['1.66'] ?? 0);
-          const v267 = Number(row.v267 ?? row['2.67'] ?? 0);
+          if (index === 0) {
+            console.log('[OT] Diagnostic - First Row Keys:', Object.keys(row));
+            console.log('[OT] Diagnostic - First Row Data:', row);
+          }
+          const v167 = safeParseFloat(row.v167 ?? row['1.67'] ?? 0);
+          const v134 = safeParseFloat(row.v134 ?? row['1.34'] ?? 0);
+          const v166 = safeParseFloat(row.v166 ?? row['2'] ?? row['2.0'] ?? row['1.66'] ?? 0);
+          const v267 = safeParseFloat(row.v267 ?? row['2.67'] ?? 0);
 
           const baseRaw = row.base ?? row.Base ?? '';
           const travelRaw = row.travel ?? row.Travel ?? '';
@@ -1948,9 +2188,13 @@
           const otSumRaw = row.otSum ?? row['OT hr SUM'] ?? '';
           const remarkRaw = row.remark ?? row.Remark ?? '';
 
-          const travelNum = Number(travelRaw) || 0;
+          const travelNum = safeParseFloat(travelRaw) || 0;
           const travelEnabled = travelNum > 0;
 
+          const isLeaveRaw = row.isLeave ?? '';
+          const isLeave = (isLeaveRaw === 'TRUE' || isLeaveRaw === true);
+
+          const trvCountryRaw = row.travelCountry ?? row['Travel Country'] ?? '';
           return {
             date: rawDate,
             weekday: row.weekday || (rawDate ? getWeekdayChar(rawDate) : ''),
@@ -1965,8 +2209,14 @@
             monthSLR: (monthSlrRaw || '').toString(),
             otSum: (otSumRaw || '').toString(),
             remark: (remarkRaw || '').toString(),
+            travelCountry: trvCountryRaw || (travelEnabled ? 'Vietnam' : 'None'),
+            endTime: row.endTime || '',
+            isLeave: isLeave,
+            leaveType: row.leaveType || (isLeave ? '特休' : ''),
+            leaveAmount: safeParseFloat(row.leaveAmount || (isLeave ? 1 : 0)),
             travelEnabled,
-            isHoliday: (v166 > 0)
+            isHoliday: String(row.isHoliday || '').toUpperCase() === 'TRUE' || row.isHoliday === true,
+            __id: 'rec_' + Math.random().toString(36).substr(2, 9) + '_' + index
           };
         } catch (e) {
           console.error(`[OT] 第 ${index} 筆資料轉換失敗:`, e, row);
@@ -1976,7 +2226,7 @@
 
       // 排序: 由新到舊 (Newest First)
       tableData.sort((a, b) => {
-        return new Date(b.date) - new Date(a.date);
+        return parseDateSafe(b.date) - parseDateSafe(a.date);
       });
       updateAll();
     }
@@ -1990,7 +2240,11 @@
       v134: 0,
       v166: 0,
       v267: 0,
-      travel: 'Vietnam'
+      travel: 'Vietnam',
+      isHoliday: false,
+      isLeave: false,
+      leaveType: '特休',
+      leaveAmount: 1
     };
 
     const travelOptions = ['None', 'Vietnam', 'China', 'India'];
@@ -2018,34 +2272,44 @@
           const input = document.createElement('input');
           input.type = 'date';
           input.value = newAddCardState.date || '';
-          input.style.position = 'fixed';
-          input.style.top = '50%';
-          input.style.left = '50%';
-          input.style.transform = 'translate(-50%, -50%)';
-          input.style.width = '240px';
-          input.style.height = '60px';
-          input.style.fontSize = '20px';
-          input.style.padding = '10px';
-          input.style.zIndex = '10000';
-          input.style.borderRadius = '12px';
-          input.style.border = '2px solid var(--color-primary)';
+
+          // Improved styling to fix transparency and rectangular glitch
+          Object.assign(input.style, {
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '280px',
+            height: '60px',
+            fontSize: '20px',
+            padding: '10px',
+            zIndex: '10000',
+            borderRadius: '16px',
+            border: '2px solid #007AFF', // var(--color-primary)
+            background: '#ffffff', // Force solid background
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            outline: 'none',
+            color: '#000000'
+          });
+
           document.body.appendChild(input);
 
           input.addEventListener('change', () => {
             if (input.value) {
               newAddCardState.date = input.value;
-              const d = new Date(input.value);
+              const d = parseDateSafe(input.value);
               const mm = String(d.getMonth() + 1).padStart(2, '0');
               const dd = String(d.getDate()).padStart(2, '0');
               dateBtn.textContent = `${mm}/${dd}`;
               dateBtn.classList.add('has-value');
             }
-            document.body.removeChild(input);
+            if (document.body.contains(input)) document.body.removeChild(input);
           });
           input.addEventListener('blur', () => {
-            setTimeout(() => { if (document.body.contains(input)) document.body.removeChild(input); }, 100);
+            // Delay to allow change event if processed on mobile
+            setTimeout(() => { if (document.body.contains(input)) document.body.removeChild(input); }, 300);
           });
-          setTimeout(() => { input.focus(); input.click(); }, 50);
+          setTimeout(() => { input.focus(); input.click(); }, 100);
         });
       }
 
@@ -2126,15 +2390,53 @@
 
       // Leave Toggle for Add Card
       const leaveToggleBtn = document.getElementById('newLeaveToggle');
+      const leaveInfoWrapper = document.getElementById('leaveInfoWrapper');
       const leaveInfoRow = document.getElementById('leaveInfoRow');
-      const newLeaveType = document.getElementById('newLeaveType');
-      const newLeaveAmount = document.getElementById('newLeaveAmount');
+
+      // Replace these with capsule selectors dynamically
+      if (leaveInfoRow) {
+        leaveInfoRow.innerHTML = '';
+
+        const types = [
+          '特休', '事假', '病假', '公假', '婚假', '公傷假', '喪假',
+          '有薪產假', '無薪產假', '補休', '產檢假', '陪產檢及陪產假',
+          '駐地休假', '生理假', '家庭照顧假', '住院病假', '健檢假'
+        ];
+        const typeCapsule = renderCapsuleSelector(types, '特休', (val) => {
+          newAddCardState.leaveType = val;
+        });
+
+        const amts = [
+          { value: 1, label: '1.0 天' }, { value: 0.5, label: '0.5 天' }, { value: 0.125, label: '1 小時' }, { value: 0.25, label: '2 小時' }, { value: 0.375, label: '3 小時' }, { value: 0.5, label: '4 小時' }
+        ];
+        const amtCapsule = renderCapsuleSelector(amts, 1, (val) => {
+          newAddCardState.leaveAmount = parseFloat(val);
+        });
+        const amtToggle = amtCapsule.querySelector('.capsule-toggle');
+        if (amtToggle) amtToggle.textContent = '1.0 天';
+
+        leaveInfoRow.appendChild(typeCapsule);
+        leaveInfoRow.appendChild(amtCapsule);
+      }
+
+
 
       if (leaveToggleBtn) {
         leaveToggleBtn.addEventListener('click', () => {
           newAddCardState.isLeave = !newAddCardState.isLeave;
           leaveToggleBtn.classList.toggle('on', newAddCardState.isLeave);
-          if (leaveInfoRow) leaveInfoRow.style.display = newAddCardState.isLeave ? 'flex' : 'none';
+
+          const unit = document.getElementById('leaveCapsuleUnit');
+
+          if (leaveInfoWrapper) {
+            if (newAddCardState.isLeave) {
+              leaveInfoWrapper.classList.add('expanded');
+              if (unit) unit.classList.add('expanded');
+            } else {
+              leaveInfoWrapper.classList.remove('expanded');
+              if (unit) unit.classList.remove('expanded');
+            }
+          }
 
           const icon = leaveToggleBtn.querySelector('.material-symbols-outlined');
           if (icon) {
@@ -2142,20 +2444,9 @@
             icon.style.color = newAddCardState.isLeave ? '#ba1a1a' : 'rgba(0,0,0,0.5)';
           }
           if (newAddCardState.isLeave) {
-            newAddCardState.leaveType = newLeaveType.value || '特休';
-            newAddCardState.leaveAmount = parseFloat(newLeaveAmount.value) || 1;
+            newAddCardState.leaveType = newAddCardState.leaveType || '特休';
+            newAddCardState.leaveAmount = newAddCardState.leaveAmount || 1;
           }
-        });
-      }
-
-      if (newLeaveType) {
-        newLeaveType.addEventListener('change', () => {
-          newAddCardState.leaveType = newLeaveType.value;
-        });
-      }
-      if (newLeaveAmount) {
-        newLeaveAmount.addEventListener('change', () => {
-          newAddCardState.leaveAmount = parseFloat(newLeaveAmount.value);
         });
       }
 
@@ -2328,9 +2619,16 @@
               icon.style.color = 'rgba(0,0,0,0.5)';
             }
           }
-          if (leaveInfoRow) leaveInfoRow.style.display = 'none';
-          if (newLeaveType) newLeaveType.value = '特休';
-          if (newLeaveAmount) newLeaveAmount.value = '1';
+          if (leaveInfoWrapper) {
+            leaveInfoWrapper.classList.remove('expanded');
+          }
+          const leaveInfoRow = document.getElementById('leaveInfoRow');
+          if (leaveInfoRow) {
+            // Reset capsule toggles text
+            const toggles = leaveInfoRow.querySelectorAll('.capsule-toggle');
+            if (toggles[0]) toggles[0].textContent = '特休';
+            if (toggles[1]) toggles[1].textContent = '1.0 天';
+          }
 
           if (holidayToggleBtn) {
             holidayToggleBtn.classList.remove('on');
@@ -2430,8 +2728,45 @@
     }
 
     // ========== Chart.js 圖表 ==========
+    const centerTextPlugin = {
+      id: 'centerText',
+      afterDraw: function (chart) {
+        if (chart.config.type !== 'doughnut' || !chart.options.plugins.centerText) return;
+        const { ctx, width, height } = chart;
+        ctx.save();
+        const text = chart.options.plugins.centerText.text || '';
+        const label = chart.options.plugins.centerText.label || 'Total';
+
+        // Label (Top small)
+        ctx.font = '500 12px sans-serif';
+        ctx.fillStyle = '#666';
+        ctx.textAlign = 'center';
+        ctx.fillText(label, width / 2, height / 2 - 10);
+
+        // Amount (Center big)
+        ctx.font = 'bold 18px sans-serif';
+        ctx.fillStyle = '#000';
+        ctx.fillText(text, width / 2, height / 2 + 12);
+        ctx.restore();
+      }
+    };
+
     function initCharts() {
+      chartsInitialized = true;
       if (typeof Chart === 'undefined') return;
+      if (charts.overtime) return; // Already initialized
+
+      // Register plugins
+      try {
+        if (typeof ChartDataLabels !== 'undefined' && !Chart.registry.plugins.get('datalabels')) {
+          Chart.register(ChartDataLabels);
+        }
+        if (!Chart.registry.plugins.get('centerText')) {
+          Chart.register(centerTextPlugin);
+        }
+      } catch (e) {
+        console.warn('[OT] Plugin registration error:', e);
+      }
 
       const ctx1 = document.getElementById('overtimeChart');
       if (ctx1) {
@@ -2468,18 +2803,111 @@
             labels: ['Base 薪資', 'Travel 津貼', 'OT 加班費'],
             datasets: [{
               data: [0, 0, 0],
-              backgroundColor: [
-                'rgba(100,100,100,0.8)',
-                'rgba(255,200,124,0.8)',
-                'rgba(160,231,160,0.8)'
-              ],
-              borderWidth: 2
+              backgroundColor: ['#A0A0A0', '#FF9500', '#34C759'],
+              borderWidth: 0,
+              hoverOffset: 10
             }]
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom' } }
+            cutout: '70%',
+            plugins: {
+              legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } },
+              datalabels: {
+                color: '#444',
+                anchor: 'end',
+                align: 'end',
+                offset: 10,
+                formatter: (value) => value > 0 ? '$' + Math.round(value).toLocaleString() : '',
+                font: { weight: 'bold' }
+              },
+              centerText: { label: '總支出', text: '$0' }
+            }
+          }
+        });
+      }
+
+      // 3. 月度出勤統計 (Merged Bar)
+      const ctx3 = document.getElementById('attendanceChart');
+      if (ctx3) {
+        charts.attendance = new Chart(ctx3, {
+          type: 'bar',
+          data: {
+            labels: [],
+            datasets: [
+              {
+                label: '辦公天數',
+                data: [],
+                backgroundColor: 'rgba(52, 199, 89, 0.7)',
+                borderColor: 'rgba(52, 199, 89, 1)',
+                borderWidth: 1,
+                borderRadius: 4
+              },
+              {
+                label: '出差天數',
+                data: [],
+                backgroundColor: 'rgba(0, 122, 255, 0.7)',
+                borderColor: 'rgba(0, 122, 255, 1)',
+                borderWidth: 1,
+                borderRadius: 4
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'top', labels: { boxWidth: 12 } },
+              datalabels: { display: false } // Disable for bars to avoid clutter
+            },
+            scales: {
+              y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { stepSize: 5 } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      // 4. 月度薪資趨勢 (Stacked Bar)
+      const ctx4 = document.getElementById('salaryTrendChart');
+      if (ctx4) {
+        charts.salaryTrend = new Chart(ctx4, {
+          type: 'bar', // Changed from line to stacked bar for components
+          data: {
+            labels: [],
+            datasets: [
+              {
+                label: 'Base 薪資',
+                data: [],
+                backgroundColor: 'rgba(160, 160, 160, 0.6)',
+                stack: 'Stack 0',
+              },
+              {
+                label: 'OT 加班費',
+                data: [],
+                backgroundColor: 'rgba(52, 199, 89, 0.6)',
+                stack: 'Stack 0',
+              },
+              {
+                label: 'Travel 津貼',
+                data: [],
+                backgroundColor: 'rgba(255, 149, 0, 0.6)',
+                stack: 'Stack 0',
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'top', labels: { boxWidth: 12 } },
+              datalabels: { display: false }
+            },
+            scales: {
+              x: { stacked: true, grid: { display: false } },
+              y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }
+            }
           }
         });
       }
@@ -2487,51 +2915,117 @@
 
     // 更新圖表數據
     function updateCharts() {
-      if (!charts.overtime || !charts.income) return;
+      try {
+        if (!chartsInitialized || !charts.overtime || !charts.income || !charts.attendance || !charts.salaryTrend) {
+          console.warn('[OT] Charts not fully initialized.');
+          return;
+        }
 
-      // 收入結構數據 (受 filter 影響)
-      let totalBase = 0;
-      let totalTravel = 0;
-      let totalOtPay = 0;
+        // 1. 收入結構數據 (受 filter 影響)
+        let totalBase = 0;
+        let totalTravel = 0;
+        let totalOtPay = 0;
 
-      tableData.forEach(entry => {
-        const mKey = entry.date.slice(0, 7);
-        if (selectedMonth && mKey !== selectedMonth) return;
+        tableData.forEach(entry => {
+          if (!entry.date) return;
+          const mKey = entry.date.slice(0, 7).replace(/\//g, '-');
+          if (selectedMonth && mKey !== selectedMonth) return;
 
-        totalBase += parseFloat(entry.base || 0);
-        totalTravel += parseFloat(entry.travel || 0);
-        totalOtPay += parseFloat(entry.otSalary || 0);
-      });
+          totalBase += safeParseFloat(entry.base || 0);
+          totalTravel += safeParseFloat(entry.travel || 0);
+          totalOtPay += safeParseFloat(entry.otSalary || 0);
+        });
 
-      // 趨勢圖數據 (永遠顯示所有月份)
-      const allMonthsData = {};
-      tableData.forEach(e => {
-        const k = e.date.slice(0, 7);
-        if (!allMonthsData[k]) allMonthsData[k] = 0;
-        const isLeave = !!e.isLeave;
-        allMonthsData[k] += isLeave ? 0 : parseFloat(e.otSum || 0);
-      });
+        // 2. 趨勢圖數據 (永遠顯示所有月份，不受月分篩選器影響，便於觀察趨勢)
+        const allMonthsData = {}; // 加班時數
+        const allMonthsAttendance = {}; // { work: 0, travel: 0 }
+        const allMonthsSalaryComponents = {}; // { base: 0, ot: 0, travel: 0 }
 
-      const sortedMonths = Object.keys(allMonthsData).sort();
-      charts.overtime.data.labels = sortedMonths;
-      charts.overtime.data.datasets[0].data = sortedMonths.map(m => allMonthsData[m]);
+        tableData.forEach(e => {
+          if (!e.date || e.date.length < 7) return;
+          const k = e.date.slice(0, 7).replace(/\//g, '-'); // Normalize to YYYY-MM
+          if (allMonthsData[k] === undefined) {
+            allMonthsData[k] = 0;
+            allMonthsAttendance[k] = { work: 0, travel: 0 };
+            allMonthsSalaryComponents[k] = { base: 0, ot: 0, travel: 0 };
+          }
 
-      // 高亮選擇的月份 (橘紅色)
-      const bgColors = sortedMonths.map(m =>
-        m === selectedMonth ? 'rgba(255, 59, 48, 0.9)' : 'rgba(52, 199, 89, 0.6)'
-      );
-      const borderColors = sortedMonths.map(m =>
-        m === selectedMonth ? 'rgba(255, 59, 48, 1)' : 'rgba(52, 199, 89, 1)'
-      );
+          const isLeave = !!e.isLeave;
+          const leaveType = e.leaveType || '';
 
-      charts.overtime.data.datasets[0].backgroundColor = bgColors;
-      charts.overtime.data.datasets[0].borderColor = borderColors;
+          // 加班時數
+          allMonthsData[k] += isLeave ? 0 : safeParseFloat(e.otSum || 0);
 
-      charts.overtime.update();
+          // 出勤天數 (修正: 採用一致且包容的邏輯)
+          // 規則: 
+          // 1. 出差日: travelCountry 不為 None 或有差旅費 或有差旅紀錄
+          // 2. 辦公日: (平日且非休假) 或 (有加班)
+          const isTravel = (e.travelCountry && e.travelCountry !== 'None') || (safeParseFloat(e.travel || 0) > 0);
+          // Force local time parsing to avoid timezone shift in different regions
+          const date = parseDateSafe(e.date);
+          const day = date.getDay();
+          const isWeekend = (day === 0 || day === 6);
+          const otVal = safeParseFloat(e.otSum || 0);
+          const isOffice = (!isLeave && !isWeekend) || (otVal > 0);
 
-      // 更新收入結構圖
-      charts.income.data.datasets[0].data = [totalBase, totalTravel, totalOtPay];
-      charts.income.update();
+          if (isTravel) allMonthsAttendance[k].travel++;
+          if (isOffice) allMonthsAttendance[k].work++;
+
+          allMonthsSalaryComponents[k].ot += safeParseFloat(e.otSalary || 0);
+          allMonthsSalaryComponents[k].travel += safeParseFloat(e.travel || 0);
+        });
+
+        // 補足薪資趨勢圖的 Base 薪資
+        let salaryHistory = JSON.parse(storage.get('salaryHistory') || '[]');
+        if (salaryHistory.length === 0) {
+          salaryHistory = [{ date: '2000-01', amount: 68000 }];
+        }
+        salaryHistory.sort((a, b) => b.date.localeCompare(a.date));
+
+        Object.keys(allMonthsSalaryComponents).forEach(k => {
+          const applicable = salaryHistory.find(h => h.date <= k) || salaryHistory[salaryHistory.length - 1];
+          const baseSalary = applicable ? safeParseFloat(applicable.amount) : 68000;
+          allMonthsSalaryComponents[k].base = baseSalary;
+        });
+
+        // 3. 計算平均年薪
+        const allMonthsTotals = Object.values(allMonthsSalaryComponents).map(v => v.base + v.ot + v.travel);
+        const avgMonthly = allMonthsTotals.length > 0 ? (allMonthsTotals.reduce((a, b) => a + b, 0) / allMonthsTotals.length) : 0;
+        const avgAnnual = avgMonthly * 12;
+        const annualEl = document.getElementById('statAvgAnnual');
+        if (annualEl) annualEl.textContent = Math.round(avgAnnual).toLocaleString();
+
+        const sortedMonths = Object.keys(allMonthsData).sort();
+
+        // --- 更新 A: 加班趨勢圖 ---
+        charts.overtime.data.labels = sortedMonths;
+        charts.overtime.data.datasets[0].data = sortedMonths.map(m => allMonthsData[m]);
+        charts.overtime.update();
+
+        // --- 更新 B: 收入結構圖 ---
+        charts.income.data.datasets[0].data = [totalBase, totalTravel, totalOtPay];
+        const grandTotal = totalBase + totalTravel + totalOtPay;
+        charts.income.options.plugins.centerText.text = '$' + Math.round(grandTotal).toLocaleString();
+        charts.income.update();
+
+        // --- 更新 C: 月度出勤統計 (Merged) ---
+        if (charts.attendance) {
+          charts.attendance.data.labels = sortedMonths;
+          charts.attendance.data.datasets[0].data = sortedMonths.map(m => allMonthsAttendance[m].work);
+          charts.attendance.data.datasets[1].data = sortedMonths.map(m => allMonthsAttendance[m].travel);
+          charts.attendance.update();
+        }
+
+        if (charts.salaryTrend) {
+          charts.salaryTrend.data.labels = sortedMonths;
+          charts.salaryTrend.data.datasets[0].data = sortedMonths.map(m => allMonthsSalaryComponents[m].base);
+          charts.salaryTrend.data.datasets[1].data = sortedMonths.map(m => Math.round(allMonthsSalaryComponents[m].ot));
+          charts.salaryTrend.data.datasets[2].data = sortedMonths.map(m => Math.round(allMonthsSalaryComponents[m].travel));
+          charts.salaryTrend.update();
+        }
+      } catch (err) {
+        console.error('[OT] updateCharts failed:', err);
+      }
     }
 
     // 更新統計卡片
@@ -2552,33 +3046,45 @@
 
       // 根據篩選器決定計算範圍
       const targetData = selectedMonth
-        ? tableData.filter(e => e.date && e.date.startsWith(selectedMonth))
+        ? tableData.filter(e => e.date && e.date.replace(/\//g, '-').startsWith(selectedMonth))
         : tableData;
 
       targetData.forEach(entry => {
         if (!entry.date) return;
 
         const isLeave = !!entry.isLeave;
-        if (!isLeave) {
+        const leaveType = entry.leaveType || '';
+
+        // [Audit Fix] 採用與圖表一致的包容性邏輯
+        const isTrv = (entry.travelCountry && entry.travelCountry !== 'None') || (parseFloat(entry.travel || 0) > 0);
+        // Force local time parsing
+        const date = parseDateSafe(entry.date);
+        const dayNum = date.getDay();
+        const isWknd = (dayNum === 0 || dayNum === 6);
+        const otVal = parseFloat(entry.otSum || 0);
+        const isOff = (!isLeave && !isWknd) || (otVal > 0);
+
+        if (isOff) {
           workDays++;
-          totalOT += parseFloat(entry.otSum || 0);
+          totalOT += otVal;
         }
+        if (isTrv) {
+          travelDays++;
+        }
+        totalTravelAllowance += parseFloat(entry.travel || 0);
 
-        // 檢查出差
-        const trv = parseFloat(entry.travel || 0);
-        if (trv > 0) travelDays++;
-        totalTravelAllowance += trv;
-
-        const ots = parseFloat(entry.otSalary || 0);
-        totalOTSalary += ots;
+        const otSal = parseFloat(entry.otSalary || 0);
+        totalOTSalary += otSal;
 
         const income = parseFloat(entry.total || 0);
         totalIncome += income;
 
-        // 判斷平日/週末
-        const day = new Date(entry.date).getDay();
-        if (day === 0 || day === 6) weekendDays++;
-        else weekdayDays++;
+        // 判斷平日/週末 (統計加班次數與天數)
+        if (dayNum === 0 || dayNum === 6) {
+          if (otVal > 0) weekendDays++;
+        } else {
+          if (otVal > 0) weekdayDays++;
+        }
 
         // 如果未選月份，則統計「當前這個月」的收入作為本月收入
         if (!selectedMonth) {
@@ -2746,20 +3252,36 @@
       const modal = document.getElementById('salaryModal');
       modal.classList.add('active');
       renderSalaryList();
+    };
+
+    window.openTravelRateModal = function () {
+      const modal = document.getElementById('travelRateModal');
+      modal.classList.add('active');
       renderTravelRateList();
       initDefaultChinaRate();
     };
 
+    window.openLeaveManagementModal = function () {
+      const modal = document.getElementById('leaveManagementModal');
+      modal.classList.add('active');
+      updateLeaveSummaryDOM();
+    };
+
     window.closeSalaryModal = function () {
-      const modal = document.getElementById('salaryModal');
-      modal.classList.remove('active');
+      document.getElementById('salaryModal').classList.remove('active');
+    };
+    window.closeTravelRateModal = function () {
+      document.getElementById('travelRateModal').classList.remove('active');
+    };
+    window.closeLeaveManagementModal = function () {
+      document.getElementById('leaveManagementModal').classList.remove('active');
     };
 
     function getSalaryHistory() {
-      let history = JSON.parse(localStorage.getItem('salaryHistory') || '[]');
+      let history = JSON.parse(storage.get('salaryHistory') || '[]');
       if (history.length === 0) {
         history = [{ date: '2024-01', amount: 68000 }];
-        localStorage.setItem('salaryHistory', JSON.stringify(history));
+        storage.set('salaryHistory', JSON.stringify(history));
       }
       return history.sort((a, b) => b.date.localeCompare(a.date));
     }
@@ -2819,7 +3341,7 @@
       const history = getSalaryHistory();
       history[index] = { ...salaryEditState[index] };
       delete salaryEditState[index];
-      localStorage.setItem('salaryHistory', JSON.stringify(history));
+      storage.set('salaryHistory', JSON.stringify(history));
       updateAll();
       renderSalaryList();
       showNotification('✅ 薪資紀錄已更新');
@@ -2901,12 +3423,12 @@
 
     // --- Leave Management Logic ---
     window.saveLeaveQuota = function (val) {
-      localStorage.setItem('annualLeaveQuota', val);
+      storage.set('annualLeaveQuota', val);
       updateAll();
     };
 
     function getLeaveQuota() {
-      return parseFloat(localStorage.getItem('annualLeaveQuota')) || 5.25;
+      return parseFloat(storage.get('annualLeaveQuota')) || 5.25;
     }
 
     function updateLeaveSummaryDOM() {
@@ -2950,11 +3472,15 @@
       renderTravelRateList();
     };
 
+    let ratesInProgress = false;
     function initDefaultChinaRate() {
+      if (ratesInProgress) return;
       const rates = getTravelRates();
       // Only auto-update if it's the old default values
       if (rates['China'] === 160.25 || rates['China'] === 32.05) {
+        ratesInProgress = true;
         google.script.run.withSuccessHandler(rate => {
+          ratesInProgress = false;
           if (rate) {
             const chinaUsd = Math.round(250 * rate * 100) / 100; // 250 HKD
             const currentRates = getTravelRates();
@@ -2963,6 +3489,8 @@
             renderTravelRateList();
             console.log(`[OT] China rate updated to ${chinaUsd} USD (250 HKD)`);
           }
+        }).withFailureHandler(() => {
+          ratesInProgress = false;
         }).getExchangeRate('HKD', 'USD');
       }
     }
@@ -3035,7 +3563,7 @@
     window.updateSalaryItem = function (index, key, value) {
       const history = getSalaryHistory();
       history[index][key] = key === 'amount' ? parseFloat(value) : value;
-      localStorage.setItem('salaryHistory', JSON.stringify(history));
+      storage.set('salaryHistory', JSON.stringify(history));
       updateAll();
     };
 
@@ -3043,7 +3571,7 @@
       const history = getSalaryHistory();
       const last = history[0] || { date: '2024-01', amount: 68000 };
       history.unshift({ date: last.date, amount: last.amount });
-      localStorage.setItem('salaryHistory', JSON.stringify(history));
+      storage.set('salaryHistory', JSON.stringify(history));
       renderSalaryList();
       updateAll();
     };
@@ -3055,7 +3583,7 @@
         return;
       }
       history.splice(index, 1);
-      localStorage.setItem('salaryHistory', JSON.stringify(history));
+      storage.set('salaryHistory', JSON.stringify(history));
       renderSalaryList();
       updateAll();
     };
@@ -3107,27 +3635,29 @@
           }
 
           // 更新視覺
-          dragState.stepper.textContent = dragState.entry[dragState.key].toFixed(1);
-          if (dragState.entry[dragState.key] > 0) {
-            dragState.stepper.classList.add('has-value');
+          if (dragState.key === 'vH' || dragState.key === 'vM') {
+            const [h, m] = dragState.entry.endTime.split(':');
+            dragState.stepper.textContent = (dragState.key === 'vH') ? h : m;
           } else {
-            dragState.stepper.classList.remove('has-value');
+            dragState.stepper.textContent = dragState.entry[dragState.key].toFixed(1);
           }
+          dragState.stepper.classList.add('has-value');
 
-          // 即時更新 Scoreboard
           const card = dragState.stepper.closest('.data-card');
           if (card) {
             const entry = dragState.entry;
-            const val = Math.round(Number(entry.v167 || 0) + Number(entry.v134 || 0) + Number(entry.v166 || 0) + Number(entry.v267 || 0));
+            const otTotal = entry.totalOtHoursNumeric || (Number(entry.v167 || 0) + Number(entry.v134 || 0) + Number(entry.v166 || 0) + Number(entry.v267 || 0));
+            const val = otTotal.toFixed(1);
             const badge = card.querySelector('.scoreboard-badge');
             if (badge) {
               badge.textContent = val;
               badge.className = 'scoreboard-badge'; // reset
-              if (val === 2) badge.classList.add('green');
-              else if (val === 3) badge.classList.add('yellow');
-              else if (val === 4) badge.classList.add('orange');
-              else if (val === 5) badge.classList.add('red');
-              else if (val >= 6) badge.classList.add('purple');
+              const numericVal = parseFloat(val);
+              if (numericVal >= 2 && numericVal < 3) badge.classList.add('green');
+              else if (numericVal >= 3 && numericVal < 4) badge.classList.add('yellow');
+              else if (numericVal >= 4 && numericVal < 5) badge.classList.add('orange');
+              else if (numericVal >= 5 && numericVal < 6) badge.classList.add('red');
+              else if (numericVal >= 6) badge.classList.add('purple');
             }
 
             // 更新 Daily OT Chip
@@ -3207,16 +3737,18 @@
           const card = dragState.stepper.closest('.data-card');
           if (card) {
             const entry = dragState.entry;
-            const val = Math.round(Number(entry.v167 || 0) + Number(entry.v134 || 0) + Number(entry.v166 || 0) + Number(entry.v267 || 0));
+            const otTotal = entry.totalOtHoursNumeric || (Number(entry.v167 || 0) + Number(entry.v134 || 0) + Number(entry.v166 || 0) + Number(entry.v267 || 0));
+            const val = otTotal.toFixed(1);
             const badge = card.querySelector('.scoreboard-badge');
             if (badge) {
               badge.textContent = val;
               badge.className = 'scoreboard-badge';
-              if (val === 2) badge.classList.add('green');
-              else if (val === 3) badge.classList.add('yellow');
-              else if (val === 4) badge.classList.add('orange');
-              else if (val === 5) badge.classList.add('red');
-              else if (val >= 6) badge.classList.add('purple');
+              const numericVal = parseFloat(val);
+              if (numericVal >= 2 && numericVal < 3) badge.classList.add('green');
+              else if (numericVal >= 3 && numericVal < 4) badge.classList.add('yellow');
+              else if (numericVal >= 4 && numericVal < 5) badge.classList.add('orange');
+              else if (numericVal >= 5 && numericVal < 6) badge.classList.add('red');
+              else if (numericVal >= 6) badge.classList.add('purple');
             }
             const dailyChip = card.querySelector('.daily-total-chip span');
             if (dailyChip) dailyChip.textContent = `+${Math.round(entry.total || 0)}`;
@@ -3318,13 +3850,17 @@
       setTimeout(() => {
         initTabNavigation();
         populateMonthFilter();
-        initCharts();
-        updateCharts();
-        updateAnalyticsStats();
+        try {
+          initCharts();
+          updateCharts();
+          updateAnalyticsStats();
+        } catch (e) {
+          console.error('[OT] Error initializing charts/stats in DOMContentLoaded:', e);
+        }
         initSmartStepperEvents(); // 初始化拖曳事件
         initAddCardSteppers(); // 初始化新增卡片拖曳
         console.log('[OT] 升級功能已載入 ✅');
-      }, 800);
+      }, 500); // Reduced delay
     });
   })(typeof globalThis !== 'undefined' ? globalThis : this);
 </script>
