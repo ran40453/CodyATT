@@ -219,8 +219,57 @@ function saveOvertimeData(payload) {
 }
 
 /**
- * 讓（未來如果有需要）外部可以用 POST 寫回加班資料。
+ * 獲取設定資料（從 Settings 工作表）
  */
+function getSettings() {
+  try {
+    var ss;
+    try {
+      ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    } catch (e) {
+      ss = SpreadsheetApp.getActiveSpreadsheet();
+    }
+    if (!ss) return { ok: false, error: 'Cannot find spreadsheet' };
+
+    var sheet = ss.getSheetByName('Settings');
+    if (!sheet) return { ok: true, data: {} };
+
+    var data = sheet.getRange(1, 1).getValue();
+    if (!data) return { ok: true, data: {} };
+
+    return { ok: true, data: JSON.parse(data) };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
+/**
+ * 儲存設定資料（至 Settings 工作表）
+ */
+function saveSettings(settings) {
+  try {
+    var ss;
+    try {
+      ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    } catch (e) {
+      ss = SpreadsheetApp.getActiveSpreadsheet();
+    }
+    if (!ss) return { ok: false, error: 'Cannot find spreadsheet' };
+
+    var sheet = ss.getSheetByName('Settings');
+    if (!sheet) {
+      sheet = ss.insertSheet('Settings');
+      sheet.setTabColor('#FF9500');
+    }
+
+    sheet.clear();
+    sheet.getRange(1, 1).setValue(JSON.stringify(settings));
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
 function doPost(e) {
   try {
     var raw = (e && e.postData && e.postData.contents) ? e.postData.contents : '{}';

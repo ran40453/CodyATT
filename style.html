@@ -73,6 +73,167 @@
             "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
+    /* Neumorphism S15 Tokens (Neumorphic theme specific) */
+    :root[data-theme="neumorphic"] {
+        --neumo-bg: #E0E5EC;
+        --neumo-light: #ffffff;
+        --neumo-shadow: #b8bec7;
+        --neumo-text: #202731;
+        --neumo-brand: #6366F1;
+        --neumo-accent: #8B5CF6;
+        --neumo-raised: 6px 6px 12px var(--neumo-shadow), -6px -6px 12px var(--neumo-light);
+        --neumo-pressed: inset 2px 2px 5px var(--neumo-shadow), inset -2px -2px 5px var(--neumo-light);
+        --neumo-inset: inset 4px 4px 8px var(--neumo-shadow), inset -4px -4px 8px var(--neumo-light);
+
+        --color-primary: var(--neumo-brand);
+        background-color: var(--neumo-bg) !important;
+    }
+
+    [data-theme="neumorphic"] body {
+        background: var(--neumo-bg) !important;
+        background-color: var(--neumo-bg) !important;
+        color: var(--neumo-text) !important;
+        font-family: 'Quicksand', -apple-system, sans-serif !important;
+    }
+
+    [data-theme="neumorphic"] button,
+    [data-theme="neumorphic"] .icon-button,
+    [data-theme="neumorphic"] .file-label,
+    [data-theme="neumorphic"] .promo-action-btn,
+    [data-theme="neumorphic"] .ot-btn,
+    [data-theme="neumorphic"] .multiplier-badge.green,
+    [data-theme="neumorphic"] .circular-toggle-btn,
+    [data-theme="neumorphic"] .smart-stepper,
+    [data-theme="neumorphic"] .smart-stepper-add,
+    [data-theme="neumorphic"] .tab-btn {
+        background: var(--neumo-bg) !important;
+        border: none !important;
+        box-shadow: var(--neumo-raised) !important;
+        color: var(--neumo-text) !important;
+        transition: all 0.2s ease !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+    }
+
+    [data-theme="neumorphic"] .card,
+    [data-theme="neumorphic"] .add-card,
+    [data-theme="neumorphic"] .add-card-circular,
+    [data-theme="neumorphic"] .data-card,
+    [data-theme="neumorphic"] .rule-card,
+    [data-theme="neumorphic"] .modal-content,
+    [data-theme="neumorphic"] .history-promo-card,
+    [data-theme="neumorphic"] .toolbox-card,
+    [data-theme="neumorphic"] .stat-column-card,
+    [data-theme="neumorphic"] .chart-card {
+        background: var(--neumo-bg) !important;
+        border: none !important;
+        box-shadow: var(--neumo-raised) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border-radius: 24px !important;
+    }
+
+    [data-theme="neumorphic"] .expand-wrapper:not(.open) {
+        overflow: hidden !important;
+        grid-template-rows: 0fr !important;
+        margin-bottom: 0 !important;
+    }
+
+    [data-theme="neumorphic"] .expand-wrapper {
+        overflow: visible;
+        /* Override to allow shadows when OPEN */
+        transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="neumorphic"] .expand-wrapper.open {
+        margin-bottom: 12px;
+    }
+
+    /* Fixed Neumorphic Inset Shadow */
+    [data-theme="neumorphic"] .neumo-inset {
+        box-shadow: var(--neumo-inset) !important;
+    }
+
+    /* Fix shadow clipping */
+    [data-theme="neumorphic"] .expand-inner {
+        padding: 16px 20px !important;
+        overflow: visible !important;
+    }
+
+    [data-theme="neumorphic"] .calendar-weekday-label {
+        background: var(--neumo-bg) !important;
+        box-shadow: var(--neumo-inset) !important;
+        border: none !important;
+        color: var(--neumo-text) !important;
+        opacity: 0.8;
+        font-weight: 600;
+        border-radius: 8px;
+        margin: 2px;
+    }
+
+    [data-theme="neumorphic"] .scoreboard-badge {
+        background: var(--neumo-bg) !important;
+        box-shadow: var(--neumo-raised) !important;
+        border: 2px solid rgba(255, 255, 255, 0.4) !important;
+        color: var(--neumo-text) !important;
+    }
+
+    [data-theme="neumorphic"] button.active,
+    [data-theme="neumorphic"] .icon-button.active,
+    [data-theme="neumorphic"] .smart-stepper.active {
+        box-shadow: var(--neumo-pressed) !important;
+        color: var(--neumo-brand) !important;
+    }
+
+    [data-theme="neumorphic"] button:active,
+    [data-theme="neumorphic"] .icon-button:active,
+    [data-theme="neumorphic"] .promo-action-btn:active,
+    [data-theme="neumorphic"] .ot-btn:active,
+    [data-theme="neumorphic"] .multiplier-badge.green:active {
+        box-shadow: var(--neumo-pressed) !important;
+        transform: translateY(1px);
+    }
+
+    [data-theme="neumorphic"] .save-btn:hover,
+    [data-theme="neumorphic"] #saveToSheetBtn:hover,
+    [data-theme="neumorphic"] .file-label:hover {
+        box-shadow: var(--neumo-inset) !important;
+    }
+
+    [data-theme="neumorphic"] input,
+    [data-theme="neumorphic"] select,
+    [data-theme="neumorphic"] textarea,
+    [data-theme="neumorphic"] .smart-stepper.active,
+    [data-theme="neumorphic"] .capsule-popup {
+        background: var(--neumo-bg) !important;
+        box-shadow: var(--neumo-inset) !important;
+        border: none !important;
+        color: var(--neumo-text) !important;
+    }
+
+    [data-theme="neumorphic"] .info-chip,
+    [data-theme="neumorphic"] .capsule {
+        background: var(--neumo-bg) !important;
+        box-shadow: var(--neumo-raised) !important;
+        border: none !important;
+        color: var(--neumo-text) !important;
+    }
+
+    [data-theme="neumorphic"] .tab-btn.active {
+        box-shadow: var(--neumo-pressed) !important;
+        background: var(--neumo-bg) !important;
+        color: var(--neumo-brand) !important;
+    }
+
+    [data-theme="neumorphic"] .month-header {
+        background: var(--neumo-bg) !important;
+        box-shadow: var(--neumo-raised) !important;
+        margin-bottom: 12px;
+        border-radius: 16px;
+        color: var(--neumo-text) !important;
+    }
+
     html,
     body {
         max-width: 100%;
@@ -280,18 +441,27 @@
         }
     }
 
-    /* MD3 Spring Animation Wrapper */
     .expand-wrapper {
         display: grid;
         grid-template-rows: 0fr;
-        transition: grid-template-rows 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.2);
-        /* Damping animation */
-        /* MD3 Expressive */
+        transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         overflow: hidden;
+        min-height: 0;
+    }
+
+    .expand-wrapper:not(.open) {
+        grid-template-rows: 0fr !important;
+        margin-bottom: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        visibility: hidden;
+        pointer-events: none;
     }
 
     .expand-wrapper.open {
         grid-template-rows: 1fr;
+        visibility: visible;
+        pointer-events: auto;
     }
 
     .expand-inner {
@@ -1095,8 +1265,19 @@
         background: rgba(255, 255, 255, 0.5) !important;
         border-radius: 6px;
         width: fit-content;
+        max-width: 100%;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
         z-index: 20 !important;
-        overflow: visible !important;
+    }
+
+    .contribution-grid::-webkit-scrollbar {
+        height: 2px;
+    }
+
+    .contribution-grid::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 2px;
     }
 
     .grid-cell {
@@ -3098,8 +3279,15 @@
         background: transparent;
         height: 48px;
         width: auto;
-        min-width: fit-content;
+        min-width: 44px;
         flex-shrink: 0 !important;
+    }
+
+    @media (max-width: 600px) {
+        .add-card-item:has(#newLeaveToggle.on) {
+            flex: 1 1 100% !important;
+            order: 10;
+        }
     }
 
     .leave-capsule-unit.expanded {
@@ -3168,30 +3356,16 @@
             height: auto !important;
         }
 
-        .add-card-item:nth-child(1),
-        .add-card-item:nth-child(2),
-        .add-card-item:nth-child(3) {
-            flex: 0 0 calc(33.33% - 4px) !important;
-            min-width: 70px;
-        }
-
-        .add-card-item:nth-child(4),
-        .add-card-item:nth-child(5),
-        .add-card-item:nth-child(6),
-        .add-card-item:nth-child(7) {
-            flex: 0 0 calc(25% - 4px) !important;
-            margin-top: 8px;
-            border-top: 1px dashed rgba(0, 0, 0, 0.05);
-            padding-top: 8px;
-        }
-
-        .add-card-item label {
-            font-size: 0.65rem !important;
+        .add-card-item {
+            flex: 1 1 auto !important;
+            /* Allow items to grow/shrink naturally */
+            min-width: 60px;
         }
 
         .leave-capsule-unit {
             height: 40px !important;
-            min-width: 140px !important;
+            min-width: 44px !important;
+            /* Fixed! No more overlap */
         }
     }
 
@@ -3410,4 +3584,28 @@
     .promo-action-btn:active {
         transform: scale(0.98);
     }
-</style>
+
+    /* Analytics Neumorphic Fixes */
+    [data-theme="neumorphic"] .analytics-container {
+        background: var(--neumo-bg) !important;
+    }
+
+    [data-theme="neumorphic"] .stat-column-card,
+    [data-theme="neumorphic"] .chart-card {
+        background: var(--neumo-bg) !important;
+        box-shadow: var(--neumo-raised) !important;
+    }
+
+    [data-theme="neumorphic"] .stat-item {
+        background: var(--neumo-bg) !important;
+        box-shadow: var(--neumo-inset) !important;
+        border-radius: 12px;
+        margin-bottom: 8px;
+        border: none !important;
+    }
+
+    [data-theme="neumorphic"] .stat-item .value {
+        color: var(--neumo-brand) !important;
+        text-shadow: none !important;
+    }
+</style>```

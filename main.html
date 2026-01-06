@@ -89,48 +89,66 @@
       return safeParseFloat(rates[country]) || 40; // Default to 40 if not found
     }
 
-    function getTravelRates() {
-      const stored = storage.get('travelRates');
-      if (stored) return JSON.parse(stored);
-
-      // Default initial rates (China: 250 HKD -> ~32 USD)
-      const defaults = {
-        'Vietnam': 40,
-        'China': 32.05,
-        'India': 75
+    function getCountryAbbr(country) {
+      if (!country || country === 'None') return '';
+      const mapping = {
+        'Vietnam': 'VN',
+        'India': 'IN',
+        'China': 'CN',
+        'Taiwan': 'TW',
+        'Japan': 'JP',
+        'Thailand': 'TH',
+        'Korea': 'KR'
       };
-      storage.set('travelRates', JSON.stringify(defaults));
-      return defaults;
+      return mapping[country] || country.slice(0, 2).toUpperCase();
     }
 
-    function saveTravelRates(rates) {
-      storage.set('travelRates', JSON.stringify(rates));
-      updateAll();
-    }
+    // Centralized settings state
+    let globalSettings = {
+      salaryHistory: [{ date: '2000-01', amount: 68000 }],
+      travelRates: { 'Vietnam': 40, 'China': 32.05, 'India': 75 },
+      usdRate: 32.5,
+      rules: {} // Placeholder for OT calculation rules
+    };
 
-    function getCountryAbbr(name) {
-      const map = { 'Vietnam': 'VN', 'China': 'CN', 'India': 'IN', 'None': '--' };
-      if (map[name]) return map[name];
-      if (!name || name === 'None') return '--';
-      // Fallback: take first two letters uppercase
-      return name.slice(0, 2).toUpperCase();
+    function loadLocalSettings() {
+      try {
+        const stored = storage.get('globalSettings');
+        if (stored) {
+          globalSettings = JSON.parse(stored);
+        } else {
+          // Fallback to old keys for backward compatibility
+          const sh = storage.get('salaryHistory');
+          const tr = storage.get('travelRates');
+          if (sh) globalSettings.salaryHistory = JSON.parse(sh);
+          if (tr) globalSettings.travelRates = JSON.parse(tr);
+        }
+      } catch (e) { console.warn('[OT] Failed to load local settings:', e); }
+
+      // Ensure sorting
+      if (globalSettings.salaryHistory) {
+        globalSettings.salaryHistory.sort((a, b) => b.date.localeCompare(a.date));
+      }
+    }
+    loadLocalSettings();
+
+    function getTravelRates() {
+      return globalSettings.travelRates;
     }
 
     // 更新: 重新計算所有資料，並重新渲染
     function updateAll(openIndex = null, skipRender = false) {
       try {
-        let salaryHistory = [];
-        try {
-          const stored = storage.get('salaryHistory');
-          salaryHistory = JSON.parse(stored || '[]');
-        } catch (e) { salaryHistory = []; }
-
-        if (salaryHistory.length === 0) {
-          salaryHistory = [{ date: '2000-01', amount: 68000 }];
+        const salaryHistory = globalSettings.salaryHistory;
+        const rateInput = document.getElementById('usdRate');
+        let rate = globalSettings.usdRate || 32.5;
+        if (rateInput && rateInput.value !== '') {
+          rate = safeParseFloat(rateInput.value);
         }
-        salaryHistory.sort((a, b) => b.date.localeCompare(a.date)); // Descending
-
-        const rate = safeParseFloat(document.getElementById('usdRate')?.value) || 32.5;
+        globalSettings.usdRate = rate;
+        if (rateInput && document.activeElement !== rateInput) {
+          rateInput.value = rate;
+        }
         // const travelUsdPerDay = getTravelUsdByCountry(); // 不再使用全域設定
 
         // 1. 先按日期「由舊到新」排序，確保累加計算 (accum) 正確
@@ -251,6 +269,7 @@
         if (global.updateMonthStatsDOM) {
           global.updateMonthStatsDOM();
         }
+
         updateDashboard();
         updateLeaveSummaryDOM();
         debouncedUpdateAnalytics();
@@ -831,6 +850,7 @@
 
     // 渲染資料列表 (Material Design 3 Card List with Calendar View & Month Grouping)
     let openCardId = null;
+    let monthsToShowRequested = 1;
     function renderDataList(targetId = null) {
       if (targetId) openCardId = targetId;
       const container = document.getElementById('tableContainer');
@@ -924,20 +944,25 @@
         if (!monthlyTravelMap[key]) monthlyTravelMap[key] = 0;
         monthlyTravelMap[key] += (Number(entry.travel) || 0);
 
-        if (!monthSalaryMap[key] && entry.monthSLR) {
-          monthSalaryMap[key] = parseFloat(entry.monthSLR);
+        if (entry.monthSLR) {
+          const val = parseFloat(entry.monthSLR);
+          if (val > 0) monthSalaryMap[key] = val;
         }
       });
 
       console.log('[OT] Redrawing data list with', tableData.length, 'entries');
+      let renderedMonthsSet = new Set();
       let currentMonthGroup = null;
-
       sortedEntries.forEach((entry, displayIdx) => {
         const index = entry.originalIndex;
         // Month Grouping Logic
         const dateObj = parseDateSafe(entry.date);
         const currentMonthKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
 
+        if (!renderedMonthsSet.has(currentMonthKey)) {
+          if (renderedMonthsSet.size >= monthsToShowRequested) return;
+          renderedMonthsSet.add(currentMonthKey);
+        }
         if (currentMonthKey !== lastMonthKey) {
           const monthHeader = document.createElement('div');
           monthHeader.classList.add('month-header');
@@ -963,7 +988,7 @@
           expandIcon.style.transition = 'transform 0.2s';
 
           const title = document.createElement('span');
-          title.textContent = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+          title.textContent = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()} `;
 
           // 3. Contribution Calendar (Mini-grid)
           const monthEntries = tableData.filter(e => {
@@ -1120,7 +1145,11 @@
         const travelChip = document.createElement('div');
         travelChip.classList.add('info-chip', 'travel-chip');
         travelChip.id = `chip-travel-${index}`;
-        const countryCode = getCountryAbbr(entry.travelCountry);
+
+        // Ensure getCountryAbbr is reachable or define it locally if needed
+        const countryCode = (typeof getCountryAbbr === 'function')
+          ? getCountryAbbr(entry.travelCountry)
+          : (entry.travelCountry && entry.travelCountry !== 'None' ? entry.travelCountry.slice(0, 2).toUpperCase() : '--');
 
         if (entry.travelCountry && entry.travelCountry !== 'None') {
           travelChip.classList.add('active'); // Blue background style
@@ -1211,17 +1240,14 @@
 
         const hourLabel = document.createElement('div');
         hourLabel.classList.add('hour-label');
-        hourLabel.textContent = 'Hour'; // or '時'
+        hourLabel.textContent = 'Hour';
 
         const hourStepper = document.createElement('div');
         hourStepper.classList.add('smart-stepper');
         hourStepper.dataset.entryIndex = index;
-        hourStepper.dataset.key = 'vH'; // For internal tracking if needed
-        if (currH >= 0) hourStepper.classList.add('has-value'); // Always true
+        hourStepper.dataset.key = 'vH';
+        if (currH >= 0) hourStepper.classList.add('has-value');
         hourStepper.textContent = String(currH).padStart(2, '0');
-
-        hourStepper.addEventListener('mousedown', e => { /* Let global delegation handle it */ });
-        hourStepper.addEventListener('touchstart', e => { /* Let global delegation handle it */ });
 
         // --- Minute Stepper ---
         const minItem = document.createElement('div');
@@ -1229,7 +1255,7 @@
 
         const minLabel = document.createElement('div');
         minLabel.classList.add('hour-label');
-        minLabel.textContent = 'Min'; // or '分'
+        minLabel.textContent = 'Min';
 
         const minStepper = document.createElement('div');
         minStepper.classList.add('smart-stepper');
@@ -1238,55 +1264,102 @@
         if (currM >= 0) minStepper.classList.add('has-value');
         minStepper.textContent = String(currM).padStart(2, '0');
 
-        minStepper.addEventListener('mousedown', e => { /* Let global delegation handle it */ });
-        minStepper.addEventListener('touchstart', e => { /* Let global delegation handle it */ });
+        const moveHDrag = (y) => {
+          if (!hDrag) return;
+          const delta = Math.floor((hDrag.startY - y) / 10);
+          let newVal = (hDrag.startVal + delta) % 24;
+          if (newVal < 0) newVal += 24;
+          if (newVal !== currH) {
+            currH = newVal;
+            hourStepper.textContent = String(newVal).padStart(2, '0');
+            updateTimeCalc();
+          }
+        };
+        const endHDrag = () => {
+          if (hDrag) {
+            hourStepper.classList.remove('active');
+            hDrag = null;
+          }
+        };
 
-        // Global Move/Up listeners for this specific card
-        // Note: Adding global listeners repeatedly for every card is bad perf?
-        // But only one drag active at a time.
-        // Better: Bind once globally?
-        // Creating per-element closure is easiest for logic isolation. 
-        // We rely on `hDrag`/`mDrag` being local.
-        /* 
-           Issue: If I add 'mousemove' to document inside the loop, it adds N listeners.
-           Solution: Use a shared event handler on document that checks a module-level 'activeDrag' object?
-           OR: Attach to document ONCE outside, and set 'activeDrag'.
-           
-           I will stick to local logic but attach to document ONLY on mousedown, remove on mouseup.
-        */
-        const textHMouseUp = () => { endHDrag(); document.removeEventListener('mousemove', onHMove); document.removeEventListener('mouseup', textHMouseUp); };
         const onHMove = (e) => moveHDrag(e.clientY);
+        const textHMouseUp = () => {
+          endHDrag();
+          document.removeEventListener('mousemove', onHMove);
+          document.removeEventListener('mouseup', textHMouseUp);
+        };
 
-        hourStepper.addEventListener('mousedown', () => {
+        hourStepper.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          hDrag = { startY: e.clientY, startVal: currH };
+          hourStepper.classList.add('active');
           document.addEventListener('mousemove', onHMove);
           document.addEventListener('mouseup', textHMouseUp);
         });
 
-        const touchHEnd = () => { endHDrag(); document.removeEventListener('touchmove', onHTouchMove); document.removeEventListener('touchend', touchHEnd); };
         const onHTouchMove = (e) => moveHDrag(e.touches[0].clientY);
+        const touchHEnd = () => {
+          endHDrag();
+          document.removeEventListener('touchmove', onHTouchMove);
+          document.removeEventListener('touchend', touchHEnd);
+        };
 
-        hourStepper.addEventListener('touchstart', () => {
+        hourStepper.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          hDrag = { startY: e.touches[0].clientY, startVal: currH };
+          hourStepper.classList.add('active');
           document.addEventListener('touchmove', onHTouchMove, { passive: false });
           document.addEventListener('touchend', touchHEnd);
         });
 
-        // Min
-        const textMMouseUp = () => { endMDrag(); document.removeEventListener('mousemove', onMMove); document.removeEventListener('mouseup', textMMouseUp); };
-        const onMMove = (e) => moveMDrag(e.clientY);
+        // Min Drag
+        const moveMDrag = (y) => {
+          if (!mDrag) return;
+          const steps = Math.floor((mDrag.startY - y) / 10);
+          let newVal = (mDrag.startVal + (steps * 10)) % 60;
+          if (newVal < 0) newVal += 60;
+          if (newVal !== currM) {
+            currM = newVal;
+            minStepper.textContent = String(newVal).padStart(2, '0');
+            updateTimeCalc();
+          }
+        };
+        const endMDrag = () => {
+          if (mDrag) {
+            minStepper.classList.remove('active');
+            mDrag = null;
+          }
+        };
 
-        minStepper.addEventListener('mousedown', () => {
+        const onMMove = (e) => moveMDrag(e.clientY);
+        const textMMouseUp = () => {
+          endMDrag();
+          document.removeEventListener('mousemove', onMMove);
+          document.removeEventListener('mouseup', textMMouseUp);
+        };
+
+        minStepper.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          mDrag = { startY: e.clientY, startVal: currM };
+          minStepper.classList.add('active');
           document.addEventListener('mousemove', onMMove);
           document.addEventListener('mouseup', textMMouseUp);
         });
 
-        const touchMEnd = () => { endMDrag(); document.removeEventListener('touchmove', onMTouchMove); document.removeEventListener('touchend', touchMEnd); };
         const onMTouchMove = (e) => moveMDrag(e.touches[0].clientY);
+        const touchMEnd = () => {
+          endMDrag();
+          document.removeEventListener('touchmove', onMTouchMove);
+          document.removeEventListener('touchend', touchMEnd);
+        };
 
-        minStepper.addEventListener('touchstart', () => {
+        minStepper.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          mDrag = { startY: e.touches[0].clientY, startVal: currM };
+          minStepper.classList.add('active');
           document.addEventListener('touchmove', onMTouchMove, { passive: false });
           document.addEventListener('touchend', touchMEnd);
         });
-
 
         hourItem.appendChild(hourLabel);
         hourItem.appendChild(hourStepper);
@@ -1538,6 +1611,28 @@
           }
         });
       });
+      // Pagination: Load More Button
+      const allMonths = Object.keys(monthlyOTMap).sort().reverse();
+      if (allMonths.length > renderedMonthsSet.size) {
+        const loadMoreRow = document.createElement('div');
+        loadMoreRow.style.padding = '32px 0';
+        loadMoreRow.style.display = 'flex';
+        loadMoreRow.style.justifyContent = 'center';
+
+        const loadMoreBtn = document.createElement('button');
+        loadMoreBtn.className = 'promo-action-btn load-more-btn';
+        loadMoreBtn.style.padding = '12px 32px';
+        loadMoreBtn.style.borderRadius = '24px';
+        loadMoreBtn.style.fontWeight = '700';
+        loadMoreBtn.innerHTML = `<span>讀取更多 Load More</span><span style="margin-left:8px; opacity:0.6; font-size:0.8rem;">(${allMonths.length - renderedMonthsSet.size} 剩餘)</span>`;
+        loadMoreBtn.onclick = () => {
+          monthsToShowRequested += 3;
+          renderDataList();
+        };
+        loadMoreRow.appendChild(loadMoreBtn);
+        container.appendChild(loadMoreRow);
+      }
+
       updateDashboard();
     }
     /* Logic removed */
@@ -1723,6 +1818,23 @@
           }, 100);
         }
 
+        // Persist Settings First
+        const settingsPayload = {
+          salaryHistory: globalSettings.salaryHistory,
+          travelRates: globalSettings.travelRates,
+          usdRate: globalSettings.usdRate,
+          rules: globalSettings.rules
+        };
+
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+          google.script.run
+            .withSuccessHandler(() => {
+              console.log('[OT] Settings persisted to sheet.');
+              storage.set('globalSettings', JSON.stringify(settingsPayload));
+            })
+            .saveSettings(settingsPayload);
+        }
+
         google.script.run
           .withSuccessHandler((res) => {
             if (progressInterval) clearInterval(progressInterval);
@@ -1796,26 +1908,22 @@
         const travel = stats.travel;
         const presence = stats.presence;
 
+        const isNeumo = document.documentElement.getAttribute('data-theme') === 'neumorphic';
         if (stats.leave > 0) {
-          // Leave: Dark Red
-          cell.style.background = '#8B0000';
+          cell.style.background = isNeumo ? '#c4c8cc' : '#8B0000';
         } else if (travel > 0) {
-          // Travel: Vibrant Blue Shades (Matching Settings Buttons)
-          if (ot >= 4) cell.style.background = '#004ea2';
-          else if (ot >= 2) cell.style.background = '#007AFF';
-          else if (ot > 0) cell.style.background = '#80bdff';
-          else cell.style.background = '#e0f0ff';
+          if (ot >= 4) cell.style.background = isNeumo ? '#5d6268' : '#004ea2';
+          else if (ot >= 2) cell.style.background = isNeumo ? '#7d8288' : '#007AFF';
+          else if (ot > 0) cell.style.background = isNeumo ? '#9da1a6' : '#80bdff';
+          else cell.style.background = isNeumo ? '#bdc2c6' : '#e0f0ff';
         } else if (ot >= 4) {
-          // OT >= 4h: Even Darker Green
-          cell.style.background = '#004d00';
+          cell.style.background = isNeumo ? '#6d7276' : '#004d00';
         } else if (ot >= 2) {
-          // OT >= 2h: Dark Green
-          cell.style.background = '#006400';
+          cell.style.background = isNeumo ? '#8d9296' : '#006400';
         } else if (ot > 0 || presence > 0) {
-          // Normal Work: Grass Green
-          cell.style.background = '#7CFC00';
+          cell.style.background = isNeumo ? '#bdc2c6' : '#7CFC00';
         } else {
-          cell.style.background = '#e0e0e0';
+          cell.style.background = isNeumo ? '#e0e5e9' : '#e0e0e0';
         }
 
         cell.title = `${monthKey}-${i}: ${Math.round(ot)} OT, ${Math.round(presence)} Presence, ${Math.round(travel)} Travel`;
@@ -1989,7 +2097,27 @@
         }
       }
     }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const next = current === 'neumorphic' ? 'default' : 'neumorphic';
+      html.setAttribute('data-theme', next);
+      storage.set('appTheme', next);
+      showNotification(next === 'neumorphic' ? '🎨 已切換至新擬態主題' : '✨ 已切換至玻璃擬態主題');
+
+      // Dynamic theme update for charts and colors
+      if (typeof initCharts === 'function') initCharts(true);
+      if (typeof updateAll === 'function') updateAll();
+      setTimeout(() => { if (typeof updateCharts === 'function') updateCharts(); }, 300);
+    }
+
+    function initTheme() {
+      const saved = storage.get('appTheme') || 'neumorphic';
+      document.documentElement.setAttribute('data-theme', saved);
+    }
     global.togglePrivacyMode = togglePrivacyMode;
+    global.toggleTheme = toggleTheme;
 
     // 當匯率輸入變更時，自動重新計算
     document.getElementById('usdRate').addEventListener('input', () => {
@@ -2069,6 +2197,23 @@
             renderDataList();
             syncTravelToggleUI();
           }
+        }
+
+        // --- Fetch Settings from Sheet ---
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+          google.script.run
+            .withSuccessHandler((res) => {
+              if (res && res.ok && res.data && Object.keys(res.data).length > 0) {
+                console.log('[OT] Settings loaded from sheet:', res.data);
+                globalSettings = { ...globalSettings, ...res.data };
+                // Apply UI changes
+                if (document.getElementById('usdRate')) {
+                  document.getElementById('usdRate').value = globalSettings.usdRate;
+                }
+                updateAll();
+              }
+            })
+            .getSettings();
         }
       } catch (err) {
         console.error('[OT] loadFromSheet 發生錯誤:', err);
@@ -2402,7 +2547,7 @@
           '有薪產假', '無薪產假', '補休', '產檢假', '陪產檢及陪產假',
           '駐地休假', '生理假', '家庭照顧假', '住院病假', '健檢假'
         ];
-        const typeCapsule = renderCapsuleSelector(types, '特休', (val) => {
+        const typeCapsule = renderCapsuleSelector(types, newAddCardState.leaveType || '特休', (val) => {
           newAddCardState.leaveType = val;
         });
 
@@ -2728,35 +2873,70 @@
     }
 
     // ========== Chart.js 圖表 ==========
+    // --- Global Esc Key Listener ---
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (typeof closeSalaryModal === 'function') closeSalaryModal();
+        if (typeof closeTravelRateModal === 'function') closeTravelRateModal();
+        if (typeof closeRulesModal === 'function') closeRulesModal();
+        if (typeof closeLeaveManagementModal === 'function') closeLeaveManagementModal();
+      }
+    });
+
+    // === Charts Helper: Center Text Plugin ===
     const centerTextPlugin = {
       id: 'centerText',
-      afterDraw: function (chart) {
-        if (chart.config.type !== 'doughnut' || !chart.options.plugins.centerText) return;
+      afterDraw(chart) {
+        if (chart.canvas.id !== 'incomeChart') return;
         const { ctx, width, height } = chart;
-        ctx.save();
-        const text = chart.options.plugins.centerText.text || '';
-        const label = chart.options.plugins.centerText.label || 'Total';
-
-        // Label (Top small)
-        ctx.font = '500 12px sans-serif';
-        ctx.fillStyle = '#666';
-        ctx.textAlign = 'center';
-        ctx.fillText(label, width / 2, height / 2 - 10);
-
-        // Amount (Center big)
-        ctx.font = 'bold 18px sans-serif';
-        ctx.fillStyle = '#000';
-        ctx.fillText(text, width / 2, height / 2 + 12);
         ctx.restore();
+
+        const sum = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+        const isNeumo = document.documentElement.getAttribute('data-theme') === 'neumorphic';
+
+        const fontSize = (height / 160).toFixed(2);
+        ctx.font = `600 ${fontSize}em "Open Sans", sans-serif`;
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = isNeumo ? '#444' : '#1d1d1f';
+
+        const text = Math.round(sum).toLocaleString();
+        const textX = Math.round((width - ctx.measureText(text).width) / 2);
+        const textY = height / 2 - 5;
+
+        ctx.fillText(text, textX, textY);
+
+        ctx.font = `400 ${(fontSize * 0.4)}em sans-serif`;
+        ctx.fillStyle = isNeumo ? '#888' : '#666';
+        const subText = 'Total Income';
+        const subX = Math.round((width - ctx.measureText(subText).width) / 2);
+        const subY = height / 2 + 15;
+        ctx.fillText(subText, subX, subY);
+
+        ctx.save();
       }
     };
 
-    function initCharts() {
-      chartsInitialized = true;
+    function initCharts(force = false) {
+      if (chartsInitialized && !force) return;
       if (typeof Chart === 'undefined') return;
-      if (charts.overtime) return; // Already initialized
 
-      // Register plugins
+      if (force) {
+        Object.values(charts).forEach(c => {
+          if (c && typeof c.destroy === 'function') c.destroy();
+        });
+        charts = {};
+      }
+
+      const ctxOvertime = document.getElementById('overtimeChart')?.getContext('2d');
+      const ctxIncome = document.getElementById('incomeChart')?.getContext('2d');
+      const ctxAttendance = document.getElementById('attendanceChart')?.getContext('2d');
+      const ctxSalaryTrend = document.getElementById('salaryTrendChart')?.getContext('2d');
+
+      if (!ctxOvertime || !ctxIncome || !ctxAttendance || !ctxSalaryTrend) return;
+
+      const isNeumo = document.documentElement.getAttribute('data-theme') === 'neumorphic';
+      const textColor = isNeumo ? '#666' : '#333';
+
       try {
         if (typeof ChartDataLabels !== 'undefined' && !Chart.registry.plugins.get('datalabels')) {
           Chart.register(ChartDataLabels);
@@ -2764,268 +2944,188 @@
         if (!Chart.registry.plugins.get('centerText')) {
           Chart.register(centerTextPlugin);
         }
-      } catch (e) {
-        console.warn('[OT] Plugin registration error:', e);
-      }
+      } catch (e) { console.warn('[OT] Plugin registration error:', e); }
 
-      const ctx1 = document.getElementById('overtimeChart');
-      if (ctx1) {
-        charts.overtime = new Chart(ctx1, {
-          type: 'bar',
-          data: {
-            labels: [],
-            datasets: [{
-              label: '加班時數',
-              data: [],
-              backgroundColor: 'rgba(160,231,160,0.8)',
-              borderColor: 'rgba(160,231,160,1)',
-              borderWidth: 2,
-              borderRadius: 8
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-              y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
-              x: { grid: { display: false } }
-            }
-          }
-        });
-      }
-
-      const ctx2 = document.getElementById('incomeChart');
-      if (ctx2) {
-        charts.income = new Chart(ctx2, {
-          type: 'doughnut',
-          data: {
-            labels: ['Base 薪資', 'Travel 津貼', 'OT 加班費'],
-            datasets: [{
-              data: [0, 0, 0],
-              backgroundColor: ['#A0A0A0', '#FF9500', '#34C759'],
-              borderWidth: 0,
-              hoverOffset: 10
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '70%',
-            plugins: {
-              legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } },
-              datalabels: {
-                color: '#444',
-                anchor: 'end',
-                align: 'end',
-                offset: 10,
-                formatter: (value) => value > 0 ? '$' + Math.round(value).toLocaleString() : '',
-                font: { weight: 'bold' }
-              },
-              centerText: { label: '總支出', text: '$0' }
-            }
-          }
-        });
-      }
-
-      // 3. 月度出勤統計 (Merged Bar)
-      const ctx3 = document.getElementById('attendanceChart');
-      if (ctx3) {
-        charts.attendance = new Chart(ctx3, {
-          type: 'bar',
-          data: {
-            labels: [],
-            datasets: [
-              {
-                label: '辦公天數',
-                data: [],
-                backgroundColor: 'rgba(52, 199, 89, 0.7)',
-                borderColor: 'rgba(52, 199, 89, 1)',
-                borderWidth: 1,
-                borderRadius: 4
-              },
-              {
-                label: '出差天數',
-                data: [],
-                backgroundColor: 'rgba(0, 122, 255, 0.7)',
-                borderColor: 'rgba(0, 122, 255, 1)',
-                borderWidth: 1,
-                borderRadius: 4
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { position: 'top', labels: { boxWidth: 12 } },
-              datalabels: { display: false } // Disable for bars to avoid clutter
+      // 1. Overtime Trend
+      charts.overtime = new Chart(ctxOvertime, {
+        type: 'line',
+        data: { labels: [], datasets: [{ label: 'OT Hours', data: [], borderColor: '#007AFF', tension: 0.4, fill: true, backgroundColor: 'rgba(0,122,255,0.1)' }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, datalabels: { display: false } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { color: textColor, callback: (val) => val.toFixed(1) }
             },
-            scales: {
-              y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { stepSize: 5 } },
-              x: { grid: { display: false } }
-            }
+            x: { ticks: { color: textColor } }
           }
-        });
-      }
+        }
+      });
 
-      // 4. 月度薪資趨勢 (Stacked Bar)
-      const ctx4 = document.getElementById('salaryTrendChart');
-      if (ctx4) {
-        charts.salaryTrend = new Chart(ctx4, {
-          type: 'bar', // Changed from line to stacked bar for components
-          data: {
-            labels: [],
-            datasets: [
-              {
-                label: 'Base 薪資',
-                data: [],
-                backgroundColor: 'rgba(160, 160, 160, 0.6)',
-                stack: 'Stack 0',
+      // 2. Income Structure
+      charts.income = new Chart(ctxIncome, {
+        type: 'doughnut',
+        data: {
+          labels: ['Salary', 'Travel', 'OT'],
+          datasets: [{
+            data: [0, 0, 0],
+            backgroundColor: ['#4CD964', '#FF9500', '#007AFF'],
+            borderWidth: 0,
+            hoverOffset: 10
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '75%',
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, color: textColor } },
+            datalabels: {
+              color: '#fff',
+              formatter: (value, ctx) => {
+                const sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                if (sum === 0) return '';
+                return (value * 100 / sum).toFixed(1) + '%';
               },
-              {
-                label: 'OT 加班費',
-                data: [],
-                backgroundColor: 'rgba(52, 199, 89, 0.6)',
-                stack: 'Stack 0',
-              },
-              {
-                label: 'Travel 津貼',
-                data: [],
-                backgroundColor: 'rgba(255, 149, 0, 0.6)',
-                stack: 'Stack 0',
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { position: 'top', labels: { boxWidth: 12 } },
-              datalabels: { display: false }
+              font: { weight: 'bold', size: 10 }
             },
-            scales: {
-              x: { stacked: true, grid: { display: false } },
-              y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }
+            tooltip: {
+              callbacks: {
+                label: (item) => `${item.label}: ${Math.round(item.raw).toLocaleString()}`
+              }
+            },
+            centerText: {
+              display: true,
+              text: 'Total',
+              label: 'Income'
             }
           }
-        });
-      }
+        }
+      });
+
+      // 3. Attendance Chart (Straight lines)
+      charts.attendance = new Chart(ctxAttendance, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            { label: 'Office Days', data: [], borderColor: isNeumo ? '#7d8288' : '#007AFF', backgroundColor: 'rgba(0,122,255,0.05)', tension: 0, fill: true },
+            { label: 'Travel Days', data: [], borderColor: isNeumo ? '#9da6b0' : '#FF9500', backgroundColor: 'rgba(255,149,0,0.05)', tension: 0, fill: true }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: textColor } },
+            datalabels: { display: false }
+          },
+          scales: { y: { beginAtZero: true, ticks: { color: textColor } }, x: { ticks: { color: textColor } } }
+        }
+      });
+
+      // 4. Salary Trend (Stacked Area)
+      charts.salaryTrend = new Chart(ctxSalaryTrend, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            { label: 'Base', data: [], borderColor: '#666', borderDash: [5, 5], tension: 0, fill: true, backgroundColor: isNeumo ? 'rgba(150,150,150,0.1)' : 'rgba(102,102,102,0.1)' },
+            { label: 'OT Pay', data: [], borderColor: isNeumo ? '#5d6268' : '#34C759', tension: 0, fill: true, backgroundColor: isNeumo ? 'rgba(100,100,100,0.2)' : 'rgba(52,199,89,0.1)' },
+            { label: 'Travel', data: [], borderColor: isNeumo ? '#8d9296' : '#FF9500', tension: 0, fill: true, backgroundColor: isNeumo ? 'rgba(120,120,120,0.3)' : 'rgba(255,149,0,0.1)' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: textColor } },
+            datalabels: { display: false }
+          },
+          scales: {
+            y: {
+              stacked: true,
+              beginAtZero: true,
+              ticks: { color: textColor }
+            },
+            x: { ticks: { color: textColor } }
+          }
+        }
+      });
+
+      chartsInitialized = true;
     }
 
-    // 更新圖表數據
     function updateCharts() {
+      if (!chartsInitialized) initCharts();
+      if (!charts.overtime) return;
+
       try {
-        if (!chartsInitialized || !charts.overtime || !charts.income || !charts.attendance || !charts.salaryTrend) {
-          console.warn('[OT] Charts not fully initialized.');
-          return;
-        }
-
-        // 1. 收入結構數據 (受 filter 影響)
-        let totalBase = 0;
-        let totalTravel = 0;
-        let totalOtPay = 0;
-
+        let totalBase = 0, totalTravel = 0, totalOtPay = 0;
         tableData.forEach(entry => {
           if (!entry.date) return;
           const mKey = entry.date.slice(0, 7).replace(/\//g, '-');
           if (selectedMonth && mKey !== selectedMonth) return;
-
           totalBase += safeParseFloat(entry.base || 0);
           totalTravel += safeParseFloat(entry.travel || 0);
           totalOtPay += safeParseFloat(entry.otSalary || 0);
         });
 
-        // 2. 趨勢圖數據 (永遠顯示所有月份，不受月分篩選器影響，便於觀察趨勢)
-        const allMonthsData = {}; // 加班時數
-        const allMonthsAttendance = {}; // { work: 0, travel: 0 }
-        const allMonthsSalaryComponents = {}; // { base: 0, ot: 0, travel: 0 }
+        const allMonthsData = {};
+        const allMonthsAttendance = {};
+        const allMonthsSalaryComponents = {};
 
         tableData.forEach(e => {
           if (!e.date || e.date.length < 7) return;
-          const k = e.date.slice(0, 7).replace(/\//g, '-'); // Normalize to YYYY-MM
+          const k = e.date.slice(0, 7).replace(/\//g, '-');
           if (allMonthsData[k] === undefined) {
             allMonthsData[k] = 0;
             allMonthsAttendance[k] = { work: 0, travel: 0 };
             allMonthsSalaryComponents[k] = { base: 0, ot: 0, travel: 0 };
           }
-
-          const isLeave = !!e.isLeave;
-          const leaveType = e.leaveType || '';
-
-          // 加班時數
-          allMonthsData[k] += isLeave ? 0 : safeParseFloat(e.otSum || 0);
-
-          // 出勤天數 (修正: 採用一致且包容的邏輯)
-          // 規則: 
-          // 1. 出差日: travelCountry 不為 None 或有差旅費 或有差旅紀錄
-          // 2. 辦公日: (平日且非休假) 或 (有加班)
+          allMonthsData[k] += !!e.isLeave ? 0 : safeParseFloat(e.otSum || 0);
           const isTravel = (e.travelCountry && e.travelCountry !== 'None') || (safeParseFloat(e.travel || 0) > 0);
-          // Force local time parsing to avoid timezone shift in different regions
           const date = parseDateSafe(e.date);
-          const day = date.getDay();
-          const isWeekend = (day === 0 || day === 6);
-          const otVal = safeParseFloat(e.otSum || 0);
-          const isOffice = (!isLeave && !isWeekend) || (otVal > 0);
-
+          const isWeekend = (date.getDay() === 0 || date.getDay() === 6);
+          const isOffice = (!e.isLeave && !isWeekend) || (safeParseFloat(e.otSum || 0) > 0);
           if (isTravel) allMonthsAttendance[k].travel++;
           if (isOffice) allMonthsAttendance[k].work++;
-
           allMonthsSalaryComponents[k].ot += safeParseFloat(e.otSalary || 0);
           allMonthsSalaryComponents[k].travel += safeParseFloat(e.travel || 0);
         });
 
-        // 補足薪資趨勢圖的 Base 薪資
-        let salaryHistory = JSON.parse(storage.get('salaryHistory') || '[]');
-        if (salaryHistory.length === 0) {
-          salaryHistory = [{ date: '2000-01', amount: 68000 }];
-        }
-        salaryHistory.sort((a, b) => b.date.localeCompare(a.date));
-
+        let salaryHistory = globalSettings.salaryHistory || [];
         Object.keys(allMonthsSalaryComponents).forEach(k => {
           const applicable = salaryHistory.find(h => h.date <= k) || salaryHistory[salaryHistory.length - 1];
-          const baseSalary = applicable ? safeParseFloat(applicable.amount) : 68000;
-          allMonthsSalaryComponents[k].base = baseSalary;
+          allMonthsSalaryComponents[k].base = applicable ? safeParseFloat(applicable.amount) : 68000;
         });
-
-        // 3. 計算平均年薪
-        const allMonthsTotals = Object.values(allMonthsSalaryComponents).map(v => v.base + v.ot + v.travel);
-        const avgMonthly = allMonthsTotals.length > 0 ? (allMonthsTotals.reduce((a, b) => a + b, 0) / allMonthsTotals.length) : 0;
-        const avgAnnual = avgMonthly * 12;
-        const annualEl = document.getElementById('statAvgAnnual');
-        if (annualEl) annualEl.textContent = Math.round(avgAnnual).toLocaleString();
 
         const sortedMonths = Object.keys(allMonthsData).sort();
 
-        // --- 更新 A: 加班趨勢圖 ---
+        // Update Overtime Chart
         charts.overtime.data.labels = sortedMonths;
         charts.overtime.data.datasets[0].data = sortedMonths.map(m => allMonthsData[m]);
         charts.overtime.update();
 
-        // --- 更新 B: 收入結構圖 ---
+        // Update Income Chart
         charts.income.data.datasets[0].data = [totalBase, totalTravel, totalOtPay];
-        const grandTotal = totalBase + totalTravel + totalOtPay;
-        charts.income.options.plugins.centerText.text = '$' + Math.round(grandTotal).toLocaleString();
         charts.income.update();
 
-        // --- 更新 C: 月度出勤統計 (Merged) ---
-        if (charts.attendance) {
-          charts.attendance.data.labels = sortedMonths;
-          charts.attendance.data.datasets[0].data = sortedMonths.map(m => allMonthsAttendance[m].work);
-          charts.attendance.data.datasets[1].data = sortedMonths.map(m => allMonthsAttendance[m].travel);
-          charts.attendance.update();
-        }
+        // Update Attendance Chart
+        charts.attendance.data.labels = sortedMonths;
+        charts.attendance.data.datasets[0].data = sortedMonths.map(m => allMonthsAttendance[m].work);
+        charts.attendance.data.datasets[1].data = sortedMonths.map(m => allMonthsAttendance[m].travel);
+        charts.attendance.update();
 
-        if (charts.salaryTrend) {
-          charts.salaryTrend.data.labels = sortedMonths;
-          charts.salaryTrend.data.datasets[0].data = sortedMonths.map(m => allMonthsSalaryComponents[m].base);
-          charts.salaryTrend.data.datasets[1].data = sortedMonths.map(m => Math.round(allMonthsSalaryComponents[m].ot));
-          charts.salaryTrend.data.datasets[2].data = sortedMonths.map(m => Math.round(allMonthsSalaryComponents[m].travel));
-          charts.salaryTrend.update();
-        }
-      } catch (err) {
-        console.error('[OT] updateCharts failed:', err);
-      }
+        // Update Salary Trend
+        charts.salaryTrend.data.labels = sortedMonths;
+        charts.salaryTrend.data.datasets[0].data = sortedMonths.map(m => allMonthsSalaryComponents[m].base);
+        charts.salaryTrend.data.datasets[1].data = sortedMonths.map(m => Math.round(allMonthsSalaryComponents[m].ot));
+        charts.salaryTrend.data.datasets[2].data = sortedMonths.map(m => Math.round(allMonthsSalaryComponents[m].travel));
+        charts.salaryTrend.update();
+      } catch (err) { console.error('[OT] updateCharts failed:', err); }
     }
 
     // 更新統計卡片
@@ -3278,12 +3378,15 @@
     };
 
     function getSalaryHistory() {
-      let history = JSON.parse(storage.get('salaryHistory') || '[]');
-      if (history.length === 0) {
-        history = [{ date: '2024-01', amount: 68000 }];
-        storage.set('salaryHistory', JSON.stringify(history));
+      if (!globalSettings.salaryHistory || globalSettings.salaryHistory.length === 0) {
+        globalSettings.salaryHistory = [{ date: '2024-01', amount: 68000 }];
       }
-      return history.sort((a, b) => b.date.localeCompare(a.date));
+      return globalSettings.salaryHistory.sort((a, b) => b.date.localeCompare(a.date));
+    }
+
+    function saveSalaryHistory(history) {
+      globalSettings.salaryHistory = history;
+      storage.set('globalSettings', JSON.stringify(globalSettings));
     }
 
     let salaryEditState = {}; // index -> { date, amount }
@@ -3403,7 +3506,8 @@
       const rates = getTravelRates();
       rates[country] = travelEditState[country].rate;
       delete travelEditState[country];
-      saveTravelRates(rates);
+      globalSettings.travelRates = rates;
+      storage.set('globalSettings', JSON.stringify(globalSettings));
       renderTravelRateList();
       showNotification(`✅ ${country} 費率已更新`);
     };
@@ -3417,7 +3521,8 @@
       if (!confirm(`確定要刪除 ${country} 的費率嗎？`)) return;
       const rates = getTravelRates();
       delete rates[country];
-      saveTravelRates(rates);
+      globalSettings.travelRates = rates;
+      storage.set('globalSettings', JSON.stringify(globalSettings));
       renderTravelRateList();
     };
 
@@ -3468,7 +3573,8 @@
         return;
       }
       rates[country] = 40;
-      saveTravelRates(rates);
+      globalSettings.travelRates = rates;
+      storage.set('globalSettings', JSON.stringify(globalSettings));
       renderTravelRateList();
     };
 
@@ -3556,8 +3662,28 @@
         stepper.classList.add('active');
       });
 
+      modal.addEventListener('touchstart', (e) => {
+        const stepper = e.target.closest('.stepper-btn');
+        if (!stepper || (!stepper.classList.contains('salary-year-stepper') && !stepper.classList.contains('salary-month-stepper'))) return;
+
+        e.preventDefault();
+        document.body.classList.add('is-dragging');
+
+        dragState = {
+          type: 'salary',
+          subType: stepper.dataset.type,
+          index: parseInt(stepper.dataset.index),
+          el: stepper,
+          lastY: e.touches[0].clientY,
+          accumulatedDelta: 0
+        };
+        stepper.classList.add('active');
+      }, { passive: false });
+
       window.addEventListener('mousemove', onMove);
       window.addEventListener('mouseup', mouseUp);
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('touchend', mouseUp);
     }
 
     window.updateSalaryItem = function (index, key, value) {
@@ -3571,7 +3697,7 @@
       const history = getSalaryHistory();
       const last = history[0] || { date: '2024-01', amount: 68000 };
       history.unshift({ date: last.date, amount: last.amount });
-      storage.set('salaryHistory', JSON.stringify(history));
+      saveSalaryHistory(history);
       renderSalaryList();
       updateAll();
     };
@@ -3583,7 +3709,7 @@
         return;
       }
       history.splice(index, 1);
-      storage.set('salaryHistory', JSON.stringify(history));
+      saveSalaryHistory(history);
       renderSalaryList();
       updateAll();
     };
@@ -3848,6 +3974,7 @@
       }
 
       setTimeout(() => {
+        initTheme();
         initTabNavigation();
         populateMonthFilter();
         try {

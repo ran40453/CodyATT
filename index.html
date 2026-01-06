@@ -175,6 +175,9 @@
             <button id="privacyToggleBtn" class="icon-button privacy-btn" onclick="togglePrivacyMode()" title="切換隱私模式">
               <span class="material-symbols-outlined">visibility</span>
             </button>
+            <button id="themeToggleBtn" class="icon-button theme-btn" onclick="toggleTheme()" title="切換主題 (新擬態/玻璃擬態)">
+              <span class="material-symbols-outlined">palette</span>
+            </button>
             <input type="file" id="importCSVCard" accept=".csv">
           </div>
         </div>
@@ -215,7 +218,7 @@
               <div class="expandable-wrapper" id="leaveInfoWrapper">
                 <div class="expandable-content" style="display: flex; align-items: center; height: 100%;">
                   <div class="add-card-item" id="leaveInfoRow"
-                    style="flex-direction: row; gap: 8px; margin-top: 0; padding-top: 0; white-space: nowrap; min-width: 150px !important;">
+                    style="flex-direction: row; gap: 8px; margin-top: 0; padding-top: 0; white-space: nowrap;">
                     <!-- Capsules dynamically injected here -->
                   </div>
                 </div>
