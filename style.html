@@ -1269,6 +1269,8 @@
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch;
         z-index: 20 !important;
+        display: flex !important;
+        /* Force show on mobile */
     }
 
     .contribution-grid::-webkit-scrollbar {
@@ -1294,19 +1296,25 @@
     }
 
     /* Mobile: Shrink calendar to prevent overflow */
-    @media (max-width: 600px) {
-        .contribution-grid {
-            gap: 1.5px;
-            padding: 3px;
-        }
+    .grid-cell {
+        position: relative;
+        width: 7px !important;
+        height: 7px !important;
+        min-width: 7px;
+        min-height: 7px;
+    }
 
-        .grid-cell {
-            position: relative;
-            width: 7px !important;
-            height: 7px !important;
-            min-width: 7px;
-            min-height: 7px;
-        }
+    /* Ensure amount chips are fully visible on mobile */
+    .card-secondary-info {
+        flex-wrap: nowrap !important;
+        justify-content: flex-end;
+        gap: 4px;
+    }
+
+    .info-chip {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
     }
 
     .grid-cell:hover {

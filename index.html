@@ -4,7 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>加班表管理</title>
+  <title>OT calculation</title>
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -61,9 +62,33 @@
 
       <!-- 左側區域 -->
       <div class="left-panel">
-        <!-- Logo 卡片已移至全域 -->
+        <!-- 工具 (操作按鈕卡片) -->
+        <div class="card actions-card">
+          <div class="settings-actions" style="justify-content: center; gap: 16px;">
+            <button id="exportCSVCard" class="icon-button">
+              <span class="material-symbols-outlined">save</span>
+            </button>
+            <label for="importCSVCard" class="icon-button file-label">
+              <span class="material-symbols-outlined">upload</span>
+            </label>
+            <button id="saveToSheetBtn" class="icon-button" aria-label="Save to Google Sheet">
+              <span class="material-symbols-outlined">cloud_upload</span>
+            </button>
+            <button id="fillMissingDatesBtn" class="icon-button" aria-label="Fill missing dates">
+              <span class="material-symbols-outlined">calendar_month</span>
+            </button>
 
-        <!-- Dashboard 總計 (可收合) -->
+            <button id="privacyToggleBtn" class="icon-button privacy-btn" onclick="togglePrivacyMode()" title="切換隱私模式">
+              <span class="material-symbols-outlined">visibility</span>
+            </button>
+            <button id="themeToggleBtn" class="icon-button theme-btn" onclick="toggleTheme()" title="切換主題 (新擬態/玻璃擬態)">
+              <span class="material-symbols-outlined">palette</span>
+            </button>
+            <input type="file" id="importCSVCard" accept=".csv">
+          </div>
+        </div>
+
+        <!-- 總計 (Dashboard 總計) -->
         <div class="card dashboard-card" id="dashboardCard">
           <div class="card-header" onclick="toggleDashboardCard()"
             style="padding: 16px 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
@@ -110,80 +135,43 @@
           </div>
         </div>
 
-
-        <!-- 系統工具卡片 (Prominent Buttons, Collapsible) -->
-        <div class="card toolbox-card" id="toolboxCard"
-          style="background: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.2)); border: 1px solid rgba(255,255,255,0.3);">
+        <!-- 系統工具 (Toolbox - 摺疊設計) -->
+        <div class="card system-tools-card" id="toolboxCard">
           <div class="card-header" onclick="toggleToolboxCard()"
             style="padding: 16px 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin: 0;">系統工具</h3>
-            <div style="display: flex; gap: 8px; align-items: center;" onclick="event.stopPropagation()">
-              <label style="font-size: 0.8rem; opacity: 0.7;">匯率</label>
-              <input type="number" id="usdRate" value="30.9"
-                style="width: 60px; height: 32px; font-size: 0.9rem; padding: 4px 8px;">
-              <button id="refreshRateOverviewBtn" class="icon-button"
-                style="width: 32px; height: 32px; margin: 0; padding: 0;" title="更新全部數據">
-                <span class="material-symbols-outlined" style="font-size: 18px;">refresh</span>
-              </button>
-            </div>
-            <span class="material-symbols-outlined card-expand-icon" id="toolboxExpandIcon">expand_less</span>
+            <h3 style="margin: 0; text-align: left;">系統工具 (Toolbox)</h3>
+            <span class="material-symbols-outlined card-expand-icon" id="toolboxExpandIcon">expand_more</span>
           </div>
-          <div class="expand-wrapper open" id="toolboxBody">
+
+          <div class="expand-wrapper" id="toolboxBody">
             <div class="expand-inner">
-              <div style="display: flex; flex-direction: column; gap: 12px; padding-top: 8px;">
-                <button onclick="openSalaryModal()" class="icon-button"
-                  style="width: 100%; height: 50px; border-radius: 16px; margin: 0; gap: 12px; background: linear-gradient(135deg, #007AFF, #0056b3); color: white; border: none; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,122,255,0.25);">
+              <div class="settings-actions"
+                style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px; align-items: stretch;">
+                <button class="promo-action-btn" onclick="openSalaryModal()">
                   <span class="material-symbols-outlined">payments</span>
                   <span>薪資紀錄管理</span>
                 </button>
-                <button onclick="openTravelRateModal()" class="icon-button"
-                  style="width: 100%; height: 50px; border-radius: 16px; margin: 0; gap: 12px; background: linear-gradient(135deg, #007AFF, #0056b3); color: white; border: none; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,122,255,0.25);">
-                  <span class="material-symbols-outlined">flight_takeoff</span>
+                <button class="promo-action-btn" onclick="openTravelRateModal()">
+                  <span class="material-symbols-outlined">public</span>
                   <span>出差費率設定</span>
                 </button>
-                <button onclick="openLeaveManagementModal()" class="icon-button"
-                  style="width: 100%; height: 50px; border-radius: 16px; margin: 0; gap: 12px; background: linear-gradient(135deg, #007AFF, #0056b3); color: white; border: none; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,122,255,0.25);">
-                  <span class="material-symbols-outlined">event_available</span>
+                <button class="promo-action-btn" onclick="openLeaveManagementModal()">
+                  <span class="material-symbols-outlined">person_pin</span>
                   <span>特休給假管理</span>
                 </button>
-                <button onclick="openRulesModal()" class="icon-button"
-                  style="width: 100%; height: 50px; border-radius: 16px; margin: 0; gap: 12px; background: linear-gradient(135deg, #007AFF, #0056b3); color: white; border: none; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,122,255,0.25);">
-                  <span class="material-symbols-outlined">calculate</span>
+                <button class="promo-action-btn" onclick="openRulesModal()">
+                  <span class="material-symbols-outlined">gavel</span>
                   <span>加班計算規則</span>
+                </button>
+                <button class="promo-action-btn" id="runDiagnosticsBtn" onclick="runDiagnostics()">
+                  <span class="material-symbols-outlined">analytics</span>
+                  <span>執行系統診斷</span>
                 </button>
               </div>
             </div>
           </div>
         </div>
-
-        <!-- 操作按鈕卡片 (獨立) -->
-        <div class="card actions-card">
-          <div class="settings-actions" style="justify-content: center; gap: 16px;">
-            <button id="exportCSVCard" class="icon-button">
-              <span class="material-symbols-outlined">save</span>
-            </button>
-            <label for="importCSVCard" class="icon-button file-label">
-              <span class="material-symbols-outlined">upload</span>
-            </label>
-            <button id="saveToSheetBtn" class="icon-button" aria-label="Save to Google Sheet">
-              <span class="material-symbols-outlined">cloud_upload</span>
-            </button>
-            <button id="fillMissingDatesBtn" class="icon-button" aria-label="Fill missing dates">
-              <span class="material-symbols-outlined">calendar_month</span>
-            </button>
-
-            <button id="privacyToggleBtn" class="icon-button privacy-btn" onclick="togglePrivacyMode()" title="切換隱私模式">
-              <span class="material-symbols-outlined">visibility</span>
-            </button>
-            <button id="themeToggleBtn" class="icon-button theme-btn" onclick="toggleTheme()" title="切換主題 (新擬態/玻璃擬態)">
-              <span class="material-symbols-outlined">palette</span>
-            </button>
-            <input type="file" id="importCSVCard" accept=".csv">
-          </div>
-        </div>
-        <!-- Cleaned up legacy header row -->
-
-      </div>
+      </div> <!-- End of left-panel -->
 
       <!-- 右側區域 -->
       <div class="right-panel">
@@ -244,9 +232,10 @@
           <!-- 表格由 JS 動態生成 -->
         </div>
 
-      </div>
+      </div> <!-- End of right-panel -->
 
-    </div>
+    </div> <!-- End of container -->
+
   </div>
   <!-- End of Overview Tab -->
 
@@ -274,6 +263,10 @@
             <h3>天數統計</h3>
           </div>
           <div class="stat-list">
+            <div class="stat-item">
+              <span class="label">統計日期</span>
+              <span class="value" id="statDateRange" style="font-size: 0.85rem;">--/--/-- - --/--/--</span>
+            </div>
             <div class="stat-item">
               <span class="label">工作天數</span>
               <span class="value" id="statWorkDays">0</span>
@@ -423,6 +416,12 @@
         </button>
       </div>
       <div class="modal-body">
+        <div class="usd-rate-container"
+          style="background: rgba(0,122,255,0.05); padding: 12px; border-radius: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: 600;">美金匯率 (USD Rate)</span>
+          <input type="number" id="usdRate" value="32.5" step="0.1"
+            style="width: 100px; text-align: right; padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
+        </div>
         <section class="travel-rate-section">
           <div id="travelRateList" class="salary-record-list"></div>
           <button class="add-salary-btn" onclick="addTravelRateRecord()">

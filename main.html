@@ -2068,6 +2068,7 @@
     global.toggleDashboardCard = function () {
       const body = document.getElementById('dashboardBody');
       const icon = document.getElementById('dashboardExpandIcon');
+      if (!body || !icon) return;
       body.classList.toggle('open');
       const isOpen = body.classList.contains('open');
       icon.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
@@ -2120,19 +2121,24 @@
     global.toggleTheme = toggleTheme;
 
     // 當匯率輸入變更時，自動重新計算
-    document.getElementById('usdRate').addEventListener('input', () => {
-      updateAll();
-    });
+    const usdRateEl = document.getElementById('usdRate');
+    if (usdRateEl) {
+      usdRateEl.addEventListener('input', () => {
+        updateAll();
+      });
+    }
 
     // === Google Sheet 相關工具（HtmlService 版：優先走 google.script.run） ===
 
     // === Google Sheet 相關工具（HtmlService 版：直接吃 Template 注入的初始資料） ===
     let isLoadingFromSheet = false;
     async function loadFromSheet() {
+      console.log('[OT] 嘗試載入資料...');
       if (isLoadingFromSheet) return;
       isLoadingFromSheet = true;
       try {
         let payload = window.__OT_INIT_PAYLOAD__;
+        console.log('[OT] 初始 Payload 狀態:', payload ? '已讀取' : '未讀取');
 
         // 如果是本地開發環境且沒有 Payload，提供模擬資料
         if (!payload && (window.location.protocol === 'file:' || !window.google)) {
@@ -2152,10 +2158,10 @@
           rows = payload.data;
         }
 
-        console.log('[OT] Template payload:', payload);
+        console.log('[OT] 最終 rows 資料筆數:', rows ? rows.length : 0);
 
         if (rows && rows.length > 0) {
-          console.log('[OT] 使用 Template 資料初始化表格');
+          console.log('[OT] 開始執行 initTableFromPayload');
           initTableFromPayload({ data: rows });
           showNotification(`✅ 已載入 ${rows.length} 筆資料`);
         } else {
@@ -3222,6 +3228,24 @@
         const el = document.getElementById(id);
         if (el) el.textContent = val;
       };
+
+      // 統計日期範圍 (yy/mm/dd-yy/mm/dd)
+      if (targetData.length > 0) {
+        // 先按日期排序
+        const sorted = [...targetData].sort((a, b) => parseDateSafe(a.date) - parseDateSafe(b.date));
+        const first = parseDateSafe(sorted[0].date);
+        const last = parseDateSafe(sorted[sorted.length - 1].date);
+
+        const fmtDate = (d) => {
+          const yy = String(d.getFullYear()).slice(-2);
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          return `${yy}/${mm}/${dd}`;
+        };
+        setEl('statDateRange', `${fmtDate(first)}-${fmtDate(last)}`);
+      } else {
+        setEl('statDateRange', '--/--/-- - --/--/--');
+      }
 
       const fmt = (n) => Math.round(n).toLocaleString();
       const pct = (n) => n.toFixed(1) + '%';
