@@ -7,7 +7,7 @@
   <title>OT calculation</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&family=Outfit:wght@300;400;500;600;700;800&display=swap" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
   <script id="init-payload" type="application/json"><?!= INIT_DATA_JSON || '{"data":[]}' ?></script>
@@ -98,37 +98,59 @@
 
           <div class="expand-wrapper open" id="dashboardBody">
             <div class="expand-inner">
-              <div class="dashboard-stats-grid">
-                <!-- 群組 1: 次數與時數 -->
-                <div class="dashboard-group">
-                  <div class="stat-row">
-                    <span class="label">出差天數</span>
-                    <span class="capsule black" id="travelDays">0</span>
+              <div class="dashboard-widgets-container">
+                <!-- Stat Card: Travel -->
+                <div class="stat-widget"
+                  style="background: linear-gradient(135deg, rgba(52, 199, 89, 0.1) 0%, rgba(52, 199, 89, 0) 100%);">
+                  <div class="stat-icon" style="color: var(--color-success);">
+                    <span class="material-symbols-outlined">flight_takeoff</span>
                   </div>
-                  <div class="stat-row">
-                    <span class="label">加班總時數</span>
-                    <span class="capsule black" id="totalOT">0</span>
-                  </div>
-                </div>
-
-                <!-- 群組 2: 津貼與加班費 -->
-                <div class="dashboard-group">
-                  <div class="stat-row">
-                    <span class="label">Travel 津貼</span>
-                    <span class="capsule black" id="totalTravel">0</span>
-                  </div>
-                  <div class="stat-row">
-                    <span class="label">OT 加班費</span>
-                    <span class="capsule black" id="totalOTSalary">0</span>
+                  <div class="stat-info">
+                    <span class="stat-label">出差天數</span>
+                    <span class="stat-value" id="travelDays">0</span>
                   </div>
                 </div>
 
-                <!-- 總計單獨顯示 -->
-                <div class="dashboard-total">
-                  <div class="stat-row total-row">
-                    <span class="label">總收入</span>
-                    <span class="capsule yellow" id="totalCost">0</span>
+                <!-- Stat Card: OT Hours -->
+                <div class="stat-widget"
+                  style="background: linear-gradient(135deg, rgba(255, 149, 0, 0.1) 0%, rgba(255, 149, 0, 0) 100%);">
+                  <div class="stat-icon" style="color: var(--color-warning);">
+                    <span class="material-symbols-outlined">timer</span>
                   </div>
+                  <div class="stat-info">
+                    <span class="stat-label">加班總時數</span>
+                    <span class="stat-value" id="totalOT">0</span>
+                  </div>
+                </div>
+
+                <!-- Stat Card: Travel Allowance -->
+                <div class="stat-widget"
+                  style="background: linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(0, 122, 255, 0) 100%);">
+                  <div class="stat-icon" style="color: var(--color-primary);">
+                    <span class="material-symbols-outlined">account_balance_wallet</span>
+                  </div>
+                  <div class="stat-info">
+                    <span class="stat-label">Travel 津貼</span>
+                    <span class="stat-value" id="totalTravel">0</span>
+                  </div>
+                </div>
+
+                <!-- Stat Card: OT Salary -->
+                <div class="stat-widget"
+                  style="background: linear-gradient(135deg, rgba(88, 86, 214, 0.1) 0%, rgba(88, 86, 214, 0) 100%);">
+                  <div class="stat-icon" style="color: #5856D6;">
+                    <span class="material-symbols-outlined">payments</span>
+                  </div>
+                  <div class="stat-info">
+                    <span class="stat-label">OT 加班費</span>
+                    <span class="stat-value" id="totalOTSalary">0</span>
+                  </div>
+                </div>
+
+                <!-- Total Income Highlights -->
+                <div class="total-income-highlight">
+                  <div class="highlight-label">本月總收入</div>
+                  <div class="highlight-value" id="totalCost">0</div>
                 </div>
               </div>
             </div>
@@ -613,6 +635,13 @@
   </div>
 
   <?!= include('main'); ?>
+  <!-- Floating Action Button -->
+  <button class="fab"
+    onclick="window.scrollTo({top: 0, behavior: 'smooth'}); setTimeout(() => document.getElementById('addRecordSection')?.scrollIntoView({behavior: 'smooth'}), 100);"
+    title="新增紀錄">
+    <span class="material-symbols-outlined">add</span>
+  </button>
+
 </body>
 
 </html>

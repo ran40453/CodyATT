@@ -1003,8 +1003,10 @@
       console.log('[OT] Redrawing data list with', tableData.length, 'entries');
       let renderedMonthsSet = new Set();
       let currentMonthGroup = null;
+      let globalIndex = 0;
       sortedEntries.forEach((entry, displayIdx) => {
         const index = entry.originalIndex;
+        globalIndex++;
         // Month Grouping Logic
         const dateObj = parseDateSafe(entry.date);
         const currentMonthKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
@@ -1119,8 +1121,9 @@
         }
 
         const card = document.createElement('div');
-        card.classList.add('data-card');
+        card.classList.add('data-card', 'fade-in-up');
         const cardUniqueId = entry.__id || entry.date;
+        card.style.animationDelay = `${globalIndex * 0.05}s`;
         if (openCardId === cardUniqueId) card.classList.add('expanded');
 
         // Desktop Calendar Alignment
@@ -3060,7 +3063,7 @@
           labels: ['Salary', 'Travel', 'OT'],
           datasets: [{
             data: [0, 0, 0],
-            backgroundColor: ['#4CD964', '#FF9500', '#007AFF'],
+            backgroundColor: ['#34C759', '#007AFF', '#FF9500'],
             borderWidth: 0,
             hoverOffset: 10
           }]
@@ -3075,7 +3078,7 @@
           labels: ['Salary', 'Travel', 'OT'],
           datasets: [{
             data: [0, 0, 0],
-            backgroundColor: ['#4CD964', '#FF9500', '#007AFF'],
+            backgroundColor: ['#34C759', '#007AFF', '#FF9500'],
             borderWidth: 0,
             hoverOffset: 10
           }]
@@ -3089,8 +3092,8 @@
         data: {
           labels: [],
           datasets: [
-            { label: 'Office Days', data: [], borderColor: isNeumo ? '#7d8288' : '#007AFF', backgroundColor: 'rgba(0,122,255,0.05)', tension: 0, fill: true },
-            { label: 'Travel Days', data: [], borderColor: isNeumo ? '#9da6b0' : '#FF9500', backgroundColor: 'rgba(255,149,0,0.05)', tension: 0, fill: true }
+            { label: 'Office Days', data: [], borderColor: isNeumo ? '#7d8288' : '#34C759', backgroundColor: 'rgba(52,199,89,0.05)', tension: 0.4, fill: true },
+            { label: 'Travel Days', data: [], borderColor: isNeumo ? '#9da6b0' : '#007AFF', backgroundColor: 'rgba(0,122,255,0.05)', tension: 0.4, fill: true }
           ]
         },
         options: {
@@ -3110,9 +3113,9 @@
         data: {
           labels: [],
           datasets: [
-            { label: 'Base', data: [], borderColor: '#666', borderDash: [5, 5], tension: 0, fill: true, backgroundColor: isNeumo ? 'rgba(150,150,150,0.1)' : 'rgba(102,102,102,0.1)' },
-            { label: 'OT Pay', data: [], borderColor: isNeumo ? '#5d6268' : '#34C759', tension: 0, fill: true, backgroundColor: isNeumo ? 'rgba(100,100,100,0.2)' : 'rgba(52,199,89,0.1)' },
-            { label: 'Travel', data: [], borderColor: isNeumo ? '#8d9296' : '#FF9500', tension: 0, fill: true, backgroundColor: isNeumo ? 'rgba(120,120,120,0.3)' : 'rgba(255,149,0,0.1)' }
+            { label: 'Base', data: [], borderColor: '#8e8e93', borderDash: [5, 5], tension: 0.4, fill: true, backgroundColor: 'rgba(142,142,147,0.05)' },
+            { label: 'OT Pay', data: [], borderColor: '#FF9500', tension: 0.4, fill: true, backgroundColor: 'rgba(255,149,0,0.05)' },
+            { label: 'Travel', data: [], borderColor: '#007AFF', tension: 0.4, fill: true, backgroundColor: 'rgba(0,122,255,0.05)' }
           ]
         },
         options: {
