@@ -6642,8 +6642,9 @@
               if (cachedRows.length > 0) {
                 console.log('[OT] 使用本地快取資料初始化');
                 initTableFromPayload({ data: cachedRows });
-                showNotification(`✅ 已從本地快取載入 ${cachedRows.length} 筆資料`);
-                return; // Successfully loaded from cache
+                initTableFromPayload({ data: cachedRows });
+                showNotification(`✅ 已從本地快取載入 ${cachedRows.length} 筆資料 (正在同步最新資料...)`);
+                // Fix: Do not return here. Continue to fetch from API to ensure data is fresh and not stale mock data.
               }
             }
 
