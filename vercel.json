@@ -1,12 +1,12 @@
 {
-  "rewrites": [
-    {
-      "source": "/api",
-      "destination": "https://script.google.com/macros/s/AKfycbyH3y-b0ybjDw_2Z4SFiy677MMZPHuR7dwayZ2ebEtIl8isAThKE1h4ZZKa6UXIqSqAwQ/exec"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "https://script.google.com/macros/s/AKfycbyH3y-b0ybjDw_2Z4SFiy677MMZPHuR7dwayZ2ebEtIl8isAThKE1h4ZZKa6UXIqSqAwQ/exec"
-    }
-  ]
+    "rewrites": [
+        {
+            "source": "/api",
+            "destination": "https://script.google.com/macros/s/AKfycbzDY3zDdmGbldTMbra2oPrQ4KWJiqC7kRxT7nIprQugP71KoL28Lj-9L53hYeh6nTxrYw/exec"
+        },
+        {
+            "source": "/api/(.*)",
+            "destination": "https://script.google.com/macros/s/AKfycbzDY3zDdmGbldTMbra2oPrQ4KWJiqC7kRxT7nIprQugP71KoL28Lj-9L53hYeh6nTxrYw/exec"
+        }
+    ]
 }
