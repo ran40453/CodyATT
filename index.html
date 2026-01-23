@@ -6608,7 +6608,10 @@
           console.log('[OT] 初始 Payload 狀態:', payload ? '已讀取' : '未讀取');
 
           // 如果是本地開發環境且沒有 Payload，提供模擬資料
-          if (!payload && (window.location.protocol === 'file:' || !window.google)) {
+          // Fix: strict check for localhost or file protocol to avoid triggering on Vercel
+          const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
+
+          if (!payload && isLocalDev) {
             console.log('[OT] 本地環境偵測：載入模擬資料 (Dev Mode)');
             payload = {
               data: [
