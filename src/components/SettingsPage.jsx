@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { Save, RefreshCw, DollarSign, Calculator, Briefcase, Calendar as CalendarIcon } from 'lucide-react'
-import { loadSettings, saveSettings, syncSettingsToSheets, testConnection } from '../lib/storage'
+import { Save, RefreshCw, DollarSign, Calculator, Briefcase, Calendar as CalendarIcon, Activity } from 'lucide-react'
+import { loadSettings, saveSettings, syncSettingsToGist, testConnection } from '../lib/storage'
 import { cn } from '../lib/utils'
 
 function SettingsPage() {
@@ -16,6 +15,7 @@ function SettingsPage() {
     const handleTestConnection = async () => {
         setIsTesting(true);
         setTestResult(null);
+        // Ensure current temp token is used for test if not saved yet
         const result = await testConnection();
         setTestResult(result);
         setIsTesting(false);
@@ -26,11 +26,15 @@ function SettingsPage() {
     const handleSave = async () => {
         setIsSaving(true)
         saveSettings(settings)
-        await syncSettingsToSheets(settings) // Sync to cloud
+        await syncSettingsToGist(settings)
         setTimeout(() => setIsSaving(false), 1000)
     }
 
     const updateSetting = (section, field, value) => {
+        if (section === 'root') {
+            setSettings(prev => ({ ...prev, [field]: value }))
+            return
+        }
         setSettings(prev => ({
             ...prev,
             [section]: {
@@ -127,47 +131,71 @@ function SettingsPage() {
                     </div>
                 ))}
 
-                {/* System Connectivity Section */}
+                {/* GitHub Gist Connectivity Section */}
                 <div className="neumo-card space-y-6">
                     <div className="flex items-center gap-3">
                         <div className="p-2 neumo-pressed rounded-xl text-gray-500">
-                            <RefreshCw size={20} className={cn(isTesting && "animate-spin")} />
+                            <Activity size={20} />
                         </div>
-                        <h3 className="text-lg font-black italic">系統連線診斷</h3>
+                        <h3 className="text-lg font-black italic">Gist 資料同步與存取</h3>
                     </div>
 
                     <div className="space-y-4">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">GitHub Personal Access Token (PAT)</label>
+                            <div className="relative">
+                                <input
+                                    type="password"
+                                    value={settings.githubToken || ''}
+                                    onChange={(e) => updateSetting('root', 'githubToken', e.target.value)}
+                                    placeholder="ghp_xxxxxxxxxxxx"
+                                    className="neumo-input h-11 text-sm font-bold w-full"
+                                />
+                            </div>
+                            <p className="text-[9px] text-gray-400 mt-1 ml-1 leading-relaxed">
+                                用於存取 Gist。請確保 Token 具有 <code className="bg-gray-100 px-1 rounded">gist</code> 權限。
+                                <br />目前的 Gist ID: <span className="font-mono text-neumo-brand">7ce68f2145a8c8aa4eabe5127f351f71</span>
+                            </p>
+                        </div>
+
                         <button
                             onClick={handleTestConnection}
                             disabled={isTesting}
-                            className="neumo-button w-full py-3 text-xs font-black uppercase text-gray-600"
+                            className={cn(
+                                "neumo-button w-full py-3 text-xs font-black uppercase transition-all",
+                                isTesting ? "opacity-50 text-gray-600" : "text-neumo-brand"
+                            )}
                         >
-                            {isTesting ? '正在測試中...' : '測試 Google Sheets 連線'}
+                            {isTesting ? '測試中...' : '測試 Gist 連線能力'}
                         </button>
 
                         {testResult && (
-                            <div className={cn(
-                                "neumo-pressed rounded-2xl p-4 text-xs font-bold break-all",
-                                testResult.ok ? "text-green-600" : "text-red-500"
-                            )}>
-                                <p className="uppercase tracking-widest mb-1 underline">測試結果:</p>
-                                <p>{testResult.ok ? '✅ 連線成功！' : `❌ 失敗: ${testResult.error}`}</p>
-                                {testResult.status && <p className="mt-1">狀態碼: {testResult.status}</p>}
-                                {testResult.raw && <p className="mt-1 opacity-50 italic">Raw: {testResult.raw}</p>}
-                            </div>
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className={cn(
+                                    "p-3 rounded-2xl text-[10px] font-bold leading-relaxed",
+                                    testResult.ok ? "bg-green-50 text-green-700 border border-green-100" : "bg-red-50 text-red-700 border border-red-100"
+                                )}
+                            >
+                                <div className="flex items-center gap-2 mb-1">
+                                    <div className={cn("w-1.5 h-1.5 rounded-full", testResult.ok ? "bg-green-500" : "bg-red-500")} />
+                                    {testResult.ok ? '連線成功！' : '連線失敗'}
+                                </div>
+                                {!testResult.ok && (
+                                    <p className="opacity-80">{testResult.error}</p>
+                                )}
+                                {testResult.ok && (
+                                    <p className="opacity-80">讀取到 {testResult.data.files ? Object.keys(testResult.data.files).length : 0} 個檔案</p>
+                                )}
+                            </motion.div>
                         )}
-
-                        <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
-                            <p className="text-[10px] text-blue-600 font-bold leading-relaxed">
-                                ※ 如果測試失敗，請確認 `vercel.json` 中的網址是否與 Apps Script 的最新部署 ID 一致。
-                            </p>
-                        </div>
                     </div>
                 </div>
             </div>
 
             <div className="text-center py-8">
-                <p className="text-[10px] text-gray-400 font-bold tracking-[0.2em] uppercase">OT Calculation App v2.0 • Neumorphic Design</p>
+                <p className="text-[10px] text-gray-400 font-bold tracking-[0.2em] uppercase">OT Calculation App v2.0 • GitHub Gist Driven</p>
             </div>
         </div>
     )

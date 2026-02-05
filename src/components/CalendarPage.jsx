@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths, isSameDay } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus, MapPin, Clock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Palmtree, Moon } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { cn } from '../lib/utils'
 import { loadData, addOrUpdateRecord } from '../lib/storage'
@@ -59,7 +59,9 @@ function CalendarPage() {
             >
                 <div className="flex flex-col md:flex-row items-center gap-4">
                     <div className="flex items-center gap-2 min-w-max">
-                        <Plus size={18} className="text-neumo-brand" />
+                        <div className="p-2 neumo-pressed rounded-xl text-neumo-brand">
+                            <Plus size={18} />
+                        </div>
                         <h3 className="text-sm font-black italic uppercase tracking-wider">快速新增</h3>
                     </div>
 
@@ -68,23 +70,26 @@ function CalendarPage() {
                         <div className="flex-1 min-w-[120px]">
                             <input
                                 type="date"
-                                className="neumo-input h-10 text-xs font-bold w-full"
+                                className="neumo-input h-11 text-xs font-bold w-full"
                                 defaultValue={format(new Date(), 'yyyy-MM-dd')}
                                 id="quick-date"
                             />
                         </div>
 
                         {/* Country Dropdown */}
-                        <div className="flex-1 min-w-[120px]">
+                        <div className="flex-1 min-w-[120px] relative">
                             <select
                                 id="quick-country"
-                                className="neumo-input h-10 text-xs font-bold w-full bg-transparent appearance-none"
+                                className="neumo-input h-11 text-xs font-bold w-full bg-transparent appearance-none"
                             >
-                                <option value="">無出差</option>
+                                <option value="">無出差 (None)</option>
                                 <option value="印度">印度 (IN)</option>
                                 <option value="越南">越南 (VN)</option>
                                 <option value="大陸">大陸 (CN)</option>
                             </select>
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+                                <ChevronRight size={14} className="rotate-90" />
+                            </div>
                         </div>
 
                         {/* Toggles */}
@@ -92,43 +97,47 @@ function CalendarPage() {
                             <button
                                 onClick={() => setQuickHoliday(!quickHoliday)}
                                 className={cn(
-                                    "p-2 rounded-xl transition-all",
-                                    quickHoliday ? "neumo-pressed text-orange-500" : "neumo-raised text-gray-400"
+                                    "p-3 rounded-2xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter",
+                                    quickHoliday ? "neumo-pressed text-orange-500 bg-orange-50/50" : "neumo-raised text-gray-400"
                                 )}
                                 title="國定假日"
                             >
-                                <Plus size={16} className={cn("transition-transform", quickHoliday && "rotate-45")} />
+                                <Palmtree size={16} />
+                                <span className="hidden sm:inline">假日</span>
                             </button>
                             <button
                                 onClick={() => setQuickLeave(!quickLeave)}
                                 className={cn(
-                                    "p-2 rounded-xl transition-all",
-                                    quickLeave ? "neumo-pressed text-red-500" : "neumo-raised text-gray-400"
+                                    "p-3 rounded-2xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter",
+                                    quickLeave ? "neumo-pressed text-indigo-500 bg-indigo-50/50" : "neumo-raised text-gray-400"
                                 )}
                                 title="請假"
                             >
-                                <div className="w-4 h-4 flex items-center justify-center font-black text-[10px]">X</div>
+                                <Moon size={16} />
+                                <span className="hidden sm:inline">請假</span>
                             </button>
                         </div>
 
                         {/* Add Button */}
                         <button
                             onClick={() => {
-                                const date = document.getElementById('quick-date').value
-                                const country = document.getElementById('quick-country').value
+                                const dateElement = document.getElementById('quick-date');
+                                const countryElement = document.getElementById('quick-country');
+                                if (!dateElement || !countryElement) return;
+
                                 handleUpdateRecord({
-                                    date: new Date(date),
+                                    date: new Date(dateElement.value),
                                     otHours: 0,
-                                    country,
+                                    country: countryElement.value,
                                     isHoliday: quickHoliday,
                                     isLeave: quickLeave
                                 })
                                 setQuickHoliday(false)
                                 setQuickLeave(false)
                             }}
-                            className="neumo-button h-10 px-6 flex items-center justify-center gap-2 text-xs font-black text-neumo-brand ml-auto"
+                            className="neumo-button h-11 px-8 flex items-center justify-center gap-2 text-xs font-black text-neumo-brand ml-auto"
                         >
-                            新增
+                            新增紀錄
                         </button>
                     </div>
                 </div>

@@ -67,36 +67,141 @@ export const calculateDailySalary = (record, settings) => {
     return (daySalary * multiplier) + otPay;
 };
 
-const SHEET_API_URL = '/api';
+const GIST_ID = '7ce68f2145a8c8aa4eabe5127f351f71';
+const GET_GIST_URL = (id) => `https://api.github.com/gists/${id}`;
 
 /**
- * Maps React record to Google Sheets row format
+ * Maps React record to Gist format (just JSON)
  */
-const recordsToSheetFormat = (records) => {
-    const headers = ['日期', '下班時間', '加班時數', '出差國家', '國定假日', '請假'];
-    const rows = records.map(r => [
-        format(new Date(r.date), 'yyyy-MM-dd'),
-        r.endTime || '',
-        r.otHours || 0,
-        r.country || '',
-        r.isHoliday ? 'TRUE' : 'FALSE',
-        r.isLeave ? 'TRUE' : 'FALSE'
-    ]);
-    return { headers, rows };
+const recordsToGistFormat = (records) => {
+    return JSON.stringify(records, null, 2);
 };
 
 /**
- * Maps Google Sheets objects back to React record format
+ * Fetch data from GitHub Gist
  */
-const sheetToRecordsFormat = (sheetRows) => {
-    return sheetRows.map(row => ({
-        date: row['日期'] || row['date'],
-        endTime: row['下班時間'] || row['endTime'] || '18:00',
-        otHours: parseFloat(row['加班時數'] || row['otHours'] || 0),
-        country: row['出差國家'] || row['country'] || '',
-        isHoliday: String(row['國定假日'] || row['isHoliday']) === 'TRUE',
-        isLeave: String(row['請假'] || row['isLeave']) === 'TRUE'
-    }));
+export const fetchRecordsFromGist = async () => {
+    try {
+        const response = await fetch(GET_GIST_URL(GIST_ID));
+        const gist = await response.json();
+        if (gist.files && gist.files['records.json']) {
+            const records = JSON.parse(gist.files['records.json'].content);
+            saveData(records);
+            return records;
+        }
+    } catch (error) {
+        console.error('Failed to fetch from Gist:', error);
+    }
+    return loadData();
+};
+
+/**
+ * Save data to GitHub Gist
+ */
+export const syncRecordsToGist = async (records) => {
+    const settings = loadSettings();
+    const token = settings.githubToken;
+    if (!token) {
+        console.warn('No GitHub token found in settings, cannot sync to Gist.');
+        return { ok: false, error: 'Token missing' };
+    }
+
+    try {
+        const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `token ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                files: {
+                    'records.json': {
+                        content: recordsToGistFormat(records)
+                    }
+                }
+            })
+        });
+        return { ok: response.ok };
+    } catch (error) {
+        console.error('Failed to sync to Gist:', error);
+        return { ok: false, error: 'Network error' };
+    }
+};
+
+/**
+ * Fetch settings from Gist
+ */
+export const fetchSettingsFromGist = async () => {
+    try {
+        const response = await fetch(GET_GIST_URL(GIST_ID));
+        const gist = await response.json();
+        if (gist.files && gist.files['settings.json']) {
+            const remoteSettings = JSON.parse(gist.files['settings.json'].content);
+            const localSettings = loadSettings();
+            // Merge remote settings with local token (token should probably stay local or be carefully synced)
+            const merged = { ...remoteSettings, githubToken: localSettings.githubToken };
+            saveSettings(merged);
+            return merged;
+        }
+    } catch (error) {
+        console.error('Failed to fetch settings from Gist:', error);
+    }
+    return loadSettings();
+};
+
+/**
+ * Save settings to Gist
+ */
+export const syncSettingsToGist = async (settings) => {
+    const token = settings.githubToken;
+    if (!token) return { ok: false };
+
+    try {
+        // Strip token before saving to Gist for security
+        const { githubToken, ...safeSettings } = settings;
+        const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `token ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                files: {
+                    'settings.json': {
+                        content: JSON.stringify(safeSettings, null, 2)
+                    }
+                }
+            })
+        });
+        return { ok: response.ok };
+    } catch (error) {
+        console.error('Failed to sync settings to Gist:', error);
+        return { ok: false };
+    }
+};
+
+/**
+ * Alias functions for compatibility or future proofing
+ */
+export const fetchRecordsFromSheets = fetchRecordsFromGist;
+export const syncRecordsToSheets = syncRecordsToGist;
+export const fetchSettingsFromSheets = fetchSettingsFromGist;
+export const syncSettingsToSheets = syncSettingsToGist;
+
+/**
+ * Test connectivity to Gist
+ */
+export const testConnection = async () => {
+    try {
+        const response = await fetch(GET_GIST_URL(GIST_ID));
+        if (response.ok) {
+            const gist = await response.json();
+            return { ok: true, status: 200, data: gist };
+        }
+        return { ok: false, status: response.status, error: `HTTP ${response.status}` };
+    } catch (error) {
+        return { ok: false, error: error.message };
+    }
 };
 
 export const loadData = () => {
@@ -106,113 +211,6 @@ export const loadData = () => {
 
 export const saveData = (data) => {
     localStorage.setItem(DATA_KEY, JSON.stringify(data));
-};
-
-/**
- * Fetch data from Google Sheets
- */
-export const fetchRecordsFromSheets = async () => {
-    try {
-        const response = await fetch(`${SHEET_API_URL}?api=1`);
-        const result = await response.json();
-        if (result && result.data) {
-            const records = sheetToRecordsFormat(result.data);
-            saveData(records);
-            return records;
-        }
-    } catch (error) {
-        console.error('Failed to fetch from sheets:', error);
-    }
-    return loadData();
-};
-
-/**
- * Save data to Google Sheets
- */
-export const syncRecordsToSheets = async (records) => {
-    try {
-        const payload = recordsToSheetFormat(records);
-        const response = await fetch(SHEET_API_URL, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
-        return await response.json();
-    } catch (error) {
-        console.error('Failed to sync to sheets:', error);
-        return { ok: false, error: 'Network error' };
-    }
-};
-
-/**
- * Fetch settings from Google Sheets
- */
-export const fetchSettingsFromSheets = async () => {
-    try {
-        const response = await fetch(`${SHEET_API_URL}?api=1&mode=settings`);
-        const result = await response.json();
-        // The legacy GAS code might need a mode=settings parameter or separate logic
-        // For now, assume it returns { ok: true, data: { ... } }
-        if (result && result.ok && result.data) {
-            saveSettings(result.data);
-            return result.data;
-        }
-    } catch (error) {
-        console.error('Failed to fetch settings:', error);
-    }
-    return loadSettings();
-};
-
-/**
- * Save settings to Google Sheets
- */
-export const syncSettingsToSheets = async (settings) => {
-    try {
-        const response = await fetch(SHEET_API_URL, {
-            method: 'POST',
-            body: JSON.stringify({ type: 'settings', data: settings })
-        });
-        return await response.json();
-    } catch (error) {
-        console.error('Failed to sync settings:', error);
-        return { ok: false };
-    }
-};
-
-/**
- * Test connectivity to Google Sheets API
- */
-export const testConnection = async () => {
-    try {
-        console.log('Testing connection to:', SHEET_API_URL);
-        const response = await fetch(`${SHEET_API_URL}?api=1`, { method: 'GET' });
-        console.log('Response status:', response.status);
-
-        if (!response.ok) {
-            return { ok: false, status: response.status, error: `HTTP ${response.status}` };
-        }
-
-        const text = await response.text();
-        console.log('Raw response:', text.slice(0, 100));
-
-        if (text.trim().startsWith('<!DOCTYPE html>') || text.includes('google-signin')) {
-            return {
-                ok: false,
-                status: response.status,
-                error: '接收到 HTML 而非 JSON。這通常是因為 Google Apps Script 權限未設為「任何人 (Anyone)」或網址錯誤。',
-                raw: text.slice(0, 100)
-            };
-        }
-
-        try {
-            const json = JSON.parse(text);
-            return { ok: true, status: response.status, data: json };
-        } catch (e) {
-            return { ok: false, status: response.status, error: '回傳格式錯誤 (Invalid JSON)', raw: text.slice(0, 100) };
-        }
-    } catch (error) {
-        console.error('Connection test failed:', error);
-        return { ok: false, error: error.message || 'Network error' };
-    }
 };
 
 export const loadSettings = () => {

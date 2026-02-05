@@ -120,79 +120,90 @@ function DayCard({ day, record, onUpdate }) {
         <motion.div
             layout
             className={cn(
-                "neumo-card transition-all duration-500 overflow-hidden",
-                isToday(day) && "border-2 border-neumo-brand/30",
+                "neumo-card transition-all duration-500 overflow-hidden flex flex-col p-4",
+                isToday(day) && "ring-2 ring-neumo-brand/30 ring-inset",
                 isHoliday && "bg-orange-50/50",
                 isLeave && "opacity-60",
                 isSunday && "bg-gray-300",
-                "flex-1 min-w-[80px]",
-                isExpanded && "flex-[2.5] min-w-[160px]"
+                "flex-1 min-w-[85px]",
+                isExpanded && "flex-[3] min-w-[180px]"
             )}
             style={{
-                color: isSunday ? '#4a5568' : '#202731'
+                color: isSunday ? '#202731' : '#202731'
             }}
         >
             <div
-                className="flex justify-between items-start cursor-pointer h-full"
+                className="flex justify-between items-start cursor-pointer w-full"
                 onClick={() => setIsExpanded(!isExpanded)}
             >
                 <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                        <span className={cn("text-xs font-bold uppercase", isSunday ? "text-gray-600" : "text-gray-500")}>{format(day, 'EEE')}</span>
-                        {isHoliday && <Flag size={12} className="text-orange-500 fill-orange-500" />}
-                        {isLeave && <UserX size={12} className="text-red-400" />}
+                    <div className="flex items-center gap-1.5 mb-1">
+                        <span className={cn("text-[10px] font-black uppercase tracking-tighter", isSunday ? "text-gray-700" : "text-gray-400")}>
+                            {format(day, 'EEE')}
+                        </span>
+                        {isHoliday && <Palmtree size={12} className="text-orange-500" />}
+                        {isLeave && <Moon size={12} className="text-indigo-400" />}
                     </div>
-                    <span className={cn("text-2xl font-black", isToday(day) ? "text-neumo-brand" : "")}>
+                    <span className={cn("text-2xl font-black leading-none", isToday(day) ? "text-neumo-brand" : "")}>
                         {format(day, 'dd')}
                     </span>
+
+                    {/* Collapsed Info */}
                     {!isExpanded && (
-                        <span className="text-[10px] font-black text-gray-500 opacity-60 mt-1">
-                            ${Math.round(dailySalary).toLocaleString()}
-                        </span>
+                        <div className="mt-2 space-y-1">
+                            <span className="text-[11px] font-black text-gray-700 block">
+                                ${Math.round(dailySalary).toLocaleString()}
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                                {otHours > 0 && (
+                                    <span className="text-[8px] font-black bg-neumo-brand/10 text-neumo-brand px-1 rounded-sm">
+                                        {otHours.toFixed(1)}h
+                                    </span>
+                                )}
+                                {country && (
+                                    <span className="text-[8px] font-black bg-green-500/10 text-green-600 px-1 rounded-sm">
+                                        {getCountryCode(country)}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
                     )}
                 </div>
 
-                <div className="flex flex-col items-end space-y-1">
-                    {otHours > 0 && (
-                        <div className="flex items-center gap-1 bg-neumo-brand/10 px-2 py-0.5 rounded-full">
-                            <Clock size={12} className="text-neumo-brand" />
-                            <span className="text-xs font-bold text-neumo-brand">{otHours.toFixed(1)}h</span>
-                        </div>
-                    )}
-                    {country && (
-                        <div className="flex items-center gap-1 bg-green-500/10 px-2 py-0.5 rounded-full">
-                            <MapPin size={12} className="text-green-600" />
-                            <span className="text-xs font-bold text-green-600">{getCountryCode(country)}</span>
-                        </div>
-                    )}
+                <div className="text-gray-300">
+                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </div>
             </div>
 
             <AnimatePresence>
                 {isExpanded && (
                     <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="pt-6 border-t border-gray-100 mt-6 space-y-6"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="mt-6 pt-6 border-t border-gray-100 space-y-6 overflow-hidden"
                     >
-                        <div className="flex gap-3">
+                        {/* Status Toggles */}
+                        <div className="flex gap-2">
                             <button
                                 onClick={(e) => { e.stopPropagation(); toggleStatus('holiday'); }}
                                 className={cn(
-                                    "flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                    "flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex flex-col items-center gap-1",
                                     isHoliday ? "neumo-pressed text-orange-500 bg-orange-50/50" : "neumo-raised text-gray-400"
                                 )}
                             >
+                                <Palmtree size={16} />
                                 國定假日
                             </button>
                             <button
                                 onClick={(e) => { e.stopPropagation(); toggleStatus('leave'); }}
                                 className={cn(
-                                    "flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                    isLeave ? "neumo-pressed text-red-500 bg-red-50/50" : "neumo-raised text-gray-400"
+                                    "flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex flex-col items-center gap-1",
+                                    isLeave ? "neumo-pressed text-indigo-500 bg-indigo-50/50" : "neumo-raised text-gray-400"
                                 )}
                             >
+                                <Moon size={16} />
                                 請假
                             </button>
                         </div>
@@ -204,11 +215,11 @@ function DayCard({ day, record, onUpdate }) {
                                     <span className="text-2xl font-black text-neumo-brand tabular-nums">{endTime}</span>
                                 </div>
                                 <div
-                                    className="h-16 neumo-pressed rounded-2xl flex items-center justify-center relative cursor-ns-resize overflow-hidden touch-none"
+                                    className="h-20 neumo-pressed rounded-2xl flex items-center justify-center relative cursor-ns-resize overflow-hidden touch-none"
                                     onMouseDown={(e) => { e.stopPropagation(); handleDragStart(e); }}
                                     onTouchStart={(e) => { e.stopPropagation(); handleDragStart(e); }}
                                 >
-                                    <div className="flex flex-col items-center opacity-30 select-none">
+                                    <div className="flex flex-col items-center opacity-30 select-none pointer-events-none">
                                         <ChevronUp size={16} />
                                         <div className="text-[10px] font-bold uppercase tracking-widest">滑動調整</div>
                                         <ChevronDown size={16} />
@@ -224,22 +235,27 @@ function DayCard({ day, record, onUpdate }) {
                         )}
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">出差地區</label>
-                            <select
-                                value={country}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    setCountry(val);
-                                    onUpdate({ date: day, endTime, otHours, country: val, isHoliday, isLeave });
-                                }}
-                                className="neumo-input w-full h-11 px-4 text-xs font-bold bg-transparent appearance-none"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <option value="">無出差</option>
-                                <option value="印度">印度 (IN)</option>
-                                <option value="越南">越南 (VN)</option>
-                                <option value="大陸">大陸 (CN)</option>
-                            </select>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 text-left block">出差地區</label>
+                            <div className="relative">
+                                <select
+                                    value={country}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setCountry(val);
+                                        onUpdate({ date: day, endTime, otHours, country: val, isHoliday, isLeave });
+                                    }}
+                                    className="neumo-input w-full h-11 px-4 text-xs font-bold bg-transparent appearance-none cursor-pointer"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <option value="">無出差 (None)</option>
+                                    <option value="印度">印度 (IN)</option>
+                                    <option value="越南">越南 (VN)</option>
+                                    <option value="大陸">大陸 (CN)</option>
+                                </select>
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+                                    <ChevronDown size={14} />
+                                </div>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 pt-2">
@@ -253,15 +269,13 @@ function DayCard({ day, record, onUpdate }) {
                             </div>
                         </div>
 
-                        <div className="flex justify-end pt-2">
-                            <button
-                                onClick={() => setIsExpanded(false)}
-                                className="neumo-button py-2 px-6 flex items-center gap-2 text-sm font-black text-neumo-brand"
-                            >
-                                <Check size={16} />
-                                完成
-                            </button>
-                        </div>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
+                            className="neumo-button w-full py-4 flex items-center justify-center gap-2 text-sm font-black text-neumo-brand"
+                        >
+                            <Check size={18} />
+                            確認完成
+                        </button>
                     </motion.div>
                 )}
             </AnimatePresence>
