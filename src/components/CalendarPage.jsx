@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths, isSameDay, startOfWeek, endOfWeek } from 'date-fns'
 import { ChevronLeft, ChevronRight, Plus, Palmtree, Moon } from 'lucide-react'
 import { motion } from 'framer-motion'
