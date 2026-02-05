@@ -81,8 +81,13 @@ const recordsToGistFormat = (records) => {
  * Fetch data from GitHub Gist
  */
 export const fetchRecordsFromGist = async () => {
+    const settings = loadSettings();
+    const token = settings?.githubToken;
     try {
-        const response = await fetch(GET_GIST_URL(GIST_ID));
+        const headers = {};
+        if (token) headers['Authorization'] = `token ${token}`;
+
+        const response = await fetch(GET_GIST_URL(GIST_ID), { headers });
         const gist = await response.json();
         if (gist.files && gist.files['records.json']) {
             const records = JSON.parse(gist.files['records.json'].content);

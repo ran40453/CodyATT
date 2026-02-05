@@ -3,7 +3,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isTod
 import { ChevronLeft, ChevronRight, Plus, Palmtree, Moon } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { cn } from '../lib/utils'
-import { loadData, addOrUpdateRecord } from '../lib/storage'
+import { loadData, addOrUpdateRecord, fetchRecordsFromGist } from '../lib/storage'
 import DayCard from './DayCard'
 
 function CalendarPage() {
@@ -14,7 +14,11 @@ function CalendarPage() {
     const [quickLeave, setQuickLeave] = useState(false)
 
     useEffect(() => {
+        // Initial load from local, then sync from Gist
         setRecords(loadData())
+        fetchRecordsFromGist().then(remoteRecords => {
+            if (remoteRecords) setRecords(remoteRecords)
+        })
     }, [])
 
     const monthStart = startOfMonth(currentDate)

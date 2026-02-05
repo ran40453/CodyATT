@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { format, isToday, getDay } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, Clock, ChevronDown, ChevronUp, Check, Flag, UserX } from 'lucide-react'
+import { MapPin, Clock, ChevronDown, ChevronUp, Check, Flag, UserX, Palmtree, Moon } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { loadSettings, calculateOTHours, calculateDailySalary } from '../lib/storage'
 

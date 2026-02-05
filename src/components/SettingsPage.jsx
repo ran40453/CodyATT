@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react'
 import { Save, RefreshCw, DollarSign, Calculator, Briefcase, Calendar as CalendarIcon, Activity } from 'lucide-react'
 import { loadSettings, saveSettings, syncSettingsToGist, testConnection } from '../lib/storage'
 import { cn } from '../lib/utils'
