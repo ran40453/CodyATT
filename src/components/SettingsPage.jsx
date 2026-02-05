@@ -187,7 +187,9 @@ function SettingsPage() {
                                     <p className="opacity-80">{testResult.error}</p>
                                 )}
                                 {testResult.ok && (
-                                    <p className="opacity-80">讀取到 {testResult.data.files ? Object.keys(testResult.data.files).length : 0} 個檔案</p>
+                                    <p className="opacity-80">
+                                        讀取到 {testResult.data?.files ? Object.keys(testResult.data.files).length : 0} 個檔案
+                                    </p>
                                 )}
                             </motion.div>
                         )}
