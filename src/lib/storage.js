@@ -61,10 +61,15 @@ export const calculateDailySalary = (record, settings) => {
     }
 
     // Holiday bonus? Usually double pay for the base day if it's a holiday and worked
-    // For now, let's keep it simple as requested or just add a placeholder for multiplier
     const multiplier = record.isHoliday ? 2 : 1;
 
-    return (daySalary * multiplier) + otPay;
+    // Travel allowance
+    let travelAllowance = 0;
+    if (record.travelCountry) {
+        travelAllowance = (settings.allowance.tripDaily || 50) * (settings.allowance.exchangeRate || 32.5);
+    }
+
+    return (daySalary * multiplier) + otPay + travelAllowance;
 };
 
 const GIST_ID = '7ce68f2145a8c8aa4eabe5127f351f71';

@@ -132,7 +132,7 @@ function CalendarPage() {
                                 handleUpdateRecord({
                                     date: new Date(dateElement.value),
                                     otHours: 0,
-                                    country: countryElement.value,
+                                    travelCountry: countryElement.value,
                                     isHoliday: quickHoliday,
                                     isLeave: quickLeave
                                 })
