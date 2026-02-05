@@ -274,3 +274,31 @@ export const deleteRecord = (date) => {
     syncRecordsToSheets(filtered);
     return filtered;
 };
+
+let exchangeRateCache = {
+    rate: 32.5,
+    timestamp: 0
+};
+
+export const fetchExchangeRate = async () => {
+    const NOW = Date.now();
+    // Cache for 1 hour
+    if (NOW - exchangeRateCache.timestamp < 3600000) {
+        return exchangeRateCache.rate;
+    }
+
+    try {
+        const response = await fetch('https://open.er-api.com/v6/latest/USD');
+        const data = await response.json();
+        if (data && data.rates && data.rates.TWD) {
+            exchangeRateCache = {
+                rate: data.rates.TWD,
+                timestamp: NOW
+            };
+            return data.rates.TWD;
+        }
+    } catch (error) {
+        console.error('Failed to fetch exchange rate:', error);
+    }
+    return exchangeRateCache.rate;
+};
