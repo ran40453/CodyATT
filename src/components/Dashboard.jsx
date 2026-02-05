@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { format, startOfMonth, endOfMonth, isWithinInterval, subDays, isSameMonth } from 'date-fns'
+import { format, startOfMonth, endOfMonth, isWithinInterval, subDays, isSameMonth, parseISO } from 'date-fns'
 import { TrendingUp, Globe, Wallet, Clock, Coffee, Moon, Gift, Eye, EyeOff } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { loadData, loadSettings, fetchRecordsFromGist, calculateCompLeaveUnits, calculateDailySalary, fetchExchangeRate } from '../lib/storage'
@@ -39,9 +39,23 @@ function Dashboard() {
     const currentMonthInterval = { start: startOfMonth(today), end: endOfMonth(today) }
     const rollingYearInterval = { start: subDays(today, 365), end: today }
 
-    const parse = (d) => new Date(d)
-    const currentMonthRecords = data.filter(r => isWithinInterval(parse(r.date), currentMonthInterval))
-    const rollingYearRecords = data.filter(r => isWithinInterval(parse(r.date), rollingYearInterval))
+    const parse = (d) => {
+        if (!d) return new Date(0);
+        if (d instanceof Date) return d;
+        try {
+            return parseISO(d);
+        } catch (e) {
+            return new Date(d);
+        }
+    }
+    const currentMonthRecords = data.filter(r => {
+        const d = parse(r.date);
+        return d instanceof Date && !isNaN(d) && isWithinInterval(d, currentMonthInterval);
+    })
+    const rollingYearRecords = data.filter(r => {
+        const d = parse(r.date);
+        return d instanceof Date && !isNaN(d) && isWithinInterval(d, rollingYearInterval);
+    })
 
     const calcMetrics = (records) => {
         const tripCount = records.filter(r => r.travelCountry && (r.travelCountry.toUpperCase() === 'VN' || r.travelCountry === '越南' || r.travelCountry.toUpperCase() === 'IN' || r.travelCountry === '印度' || r.travelCountry.toUpperCase() === 'CN' || r.travelCountry === '大陸')).length

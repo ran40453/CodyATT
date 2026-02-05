@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { format, startOfYear, endOfYear, eachMonthOfInterval, isSameMonth, subDays, isWithinInterval, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns'
+import { format, startOfYear, endOfYear, eachMonthOfInterval, isSameMonth, subDays, isWithinInterval, startOfMonth, endOfMonth, eachDayOfInterval, parseISO } from 'date-fns'
 import { TrendingUp, Clock, Calendar, Globe, ArrowUpRight, Coffee, Trophy, BarChart3 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import {
@@ -14,7 +14,7 @@ import {
     Legend,
     Filler
 } from 'chart.js'
-import { Bar, Line } from 'react-chartjs-2'
+import { Bar, Line, Chart } from 'react-chartjs-2'
 import { cn } from '../lib/utils'
 import { loadData, fetchRecordsFromGist, loadSettings, calculateDailySalary, fetchExchangeRate, calculateCompLeaveUnits } from '../lib/storage'
 
@@ -71,9 +71,23 @@ function AnalysisPage() {
     const currentMonthInterval = { start: startOfMonth(now), end: endOfMonth(now) }
 
     // Safety parse
-    const parse = (d) => new Date(d)
-    const rollingYearRecords = data.filter(r => isWithinInterval(parse(r.date), rollingYearInterval))
-    const currentMonthRecords = data.filter(r => isWithinInterval(parse(r.date), currentMonthInterval))
+    const parse = (d) => {
+        if (!d) return new Date(0);
+        if (d instanceof Date) return d;
+        try {
+            return parseISO(d);
+        } catch (e) {
+            return new Date(d);
+        }
+    }
+    const rollingYearRecords = data.filter(r => {
+        const d = parse(r.date);
+        return d instanceof Date && !isNaN(d) && isWithinInterval(d, rollingYearInterval);
+    })
+    const currentMonthRecords = data.filter(r => {
+        const d = parse(r.date);
+        return d instanceof Date && !isNaN(d) && isWithinInterval(d, currentMonthInterval);
+    })
 
     const calcStats = () => {
         const getMetrics = (records) => {
@@ -107,7 +121,10 @@ function AnalysisPage() {
 
     const getMonthlyStat = (month, fn) => {
         const monthStr = format(month, 'yyyy-MM')
-        const filtered = data.filter(r => format(parse(r.date), 'yyyy-MM') === monthStr)
+        const filtered = data.filter(r => {
+            const d = parse(r.date);
+            return d instanceof Date && !isNaN(d) && format(d, 'yyyy-MM') === monthStr;
+        })
         return filtered.reduce((sum, r) => sum + fn(r), 0)
     }
 
@@ -145,7 +162,11 @@ function AnalysisPage() {
     // 2. Attendance & Leave Stacked Bar Chart
     const currentMonthDays = eachDayOfInterval({ start: startOfMonth(now), end: endOfMonth(now) })
     const attendanceData = currentMonthDays.map(day => {
-        const record = data.find(r => format(parse(r.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'))
+        const dayStr = format(day, 'yyyy-MM-dd')
+        const record = data.find(r => {
+            const d = parse(r.date);
+            return d instanceof Date && !isNaN(d) && format(d, 'yyyy-MM-dd') === dayStr;
+        })
         if (!record) return { attendance: 0, leave: 0 }
         if (record.isLeave) return { attendance: 0, leave: 1 }
         return { attendance: 1, leave: 0 }
@@ -237,7 +258,7 @@ function AnalysisPage() {
                         加班與補休趨勢 <ArrowUpRight size={14} />
                     </h3>
                     <div className="flex-1">
-                        <Bar data={mergedData} options={mergedOptions} />
+                        <Chart type="bar" data={mergedData} options={mergedOptions} />
                     </div>
                 </div>
 
