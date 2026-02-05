@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths, isSameDay } from 'date-fns'
 import { ChevronLeft, ChevronRight, Plus, MapPin, Clock } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { cn } from '../lib/utils'
 import { loadData, addOrUpdateRecord } from '../lib/storage'
 import DayCard from './DayCard'
