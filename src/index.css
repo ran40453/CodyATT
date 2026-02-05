@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --neumo-bg: #E0E5EC;
+    --neumo-light: #ffffff;
+    --neumo-shadow: #b8bec7;
+    --neumo-text: #202731;
+}
+
+body {
+    font-family: 'Outfit', sans-serif;
+    background-color: var(--neumo-bg);
+    color: var(--neumo-text);
+    -webkit-tap-highlight-color: transparent;
+}
+
+@layer components {
+    .neumo-raised {
+        @apply shadow-[8px_8px_16px_#b8bec7, -8px_-8px_16px_#ffffff];
+    }
+
+    .neumo-pressed {
+        @apply shadow-[inset_2px_2px_5px_#b8bec7, inset_-2px_-2px_5px_#ffffff];
+    }
+
+    .neumo-flat {
+        @apply shadow-[2px_2px_5px_#b8bec7, -2px_-2px_5px_#ffffff];
+    }
+
+    .neumo-card {
+        @apply bg-[#E0E5EC] rounded-3xl p-6 neumo-raised;
+    }
+
+    .neumo-button {
+        @apply bg-[#E0E5EC] rounded-xl px-4 py-2 neumo-raised active:neumo-pressed transition-all duration-200;
+    }
+
+    .neumo-input {
+        @apply bg-[#E0E5EC] rounded-xl px-4 py-2 neumo-pressed outline-none w-full;
+    }
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+}
