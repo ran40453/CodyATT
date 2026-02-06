@@ -18,15 +18,15 @@ body {
 
 @layer components {
     .neumo-raised {
-        @apply shadow-[8px_8px_16px_#b8bec7,-8px_-8px_16px_#ffffff];
+        @apply shadow-[8px_8px_16px_#b8bec7, -8px_-8px_16px_#ffffff];
     }
 
     .neumo-pressed {
-        @apply shadow-[inset_2px_2px_5px_#b8bec7,inset_-2px_-2px_5px_#ffffff];
+        @apply shadow-[inset_2px_2px_5px_#b8bec7, inset_-2px_-2px_5px_#ffffff];
     }
 
     .neumo-flat {
-        @apply shadow-[2px_2px_5px_#b8bec7,-2px_-2px_5px_#ffffff];
+        @apply shadow-[2px_2px_5px_#b8bec7, -2px_-2px_5px_#ffffff];
     }
 
     .neumo-card {
@@ -39,6 +39,10 @@ body {
 
     .neumo-input {
         @apply bg-[#E0E5EC] rounded-xl px-4 py-2 neumo-pressed outline-none w-full;
+    }
+
+    .glass-refraction {
+        @apply bg-white/20 backdrop-blur-md border border-white/40 shadow-[inset_0_0_12px_rgba(255, 255, 255, 0.5), 0_8px_16px_rgba(0, 0, 0, 0.1)];
     }
 }
 

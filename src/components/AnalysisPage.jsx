@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { format, startOfYear, endOfYear, eachMonthOfInterval, isSameMonth, subDays, isWithinInterval, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, subMonths } from 'date-fns'
 import { TrendingUp, Clock, Calendar, Globe, ArrowUpRight, Coffee, Trophy, BarChart3, Gift, X, Edit2, Trash2, Check } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -226,35 +226,14 @@ function AnalysisPage({ isPrivacy }) {
         labels: chartMonths.map(m => format(m, 'MMM')),
         datasets: [
             {
-                label: '當月總收入',
-                data: totalIncomeByMonth,
-                borderColor: 'rgb(253, 224, 71)', // Yellow
-                backgroundColor: 'rgba(253, 224, 71, 0.1)',
-                fill: false,
-                tension: 0.4,
-                pointRadius: 5,
-                pointBackgroundColor: 'rgb(253, 224, 71)',
-                borderWidth: 3,
-            },
-            {
-                label: '底薪',
-                data: baseByMonth,
-                borderColor: 'rgb(56, 189, 248)', // Sky 400
-                backgroundColor: 'rgba(56, 189, 248, 0.8)',
+                label: '加班費',
+                data: otPayByMonth,
+                borderColor: 'rgb(255, 69, 0)', // Orange Red
+                backgroundColor: 'rgba(255, 69, 0, 0.95)',
                 fill: true,
                 tension: 0.4,
                 pointRadius: 4,
-                pointBackgroundColor: 'rgb(56, 189, 248)',
-            },
-            {
-                label: '出差費',
-                data: travelByMonth,
-                borderColor: 'rgb(16, 185, 129)', // Emerald 500
-                backgroundColor: 'rgba(16, 185, 129, 0.95)',
-                fill: true,
-                tension: 0.4,
-                pointRadius: 4,
-                pointBackgroundColor: 'rgb(16, 185, 129)',
+                pointBackgroundColor: 'rgb(255, 69, 0)',
             },
             {
                 label: '獎金',
@@ -267,14 +246,35 @@ function AnalysisPage({ isPrivacy }) {
                 pointBackgroundColor: 'rgb(245, 158, 11)',
             },
             {
-                label: '加班費',
-                data: otPayByMonth,
-                borderColor: 'rgb(255, 69, 0)', // Orange Red
-                backgroundColor: 'rgba(255, 69, 0, 0.95)',
+                label: '出差費',
+                data: travelByMonth,
+                borderColor: 'rgb(16, 185, 129)', // Emerald 500
+                backgroundColor: 'rgba(16, 185, 129, 0.95)',
                 fill: true,
                 tension: 0.4,
                 pointRadius: 4,
-                pointBackgroundColor: 'rgb(255, 69, 0)',
+                pointBackgroundColor: 'rgb(16, 185, 129)',
+            },
+            {
+                label: '底薪',
+                data: baseByMonth,
+                borderColor: 'rgb(56, 189, 248)', // Sky 400
+                backgroundColor: 'rgba(56, 189, 248, 0.8)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: 'rgb(56, 189, 248)',
+            },
+            {
+                label: '當月總收入',
+                data: totalIncomeByMonth,
+                borderColor: 'rgb(253, 224, 71)', // Yellow
+                backgroundColor: 'rgba(253, 224, 71, 0.1)',
+                fill: false,
+                tension: 0.4,
+                pointRadius: 5,
+                pointBackgroundColor: 'rgb(253, 224, 71)',
+                borderWidth: 3,
             }
         ]
     }
