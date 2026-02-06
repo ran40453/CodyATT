@@ -60,8 +60,9 @@ export const calculateOTHours = (endTimeStr, standardEndTimeStr = "17:30") => {
  * Calculates estimated daily salary with complex tiered OT rules
  */
 export const calculateDailySalary = (record, settings) => {
-    if (!settings) return 0;
-    if (record.isLeave) return 0;
+    const emptyMetrics = { total: 0, extra: 0, otPay: 0, travelAllowance: 0, baseDayPay: 0 };
+    if (!settings) return emptyMetrics;
+    if (record.isLeave) return emptyMetrics;
 
     // 1. Get Base Salary for that date (History support)
     // If no history, fallback to current baseMonthly

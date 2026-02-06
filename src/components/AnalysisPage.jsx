@@ -250,8 +250,9 @@ function AnalysisPage() {
         return { day, type };
     })
 
+    const attendanceBoxesLength = currentMonthDays.length || 1;
     const attendanceCount = attendanceBoxes.filter(b => b.type === 'attendance').length;
-    const attendancePercent = Math.round((attendanceCount / currentMonthDays.length) * 100);
+    const attendancePercent = Math.round((attendanceCount / attendanceBoxesLength) * 100) || 0;
 
     // Options for OT/Comp Chart
     const mergedOptions = {
