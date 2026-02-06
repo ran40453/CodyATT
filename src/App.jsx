@@ -12,6 +12,7 @@ import { fetchRecordsFromSheets, fetchSettingsFromSheets, addOrUpdateRecord, loa
 function App() {
     const [activeTab, setActiveTab] = useState('home')
     const [isModalOpen, setIsModalOpen] = useState(false)
+    const [records, setRecords] = useState([])
     const [settings, setSettings] = useState(null)
     const [isPrivacy, setIsPrivacy] = useState(() => localStorage.getItem('ot-privacy') === 'true')
 
@@ -22,30 +23,39 @@ function App() {
     }
 
     React.useEffect(() => {
-        // Initial sync from Google Sheets
-        fetchRecordsFromSheets();
-        fetchSettingsFromSheets().then(s => setSettings(s));
-        setSettings(loadSettings())
+        // Initial load from localStorage
+        const localRecords = loadData();
+        setRecords(localRecords);
+        setSettings(loadSettings());
+
+        // Background sync and refresh from Cloud (Gist)
+        const sync = async () => {
+            const remoteRecords = await fetchRecordsFromSheets();
+            if (remoteRecords) setRecords(remoteRecords);
+
+            const remoteSettings = await fetchSettingsFromSheets();
+            if (remoteSettings) setSettings(remoteSettings);
+        };
+        sync();
     }, []);
 
-    const handleAddRecord = (record) => {
-        addOrUpdateRecord(record)
-        // Optionally reload data or trigger sync
-        window.location.reload() // Simple way to refresh all views for now, or use a context/global state
+    const handleUpdateRecord = (updatedRecord) => {
+        const newData = addOrUpdateRecord(updatedRecord)
+        setRecords(newData)
     }
 
     const renderPage = () => {
         switch (activeTab) {
             case 'home':
-                return <Dashboard isPrivacy={isPrivacy} setIsPrivacy={togglePrivacy} />
+                return <Dashboard data={records} isPrivacy={isPrivacy} setIsPrivacy={togglePrivacy} />
             case 'calendar':
-                return <CalendarPage isPrivacy={isPrivacy} />
+                return <CalendarPage data={records} onUpdate={handleUpdateRecord} isPrivacy={isPrivacy} />
             case 'analysis':
-                return <AnalysisPage isPrivacy={isPrivacy} />
+                return <AnalysisPage data={records} onUpdate={setRecords} isPrivacy={isPrivacy} />
             case 'settings':
                 return <SettingsPage isPrivacy={isPrivacy} />
             default:
-                return <Dashboard isPrivacy={isPrivacy} setIsPrivacy={togglePrivacy} />
+                return <Dashboard data={records} isPrivacy={isPrivacy} setIsPrivacy={togglePrivacy} />
         }
     }
 
@@ -72,7 +82,7 @@ function App() {
             <AddRecordModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                onAdd={handleAddRecord}
+                onAdd={handleUpdateRecord}
                 settings={settings}
             />
         </div>

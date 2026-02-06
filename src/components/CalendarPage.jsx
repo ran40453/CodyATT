@@ -5,17 +5,9 @@ import { motion } from 'framer-motion'
 import { loadData, addOrUpdateRecord, fetchRecordsFromGist } from '../lib/storage'
 import DayCard from './DayCard'
 
-function CalendarPage({ isPrivacy }) {
+function CalendarPage({ data, onUpdate, isPrivacy }) {
     const [currentDate, setCurrentDate] = useState(new Date())
-    const [records, setRecords] = useState([])
     const [focusedDay, setFocusedDay] = useState(null)
-
-    useEffect(() => {
-        setRecords(loadData())
-        fetchRecordsFromGist().then(remoteRecords => {
-            if (remoteRecords) setRecords(remoteRecords)
-        })
-    }, [])
 
     const monthStart = startOfMonth(currentDate)
     const monthEnd = endOfMonth(monthStart)
@@ -31,7 +23,7 @@ function CalendarPage({ isPrivacy }) {
 
     const getRecordForDay = (day) => {
         const dayStr = format(day, 'yyyy-MM-dd')
-        return records.find(r => {
+        return data.find(r => {
             if (!r.date) return false
             const dStr = typeof r.date === 'string' ? r.date.split('T')[0] : format(new Date(r.date), 'yyyy-MM-dd')
             return dStr === dayStr
@@ -39,8 +31,7 @@ function CalendarPage({ isPrivacy }) {
     }
 
     const handleUpdateRecord = (updatedRecord) => {
-        const newData = addOrUpdateRecord(updatedRecord)
-        setRecords(newData)
+        onUpdate(updatedRecord)
     }
 
     // Generate options for selectors

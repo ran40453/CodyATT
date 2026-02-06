@@ -30,7 +30,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings }) {
     })();
 
     const handleSubmit = () => {
-        onAdd({
+        const payload = {
             date: new Date(date),
             travelCountry: mode === 'attendance' ? country : '',
             isHoliday: mode === 'attendance' ? isHoliday : false,
@@ -41,9 +41,23 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings }) {
             bonus: mode === 'bonus' ? parseFloat(bonus) || 0 : 0,
             bonusCategory: mode === 'bonus' ? (showCustomCategory ? customCategory : bonusCategory) : '',
             bonusName: mode === 'bonus' ? bonusName : '',
-            recordType: mode // helpful for distinguishing records
-        })
-        onClose()
+            recordType: mode
+        };
+
+        if (mode === 'bonus' && payload.bonus > 0) {
+            payload.bonusEntries = [{
+                id: `be-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                amount: payload.bonus,
+                category: payload.bonusCategory,
+                name: payload.bonusName,
+                date: payload.date
+            }];
+        }
+
+        onAdd(payload);
+        setBonus('');
+        setBonusName('');
+        onClose();
     }
 
     const handleDragStart = (e) => {

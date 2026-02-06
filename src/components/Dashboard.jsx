@@ -5,8 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { loadData, loadSettings, fetchRecordsFromGist, calculateCompLeaveUnits, calculateDailySalary, fetchExchangeRate, standardizeCountry, calculateOTHours } from '../lib/storage'
 import { cn } from '../lib/utils'
 
-function Dashboard({ isPrivacy, setIsPrivacy }) {
-    const [data, setData] = useState([])
+function Dashboard({ data, isPrivacy, setIsPrivacy }) {
     const [settings, setSettings] = useState(null)
     const [liveRate, setLiveRate] = useState(null)
     const today = new Date()
@@ -14,27 +13,14 @@ function Dashboard({ isPrivacy, setIsPrivacy }) {
     useEffect(() => {
         const init = async () => {
             console.log('Dashboard: Initializing...');
-            const localData = loadData();
-            console.log('Dashboard: Local records count:', localData.length);
-            setData(localData);
             const s = loadSettings();
             setSettings(s);
 
             try {
-                const [rate, remote] = await Promise.all([
-                    fetchExchangeRate().catch(() => 32.5),
-                    fetchRecordsFromGist().catch(() => null)
-                ]);
-
+                const rate = await fetchExchangeRate().catch(() => 32.5);
                 if (rate) setLiveRate(rate);
-                if (remote) {
-                    console.log('Dashboard: Gist remote records count:', remote.length);
-                    setData(remote);
-                } else {
-                    console.warn('Dashboard: Failed to fetch from Gist or Gist is empty.');
-                }
             } catch (err) {
-                console.error('Dashboard: Init fetch error:', err);
+                console.error('Dashboard: Rate fetch error:', err);
             }
         };
         init();

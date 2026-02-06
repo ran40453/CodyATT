@@ -34,35 +34,21 @@ ChartJS.register(
     Filler
 )
 
-function AnalysisPage({ isPrivacy }) {
-    const [data, setData] = useState([])
-    const [settings, setSettings] = useState(null)
-    const [liveRate, setLiveRate] = useState(32.5)
-    const [isLoading, setIsLoading] = useState(true)
-    const [isBonusDetailOpen, setIsBonusDetailOpen] = useState(false)
+function AnalysisPage({ data, onUpdate, isPrivacy }) {
+    const [settings, setSettings] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [liveRate, setLiveRate] = useState(32.5);
+    const [isBonusDetailOpen, setIsBonusDetailOpen] = useState(false);
 
     const mask = (val) => isPrivacy ? '••••' : val;
 
     useEffect(() => {
         const init = async () => {
-            console.log('Analysis: Initializing...');
-            const localData = loadData();
-            console.log('Analysis: Local records found:', localData.length);
-            setData(localData);
             const s = loadSettings();
             setSettings(s);
-
             try {
-                const [rate, remote] = await Promise.all([
-                    fetchExchangeRate().catch(() => 32.5),
-                    fetchRecordsFromGist().catch(() => null)
-                ]);
-
+                const rate = await fetchExchangeRate().catch(() => 32.5);
                 if (rate) setLiveRate(rate);
-                if (remote) {
-                    console.log('Analysis: Remote records found:', remote.length);
-                    setData(remote);
-                }
             } catch (err) {
                 console.error('Analysis: Fetch error:', err);
             }
@@ -512,8 +498,7 @@ function AnalysisPage({ isPrivacy }) {
                 onClose={() => setIsBonusDetailOpen(false)}
                 data={data}
                 onUpdate={(newData) => {
-                    setData(newData);
-                    // Also trigger back-end sync
+                    onUpdate(newData);
                     saveData(newData);
                     syncRecordsToGist(newData);
                 }}
