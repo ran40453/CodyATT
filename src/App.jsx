@@ -7,7 +7,7 @@ import SettingsPage from './components/SettingsPage'
 import Tabbar from './components/Tabbar'
 import AddRecordModal from './components/AddRecordModal'
 
-import { fetchRecordsFromSheets, fetchSettingsFromSheets, addOrUpdateRecord, loadSettings } from './lib/storage'
+import { fetchRecordsFromSheets, fetchSettingsFromSheets, addOrUpdateRecord, loadSettings, loadData } from './lib/storage'
 
 function App() {
     const [activeTab, setActiveTab] = useState('home')
