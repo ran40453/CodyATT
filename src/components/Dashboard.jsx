@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { format, startOfMonth, endOfMonth, isWithinInterval, subDays, isSameMonth, parseISO } from 'date-fns'
 import { TrendingUp, Globe, Wallet, Clock, Coffee, Moon, Gift, Eye, EyeOff } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { loadData, loadSettings, fetchRecordsFromGist, calculateCompLeaveUnits, calculateDailySalary, fetchExchangeRate } from '../lib/storage'
+import { loadData, loadSettings, fetchRecordsFromGist, calculateCompLeaveUnits, calculateDailySalary, fetchExchangeRate, standardizeCountry } from '../lib/storage'
 import { cn } from '../lib/utils'
 
 function Dashboard() {
@@ -95,12 +95,12 @@ function Dashboard() {
         // Allowance recalculation based on per-country rules
         const allowance = records.reduce((total, r) => {
             if (!r.travelCountry) return total;
-            const country = r.travelCountry.toUpperCase();
+            const country = standardizeCountry(r.travelCountry);
             let usd = 50;
-            if (country === 'VN' || country === '越南') usd = 40;
-            else if (country === 'IN' || country === '印度') usd = 70;
-            else if (country === 'CN' || country === '大陸') usd = 33;
-            return total + (usd * (liveRate || settings.allowance.exchangeRate || 32.5));
+            if (country === 'VN') usd = 40;
+            else if (country === 'IN') usd = 70;
+            else if (country === 'CN') usd = 33;
+            return total + (usd * (liveRate || settings.allowance?.exchangeRate || 32.5));
         }, 0);
 
         return { tripCount, totalOT, totalComp, totalLeave, totalSalary, allowance }

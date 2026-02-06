@@ -3,7 +3,7 @@ import { format, isToday, getDay, isSameDay, isAfter, startOfDay } from 'date-fn
 import { motion, AnimatePresence } from 'framer-motion'
 import { MapPin, Clock, ChevronDown, ChevronUp, Check, Palmtree, Moon, DollarSign, Coffee, CreditCard, X } from 'lucide-react'
 import { cn } from '../lib/utils'
-import { loadSettings, calculateOTHours, calculateDailySalary, calculateCompLeaveUnits, fetchExchangeRate } from '../lib/storage'
+import { loadSettings, calculateOTHours, calculateDailySalary, calculateCompLeaveUnits, fetchExchangeRate, standardizeCountry } from '../lib/storage'
 
 function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFocus }) {
     const [endTime, setEndTime] = useState(record?.endTime || '17:30')
@@ -40,9 +40,9 @@ function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFo
                 catch (e) { rawTime = '17:30'; }
             }
             setEndTime(rawTime)
-            // Standardize Vietnam to VN
-            const country = record.travelCountry === '越南' || record.travelCountry === 'VIETNAM' ? 'VN' : record.travelCountry;
-            setTravelCountry(country || '')
+            // Use global standardization
+            const country = standardizeCountry(record.travelCountry);
+            setTravelCountry(country)
             setIsHoliday(record.isHoliday || false)
             setIsLeave(record.isLeave || false)
             setOtType(record.otType || 'pay')

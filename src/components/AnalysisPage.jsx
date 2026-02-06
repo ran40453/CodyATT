@@ -18,7 +18,7 @@ import {
 } from 'chart.js'
 import { Bar, Line, Chart } from 'react-chartjs-2'
 import { cn } from '../lib/utils'
-import { loadData, fetchRecordsFromGist, loadSettings, calculateDailySalary, fetchExchangeRate, calculateCompLeaveUnits, calculateOTHours } from '../lib/storage'
+import { loadData, fetchRecordsFromGist, loadSettings, calculateDailySalary, fetchExchangeRate, calculateCompLeaveUnits, calculateOTHours, standardizeCountry } from '../lib/storage'
 
 ChartJS.register(
     CategoryScale,
@@ -275,9 +275,9 @@ function AnalysisPage() {
     const countryStats = () => {
         const counts = {}
         data.forEach(r => {
-            if (r.travelCountry) {
-                const code = r.travelCountry.toUpperCase() === '越南' || r.travelCountry.toUpperCase() === 'VIETNAM' ? 'VN' : r.travelCountry.toUpperCase();
-                counts[code] = (counts[code] || 0) + 1
+            const country = standardizeCountry(r.travelCountry);
+            if (country) {
+                counts[country] = (counts[country] || 0) + 1
             }
         })
         return Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)

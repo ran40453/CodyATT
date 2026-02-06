@@ -20,10 +20,10 @@ const defaultSettings = {
     }
 };
 
-// Helper to standardize country codes
-const standardizeCountry = (c) => {
-    if (!c) return '';
-    const upper = c.toUpperCase();
+// Helper to standardize country codes (exported for component use)
+export const standardizeCountry = (c) => {
+    if (!c || typeof c !== 'string') return '';
+    const upper = c.trim().toUpperCase();
     if (upper === 'VN' || upper === '越南' || upper === 'VIETNAM') return 'VN';
     if (upper === 'IN' || upper === '印度' || upper === 'INDIA') return 'IN';
     if (upper === 'CN' || upper === '大陸' || upper === 'CHINA') return 'CN';
@@ -316,21 +316,43 @@ export const testConnection = async (token) => {
 };
 
 export const loadData = () => {
-    const data = localStorage.getItem(DATA_KEY);
-    return data ? JSON.parse(data) : [];
+    try {
+        const data = localStorage.getItem(DATA_KEY);
+        if (!data) return [];
+        const parsed = JSON.parse(data);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        console.error('Storage: Failed to load records', e);
+        return [];
+    }
 };
 
 export const saveData = (data) => {
-    localStorage.setItem(DATA_KEY, JSON.stringify(data));
+    try {
+        localStorage.setItem(DATA_KEY, JSON.stringify(Array.isArray(data) ? data : []));
+    } catch (e) {
+        console.error('Storage: Failed to save records', e);
+    }
 };
 
 export const loadSettings = () => {
-    const settings = localStorage.getItem(SETTINGS_KEY);
-    return settings ? JSON.parse(settings) : defaultSettings;
+    try {
+        const settings = localStorage.getItem(SETTINGS_KEY);
+        if (!settings) return defaultSettings;
+        const parsed = JSON.parse(settings);
+        return { ...defaultSettings, ...parsed };
+    } catch (e) {
+        console.error('Storage: Failed to load settings', e);
+        return defaultSettings;
+    }
 };
 
 export const saveSettings = (settings) => {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    try {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    } catch (e) {
+        console.error('Storage: Failed to save settings', e);
+    }
 };
 
 export const addOrUpdateRecord = (record) => {
