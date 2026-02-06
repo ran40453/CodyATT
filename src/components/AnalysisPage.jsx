@@ -38,7 +38,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
     const [settings, setSettings] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [liveRate, setLiveRate] = useState(32.5);
-    const [isBonusDetailOpen, setIsBonusDetailOpen] = useState(false);
+    const [isSalaryDetailOpen, setIsSalaryDetailOpen] = useState(false);
 
     const mask = (val) => isPrivacy ? '••••' : val;
 
@@ -69,16 +69,13 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
     const currentMonthInterval = { start: startOfMonth(now), end: endOfMonth(now) }
 
     // Safety parse
-    // Safety parse - handling both Date objects and various string formats
     const parse = (d) => {
         if (!d) return new Date(0);
         if (d instanceof Date) return d;
-        // If it's an ISO string with T, parse it
         if (typeof d === 'string' && d.includes('T')) {
             const p = parseISO(d);
             if (!isNaN(p.getTime())) return p;
         }
-        // Fallback or simple yyyy-MM-dd
         const p = new Date(d);
         if (!isNaN(p.getTime())) return p;
         return new Date(0);
@@ -101,7 +98,6 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
             }, 0)
             const totalOT = records.reduce((sum, r) => {
                 let hours = parseFloat(r.otHours)
-                // Fallback: Recalculate if endTime exists but hours is 0/missing
                 if ((!hours || hours === 0) && r.endTime && settings?.rules?.standardEndTime) {
                     hours = calculateOTHours(r.endTime, settings.rules.standardEndTime)
                 }
@@ -109,17 +105,42 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
             }, 0)
             const totalComp = records.reduce((sum, r) => sum + calculateCompLeaveUnits(r), 0)
             const totalBonus = records.reduce((sum, r) => sum + (parseFloat(r.bonus) || 0), 0)
-            return { extraTotal, totalOT, totalComp, totalBonus }
+
+            // Calculate components for detail modal
+            const totalOTPay = records.reduce((sum, r) => {
+                const results = calculateDailySalary(r, { ...settings, liveRate });
+                return sum + (results?.otPay || 0);
+            }, 0);
+            const totalTravel = records.reduce((sum, r) => {
+                const results = calculateDailySalary(r, { ...settings, liveRate });
+                return sum + (results?.travelAllowance || 0);
+            }, 0);
+
+            return { extraTotal, totalOT, totalComp, totalBonus, totalOTPay, totalTravel }
         }
 
         const yearMetrics = getMetrics(rollingYearRecords)
         const monthMetrics = getMetrics(currentMonthRecords)
 
-        const baseMonthly = settings.salary?.baseMonthly || 50000;
-        const rollingAnnualSalary = (baseMonthly * 12) + yearMetrics.extraTotal
+        // Calculate Base Salary Sum for Rolling Year
+        let totalBaseInYear = 0;
+        const monthsInYear = eachMonthOfInterval({ start: subDays(now, 365), end: now });
+        monthsInYear.forEach(m => {
+            let base = settings.salary?.baseMonthly || 50000;
+            if (settings.salaryHistory && Array.isArray(settings.salaryHistory)) {
+                const sortedHistory = [...settings.salaryHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+                const monthEnd = endOfMonth(m);
+                const applicable = sortedHistory.find(h => new Date(h.date) <= monthEnd);
+                if (applicable) base = parseFloat(applicable.amount) || base;
+            }
+            totalBaseInYear += base;
+        });
+
+        const rollingAnnualSalary = totalBaseInYear + yearMetrics.extraTotal
         const rollingMonthlySalary = rollingAnnualSalary / 12
 
         // Month Salary Verification: Base + this month's extra
+        const baseMonthly = settings.salary?.baseMonthly || 50000; // Simplified for current metric
         const monthTotalIncome = baseMonthly + monthMetrics.extraTotal;
 
         console.log('Analysis: Data Verification Audit', {
@@ -137,9 +158,14 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
             totalCompInMonth: monthMetrics.totalComp,
             totalBonusInYear: yearMetrics.totalBonus,
             totalBonusInMonth: monthMetrics.totalBonus,
-            yearOT: yearMetrics.totalOT,
-            monthOT: monthMetrics.totalOT,
-            monthTotalIncome
+
+            // Detailed Breakdown for Annual Salary Modal
+            breakdown: {
+                base: totalBaseInYear,
+                ot: yearMetrics.totalOTPay,
+                travel: yearMetrics.totalTravel,
+                bonus: yearMetrics.totalBonus
+            }
         }
     }
 
@@ -185,7 +211,6 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
     const otPayByMonth = chartMonths.map(m => getMonthlyStat(m, r => calculateDailySalary(r, { ...settings, liveRate }).otPay))
     const travelByMonth = chartMonths.map(m => getMonthlyStat(m, r => calculateDailySalary(r, { ...settings, liveRate }).travelAllowance))
     const baseByMonth = chartMonths.map(m => {
-        // Find applicable base salary for this month
         let base = settings.salary?.baseMonthly || 50000;
         if (settings.salaryHistory && Array.isArray(settings.salaryHistory)) {
             const sortedHistory = [...settings.salaryHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -199,15 +224,6 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
         return (bonusByMonth[idx] || 0) + (otPayByMonth[idx] || 0) + (travelByMonth[idx] || 0) + (baseByMonth[idx] || 0);
     })
 
-    console.log('Analysis Chart Summary:', {
-        months: chartMonths.map(m => format(m, 'MMM-yyyy')),
-        otValues: otByMonth,
-        compValues: compByMonth,
-        bonusValues: bonusByMonth,
-        totalDataRecords: data.length
-    });
-
-    // Income Structure Chart Data
     const incomeData = {
         labels: chartMonths.map(m => format(m, 'MMM')),
         datasets: [
@@ -215,7 +231,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                 label: '當月總收入',
                 data: totalIncomeByMonth,
                 borderColor: 'rgb(253, 224, 71)', // Yellow
-                backgroundColor: 'rgba(253, 224, 71, 0.4)', // Semi-transparent fill to see grid
+                backgroundColor: 'rgba(253, 224, 71, 0.4)', // Semi-transparent fill
                 fill: true,
                 tension: 0.4,
                 pointRadius: 5,
@@ -265,7 +281,6 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
         ]
     }
 
-    // 1. Merged Chart: OT Hours & Comp Leave
     const mergedData = {
         labels: chartMonths.map(m => format(m, 'MMM')),
         datasets: [
@@ -293,7 +308,6 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
         ]
     }
 
-    // 2. Attendance & Leave Grid Logic (GitHub style)
     const currentMonthDays = eachDayOfInterval({ start: startOfMonth(now), end: endOfMonth(now) })
     const attendanceBoxes = currentMonthDays.map(day => {
         const dayStr = format(day, 'yyyy-MM-dd')
@@ -302,13 +316,12 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
             return d instanceof Date && !isNaN(d) && format(d, 'yyyy-MM-dd') === dayStr;
         })
 
-        let type = 'none'; // no record
+        let type = 'none';
         if (record) {
             type = record.isLeave ? 'leave' : 'attendance';
         }
         return { day, type };
     })
-
     const attendanceBoxesLength = currentMonthDays.length || 1;
     const attendanceCount = attendanceBoxes.filter(b => b.type === 'attendance').length;
     const attendancePercent = Math.round((attendanceCount / attendanceBoxesLength) * 100) || 0;
@@ -365,15 +378,6 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
         return Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
     }
 
-    const totalOTSum = data.reduce((sum, r) => {
-        let hours = parseFloat(r.otHours) || 0;
-        if ((!hours || hours === 0) && r.endTime && settings?.rules?.standardEndTime) {
-            hours = calculateOTHours(r.endTime, settings.rules.standardEndTime);
-        }
-        return sum + (isNaN(hours) ? 0 : hours);
-    }, 0)
-    const totalCompSum = data.reduce((sum, r) => sum + calculateCompLeaveUnits(r), 0)
-
     return (
         <div className="space-y-8 pb-32">
             <header className="flex justify-between items-end">
@@ -388,30 +392,67 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                 </div>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <StatCard label="當年年薪 (Rolling 365)" value={mask(`$${Math.round(stats?.rollingAnnualSalary || 0).toLocaleString()} `)} sub="Estimated Cumulative" icon={TrendingUp} color="text-neumo-brand" />
-                <StatCard label="月平均薪資 (Rolling 365)" value={mask(`$${Math.round(stats?.rollingMonthlySalary || 0).toLocaleString()} `)} sub="Monthly Projection" icon={Calendar} color="text-blue-500" />
-                <StatCard
-                    label="累計補休"
-                    value={mask(`${stats?.totalCompInYear.toFixed(1)} `)}
-                    unit="單"
-                    sub={`本月增: ${mask(stats?.totalCompInMonth.toFixed(1))} `}
-                    icon={Coffee}
-                    color="text-indigo-500"
-                />
-                <div onClick={() => setIsBonusDetailOpen(true)} className="cursor-pointer">
-                    <StatCard
-                        label="累計獎金"
-                        value={mask(`$${Math.round(stats?.totalBonusInYear || 0).toLocaleString()} `)}
-                        sub={`本月增: ${mask('$' + Math.round(stats?.totalBonusInMonth || 0).toLocaleString())} `}
-                        icon={Gift}
-                        color="text-amber-500"
-                    />
+            {/* 1. History Overview */}
+            <div className="space-y-6">
+                <h2 className="text-xl font-black italic flex items-center gap-2 px-2">
+                    <Trophy className="text-amber-500" /> 歷史戰績總覽
+                </h2>
+                <div className="grid grid-cols-1 gap-4">
+                    <HistoryCard label="出差總戰績" items={countryStats().slice(0, 3)} />
                 </div>
             </div>
 
+            {/* 2. Attendance Grid */}
+            <div className="neumo-card flex flex-col p-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+                    <div className="flex items-center gap-6">
+                        <div className="relative w-14 h-14 flex items-center justify-center">
+                            <svg className="w-14 h-14 transform -rotate-90">
+                                <circle cx="28" cy="28" r="24" fill="transparent" stroke="currentColor" strokeWidth="4" className="text-gray-100" />
+                                <circle cx="28" cy="28" r="24" fill="transparent" stroke="currentColor" strokeWidth="4" strokeDasharray={151} strokeDashoffset={151 - (151 * attendancePercent) / 100} className="text-neumo-brand transition-all duration-1000" />
+                            </svg>
+                            <span className="absolute text-[11px] font-black">{attendancePercent}%</span>
+                        </div>
+                        <div className="space-y-0.5">
+                            <h3 className="font-black italic flex items-center gap-2 text-sm text-[#202731] uppercase tracking-widest">
+                                本月出勤紀錄 (Contribution Grid) <BarChart3 size={14} className="text-neumo-brand" />
+                            </h3>
+                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                                {attendanceCount} / {currentMonthDays.length} Days Active
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-[8px] font-black uppercase tracking-widest">
+                        <span className="flex items-center gap-1"><div className="w-2 h-2 bg-green-500 rounded-sm" /> 出勤</span>
+                        <span className="flex items-center gap-1"><div className="w-2 h-2 bg-rose-500 rounded-sm" /> 休假</span>
+                        <span className="flex items-center gap-1"><div className="w-2 h-2 bg-gray-100 rounded-sm" /> 無資料</span>
+                    </div>
+                </div>
+
+                <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-6 px-1 custom-scrollbar justify-start">
+                    {attendanceBoxes.map((box, idx) => (
+                        <div key={idx} className="flex flex-col items-center gap-1.5 flex-shrink-0">
+                            <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ delay: idx * 0.01 }}
+                                className={cn(
+                                    "w-7 h-7 md:w-9 md:h-9 rounded-lg shadow-sm transition-all duration-300",
+                                    box.type === 'attendance' ? "bg-green-500 shadow-green-200" :
+                                        box.type === 'leave' ? "bg-rose-500 shadow-rose-200" :
+                                            "bg-gray-100"
+                                )}
+                                title={`${format(box.day, 'yyyy-MM-dd')}: ${box.type} `}
+                            />
+                            <span className="text-[7px] font-black text-gray-400">{format(box.day, 'd')}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* 3. Charts */}
             <div className="space-y-6">
-                {/* Chart 1: Monthly Income Structure */}
+                {/* Monthly Income Structure */}
                 <div className="neumo-card h-[400px] flex flex-col p-6">
                     <h3 className="font-black italic flex items-center gap-2 mb-6 text-sm text-[#202731] uppercase tracking-widest">
                         每月收入結構 (Monthly Income) <TrendingUp size={14} className="text-amber-500" />
@@ -421,7 +462,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                     </div>
                 </div>
 
-                {/* Chart 2: Overtime & Comp Leave */}
+                {/* Overtime & Comp Leave */}
                 <div className="neumo-card h-[350px] flex flex-col p-6">
                     <h3 className="font-black italic flex items-center gap-2 mb-6 text-sm text-gray-400 uppercase tracking-widest">
                         加班與補休趨勢 <ArrowUpRight size={14} />
@@ -430,66 +471,22 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                         <Chart type="bar" data={mergedData} options={mergedOptions} />
                     </div>
                 </div>
-
-                {/* Chart 2: Attendance Registry (GitHub Style) */}
-                <div className="neumo-card flex flex-col p-6">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
-                        <div className="flex items-center gap-6">
-                            {/* Attendance Percentage Widget - Moved here */}
-                            <div className="relative w-14 h-14 flex items-center justify-center">
-                                <svg className="w-14 h-14 transform -rotate-90">
-                                    <circle cx="28" cy="28" r="24" fill="transparent" stroke="currentColor" strokeWidth="4" className="text-gray-100" />
-                                    <circle cx="28" cy="28" r="24" fill="transparent" stroke="currentColor" strokeWidth="4" strokeDasharray={151} strokeDashoffset={151 - (151 * attendancePercent) / 100} className="text-neumo-brand transition-all duration-1000" />
-                                </svg>
-                                <span className="absolute text-[11px] font-black">{attendancePercent}%</span>
-                            </div>
-                            <div className="space-y-0.5">
-                                <h3 className="font-black italic flex items-center gap-2 text-sm text-[#202731] uppercase tracking-widest">
-                                    本月出勤紀錄 (Contribution Grid) <BarChart3 size={14} className="text-neumo-brand" />
-                                </h3>
-                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
-                                    {attendanceCount} / {currentMonthDays.length} Days Active
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-4 text-[8px] font-black uppercase tracking-widest">
-                            <span className="flex items-center gap-1"><div className="w-2 h-2 bg-green-500 rounded-sm" /> 出勤</span>
-                            <span className="flex items-center gap-1"><div className="w-2 h-2 bg-rose-500 rounded-sm" /> 休假</span>
-                            <span className="flex items-center gap-1"><div className="w-2 h-2 bg-gray-200 rounded-sm" /> 無資料</span>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-6 px-1 custom-scrollbar justify-start">
-                        {attendanceBoxes.map((box, idx) => (
-                            <div key={idx} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                                <motion.div
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ delay: idx * 0.01 }}
-                                    className={cn(
-                                        "w-7 h-7 md:w-9 md:h-9 rounded-lg shadow-sm transition-all duration-300",
-                                        box.type === 'attendance' ? "bg-green-500 shadow-green-200" :
-                                            box.type === 'leave' ? "bg-rose-500 shadow-rose-200" :
-                                                "bg-gray-100"
-                                    )}
-                                    title={`${format(box.day, 'yyyy-MM-dd')}: ${box.type} `}
-                                />
-                                <span className="text-[7px] font-black text-gray-400">{format(box.day, 'd')}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
             </div>
 
-            <div className="space-y-6">
-                <h2 className="text-xl font-black italic flex items-center gap-2 px-2">
-                    <Trophy className="text-amber-500" /> 歷史戰績總覽
-                </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <HistoryCard label="出差總戰績" items={countryStats().slice(0, 3)} />
-                    <HistoryCountCard label="補休總戰績" value={mask(totalCompSum.toFixed(1))} sub="累計獲得單位" icon={Coffee} color="text-indigo-600" bgColor="text-indigo-500" />
-                    <HistoryCountCard label="加班總戰績" value={mask(totalOTSum.toFixed(0))} sub="累計總時數 (H)" icon={Clock} color="text-blue-600" bgColor="text-blue-500" />
+            {/* 4. Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div onClick={() => setIsSalaryDetailOpen(true)} className="cursor-pointer">
+                    <StatCard label="當年年薪 (Rolling 365)" value={mask(`$${Math.round(stats?.rollingAnnualSalary || 0).toLocaleString()} `)} sub="Estimated Cumulative" icon={TrendingUp} color="text-neumo-brand" />
+                </div>
+                <StatCard label="月平均薪資 (Rolling 365)" value={mask(`$${Math.round(stats?.rollingMonthlySalary || 0).toLocaleString()} `)} sub="Monthly Projection" icon={Calendar} color="text-blue-500" />
+                <div onClick={() => setIsBonusDetailOpen(true)} className="cursor-pointer">
+                    <StatCard
+                        label="累計獎金"
+                        value={mask(`$${Math.round(stats?.totalBonusInYear || 0).toLocaleString()} `)}
+                        sub={`本月增: ${mask('$' + Math.round(stats?.totalBonusInMonth || 0).toLocaleString())} `}
+                        icon={Gift}
+                        color="text-amber-500"
+                    />
                 </div>
             </div>
 
@@ -503,6 +500,14 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                     syncRecordsToGist(newData);
                 }}
                 isPrivacy={isPrivacy}
+            />
+
+            <SalaryDetailModal
+                isOpen={isSalaryDetailOpen}
+                onClose={() => setIsSalaryDetailOpen(false)}
+                data={stats?.breakdown || {}}
+                total={stats?.rollingAnnualSalary}
+                mask={mask}
             />
         </div>
     )
@@ -542,13 +547,57 @@ function HistoryCard({ label, items }) {
     )
 }
 
-function HistoryCountCard({ label, value, sub, icon: Icon, color, bgColor }) {
+function SalaryDetailModal({ isOpen, onClose, data, total, mask }) {
+    if (!isOpen) return null;
+
+    const items = [
+        { label: '底薪收入 (Base)', value: data.base, color: 'text-blue-500' },
+        { label: '加班費 (Overtime)', value: data.ot, color: 'text-orange-500' },
+        { label: '出差費 (Travel)', value: data.travel, color: 'text-green-500' },
+        { label: '獎金 (Bonus)', value: data.bonus, color: 'text-amber-500' },
+    ];
+
     return (
-        <div className="neumo-card p-6 flex flex-col justify-center items-center text-center gap-2">
-            <Icon size={32} className={cn("opacity-30 mb-2", bgColor)} />
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{label}</p>
-            <h4 className={cn("text-4xl font-black", color)}>{value}</h4>
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{sub}</p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                onClick={onClose}
+                className="absolute inset-0 bg-gray-500/20 backdrop-blur-sm"
+            />
+            <motion.div
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                className="relative w-full max-w-sm neumo-card p-6 flex flex-col gap-6"
+            >
+                <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-black italic uppercase text-[#202731] flex items-center gap-2">
+                        <TrendingUp size={20} strokeWidth={3} className="text-neumo-brand" />
+                        年薪明細
+                    </h3>
+                    <button onClick={onClose} className="neumo-button p-2 text-gray-400">
+                        <X size={18} />
+                    </button>
+                </div>
+
+                <div className="space-y-4">
+                    {items.map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center text-sm font-bold border-b border-gray-100 pb-2 last:border-0">
+                            <span className="text-gray-500">{item.label}</span>
+                            <span className={cn("font-black text-base", item.color)}>
+                                {mask('$' + Math.round(item.value || 0).toLocaleString())}
+                            </span>
+                        </div>
+                    ))}
+
+                    <div className="pt-4 border-t-2 border-gray-100 flex justify-between items-end">
+                        <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Total Estimated</span>
+                        <span className="text-2xl font-black text-neumo-brand">
+                            {mask('$' + Math.round(total || 0).toLocaleString())}
+                        </span>
+                    </div>
+                </div>
+            </motion.div>
         </div>
     )
 }
