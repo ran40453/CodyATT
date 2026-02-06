@@ -14,6 +14,12 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings }) {
     const [isDragging, setIsDragging] = useState(false)
     const [mode, setMode] = useState('attendance') // 'attendance' or 'bonus'
     const [bonus, setBonus] = useState('')
+    const [bonusCategory, setBonusCategory] = useState('季獎金')
+    const [bonusName, setBonusName] = useState('')
+    const [showCustomCategory, setShowCustomCategory] = useState(false)
+    const [customCategory, setCustomCategory] = useState('')
+
+    const bonusCategories = ['季獎金', '年終獎金', '其他獎金', '補助金', '退費', '分紅']
 
     if (!isOpen) return null
 
@@ -33,6 +39,8 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings }) {
             otType: mode === 'attendance' ? (otHours >= 0.5 ? otType : 'pay') : 'pay',
             endTime: mode === 'attendance' ? endTime : '',
             bonus: mode === 'bonus' ? parseFloat(bonus) || 0 : 0,
+            bonusCategory: mode === 'bonus' ? (showCustomCategory ? customCategory : bonusCategory) : '',
+            bonusName: mode === 'bonus' ? bonusName : '',
             recordType: mode // helpful for distinguishing records
         })
         onClose()
@@ -228,17 +236,77 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings }) {
 
                         {/* Bonus Mode Fields */}
                         {mode === 'bonus' && (
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                                    <Gift size={12} /> 獎金金額 (TWD)
-                                </label>
-                                <input
-                                    type="number"
-                                    value={bonus}
-                                    onChange={(e) => setBonus(e.target.value)}
-                                    placeholder="輸入獎金金額..."
-                                    className="neumo-input w-full h-12 font-bold px-4"
-                                />
+                            <div className="space-y-4">
+                                {/* Bonus Amount */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                                        <Gift size={12} /> 獎金金額 (TWD)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={bonus}
+                                        onChange={(e) => setBonus(e.target.value)}
+                                        placeholder="輸入獎金金額..."
+                                        className="neumo-input w-full h-12 font-bold px-4"
+                                    />
+                                </div>
+
+                                {/* Bonus Category */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                                        <Plus size={12} /> 獎金類別
+                                    </label>
+                                    <div className="flex gap-2">
+                                        {!showCustomCategory ? (
+                                            <>
+                                                <select
+                                                    value={bonusCategory}
+                                                    onChange={(e) => setBonusCategory(e.target.value)}
+                                                    className="neumo-input flex-1 h-12 font-bold px-4 bg-transparent appearance-none"
+                                                >
+                                                    {bonusCategories.map(cat => (
+                                                        <option key={cat} value={cat}>{cat}</option>
+                                                    ))}
+                                                </select>
+                                                <button
+                                                    onClick={() => setShowCustomCategory(true)}
+                                                    className="neumo-button w-12 h-12 flex items-center justify-center text-neumo-brand"
+                                                >
+                                                    <Plus size={18} strokeWidth={3} />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <input
+                                                    placeholder="輸入自定義類別..."
+                                                    value={customCategory}
+                                                    onChange={(e) => setCustomCategory(e.target.value)}
+                                                    className="neumo-input flex-1 h-12 font-bold px-4"
+                                                    autoFocus
+                                                />
+                                                <button
+                                                    onClick={() => setShowCustomCategory(false)}
+                                                    className="neumo-button w-12 h-12 flex items-center justify-center text-gray-400"
+                                                >
+                                                    <X size={18} />
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Bonus Name/Reason */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                                        <Calendar size={12} /> 獎金名目 / 備註
+                                    </label>
+                                    <input
+                                        value={bonusName}
+                                        onChange={(e) => setBonusName(e.target.value)}
+                                        placeholder="例如：2023 績效獎金..."
+                                        className="neumo-input w-full h-12 font-bold px-4"
+                                    />
+                                </div>
                             </div>
                         )}
 
