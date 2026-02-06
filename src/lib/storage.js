@@ -139,7 +139,13 @@ export const standardizeRecords = (records) => {
             isLeave,
             isRestDay,
             endTime,
-            otType
+            otType,
+            bonusEntries: Array.isArray(nr.bonusEntries) ? nr.bonusEntries : (bonus > 0 ? [{
+                amount: bonus,
+                category: nr.bonusCategory || '其他',
+                name: nr.bonusName || '',
+                date: nr.date
+            }] : [])
         };
     });
 };
@@ -447,8 +453,34 @@ export const addOrUpdateRecord = (record) => {
 
     let newData;
     if (index >= 0) {
+        const existing = data[index];
         newData = [...data];
-        newData[index] = { ...newData[index], ...record };
+
+        if (record.recordType === 'bonus') {
+            const newBonus = (parseFloat(existing.bonus) || 0) + (parseFloat(record.bonus) || 0);
+            const newEntries = [...(existing.bonusEntries || [])];
+            if (record.bonus > 0) {
+                newEntries.push({
+                    amount: record.bonus,
+                    category: record.bonusCategory,
+                    name: record.bonusName,
+                    date: record.date
+                });
+            }
+            newData[index] = {
+                ...existing,
+                bonus: newBonus,
+                bonusEntries: newEntries
+            };
+        } else {
+            newData[index] = {
+                ...record,
+                bonus: parseFloat(existing.bonus) || 0,
+                bonusEntries: existing.bonusEntries || [],
+                bonusCategory: existing.bonusCategory || '',
+                bonusName: existing.bonusName || ''
+            };
+        }
     } else {
         newData = [...data, record];
     }

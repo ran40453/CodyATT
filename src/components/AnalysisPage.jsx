@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { format, startOfYear, endOfYear, eachMonthOfInterval, isSameMonth, subDays, isWithinInterval, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, subMonths } from 'date-fns'
-import { TrendingUp, Clock, Calendar, Globe, ArrowUpRight, Coffee, Trophy, BarChart3 } from 'lucide-react'
+import { TrendingUp, Clock, Calendar, Globe, ArrowUpRight, Coffee, Trophy, BarChart3, Gift, X } from 'lucide-react'
 import { motion } from 'framer-motion'
 import {
     Chart as ChartJS,
@@ -39,6 +39,7 @@ function AnalysisPage() {
     const [settings, setSettings] = useState(null)
     const [liveRate, setLiveRate] = useState(32.5)
     const [isLoading, setIsLoading] = useState(true)
+    const [isBonusDetailOpen, setIsBonusDetailOpen] = useState(false)
 
     useEffect(() => {
         const init = async () => {
@@ -119,7 +120,8 @@ function AnalysisPage() {
                 return sum + (isNaN(hours) ? 0 : hours)
             }, 0)
             const totalComp = records.reduce((sum, r) => sum + calculateCompLeaveUnits(r), 0)
-            return { extraTotal, totalOT, totalComp }
+            const totalBonus = records.reduce((sum, r) => sum + (parseFloat(r.bonus) || 0), 0)
+            return { extraTotal, totalOT, totalComp, totalBonus }
         }
 
         const yearMetrics = getMetrics(rollingYearRecords)
@@ -145,6 +147,8 @@ function AnalysisPage() {
             rollingMonthlySalary,
             totalCompInYear: yearMetrics.totalComp,
             totalCompInMonth: monthMetrics.totalComp,
+            totalBonusInYear: yearMetrics.totalBonus,
+            totalBonusInMonth: monthMetrics.totalBonus,
             yearOT: yearMetrics.totalOT,
             monthOT: monthMetrics.totalOT,
             monthTotalIncome
@@ -223,7 +227,7 @@ function AnalysisPage() {
                 label: '獎金',
                 data: bonusByMonth,
                 borderColor: 'rgb(245, 158, 11)', // Amber 500
-                backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                backgroundColor: 'rgba(245, 158, 11, 0.95)',
                 fill: true,
                 tension: 0.4,
                 pointRadius: 4,
@@ -233,7 +237,7 @@ function AnalysisPage() {
                 label: '加班費',
                 data: otPayByMonth,
                 borderColor: 'rgb(99, 102, 241)', // Indigo 500
-                backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                backgroundColor: 'rgba(99, 102, 241, 0.95)',
                 fill: true,
                 tension: 0.4,
                 pointRadius: 4,
@@ -243,7 +247,7 @@ function AnalysisPage() {
                 label: '出差費',
                 data: travelByMonth,
                 borderColor: 'rgb(16, 185, 129)', // Emerald 500
-                backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                backgroundColor: 'rgba(16, 185, 129, 0.95)',
                 fill: true,
                 tension: 0.4,
                 pointRadius: 4,
@@ -253,7 +257,7 @@ function AnalysisPage() {
                 label: '底薪',
                 data: baseByMonth,
                 borderColor: 'rgb(107, 114, 128)', // Gray 500
-                backgroundColor: 'rgba(107, 114, 128, 0.1)',
+                backgroundColor: 'rgba(107, 114, 128, 0.8)',
                 fill: true,
                 tension: 0.4,
                 pointRadius: 4,
@@ -262,7 +266,7 @@ function AnalysisPage() {
             {
                 label: '當月總收入',
                 data: totalIncomeByMonth,
-                borderColor: 'rgb(253, 224, 71)', // Yellow 300 (鵝黃色)
+                borderColor: 'rgb(253, 224, 71)', // Yellow 300
                 backgroundColor: 'transparent',
                 fill: false,
                 tension: 0.4,
@@ -328,7 +332,8 @@ function AnalysisPage() {
             legend: {
                 display: true,
                 position: 'top',
-                labels: { boxWidth: 10, font: { size: 9, weight: 'bold' } }
+                usePointStyle: true,
+                labels: { boxWidth: 10, usePointStyle: true, pointStyle: 'circle', font: { size: 9, weight: 'bold' } }
             },
             tooltip: {
                 callbacks: {
@@ -395,7 +400,7 @@ function AnalysisPage() {
                 </div>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <StatCard label="當年年薪 (Rolling 365)" value={`$${Math.round(stats?.rollingAnnualSalary || 0).toLocaleString()}`} sub="Estimated Cumulative" icon={TrendingUp} color="text-neumo-brand" />
                 <StatCard label="月平均薪資 (Rolling 365)" value={`$${Math.round(stats?.rollingMonthlySalary || 0).toLocaleString()}`} sub="Monthly Projection" icon={Calendar} color="text-blue-500" />
                 <StatCard
@@ -406,6 +411,15 @@ function AnalysisPage() {
                     icon={Coffee}
                     color="text-indigo-500"
                 />
+                <div onClick={() => setIsBonusDetailOpen(true)} className="cursor-pointer">
+                    <StatCard
+                        label="累計獎金"
+                        value={`$${Math.round(stats?.totalBonusInYear || 0).toLocaleString()}`}
+                        sub={`本月增: $${Math.round(stats?.totalBonusInMonth || 0).toLocaleString()}`}
+                        icon={Gift}
+                        color="text-amber-500"
+                    />
+                </div>
             </div>
 
             <div className="space-y-6">
@@ -490,6 +504,12 @@ function AnalysisPage() {
                     <HistoryCountCard label="加班總戰績" value={totalOTSum.toFixed(0)} sub="累計總時數 (H)" icon={Clock} color="text-blue-600" bgColor="text-blue-500" />
                 </div>
             </div>
+
+            <BonusDetailModal
+                isOpen={isBonusDetailOpen}
+                onClose={() => setIsBonusDetailOpen(false)}
+                data={data}
+            />
         </div>
     )
 }
@@ -537,6 +557,78 @@ function HistoryCountCard({ label, value, sub, icon: Icon, color, bgColor }) {
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{sub}</p>
         </div>
     )
+}
+
+function BonusDetailModal({ isOpen, onClose, data }) {
+    if (!isOpen) return null;
+
+    const bonusRecords = data
+        .flatMap(r => {
+            if (Array.isArray(r.bonusEntries) && r.bonusEntries.length > 0) {
+                return r.bonusEntries;
+            }
+            if (parseFloat(r.bonus) > 0) {
+                return [{
+                    date: r.date,
+                    amount: r.bonus,
+                    category: r.bonusCategory || '獎金',
+                    name: r.bonusName || ''
+                }];
+            }
+            return [];
+        })
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                onClick={onClose}
+                className="absolute inset-0 bg-gray-500/20 backdrop-blur-sm"
+            />
+            <motion.div
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                className="relative w-full max-w-lg neumo-card p-6 max-h-[80vh] flex flex-col"
+            >
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-black italic uppercase text-amber-500 flex items-center gap-2">
+                        <Gift size={20} strokeWidth={3} />
+                        獎金明細
+                    </h3>
+                    <button onClick={onClose} className="neumo-button p-2 text-gray-400">
+                        <X size={18} />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                    {bonusRecords.length === 0 ? (
+                        <div className="text-center py-10 text-gray-400 font-bold italic">尚無獎金紀錄</div>
+                    ) : (
+                        bonusRecords.map((b, idx) => (
+                            <div key={idx} className="neumo-pressed p-4 rounded-2xl flex justify-between items-center">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-black text-gray-400 bg-white/50 px-2 py-0.5 rounded shadow-sm">
+                                            {format(new Date(b.date), 'yyyy/MM/dd')}
+                                        </span>
+                                        <span className="text-[10px] font-black text-amber-600 border border-amber-200 px-2 py-0.5 rounded uppercase tracking-wider">
+                                            {b.category}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs font-black text-gray-600">{b.name || '無備註'}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-sm font-black text-gray-800">${Math.round(b.amount).toLocaleString()}</p>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </motion.div>
+        </div>
+    );
 }
 
 export default AnalysisPage
