@@ -340,7 +340,7 @@ function AnalysisPage({ isPrivacy }) {
             tooltip: {
                 callbacks: {
                     label: (context) => {
-                        return `${context.dataset.label}: $${Math.round(context.raw).toLocaleString()}`;
+                        return `${context.dataset.label}: ${mask('$' + Math.round(context.raw).toLocaleString())}`;
                     }
                 }
             }
@@ -403,13 +403,13 @@ function AnalysisPage({ isPrivacy }) {
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <StatCard label="當年年薪 (Rolling 365)" value={`$${Math.round(stats?.rollingAnnualSalary || 0).toLocaleString()}`} sub="Estimated Cumulative" icon={TrendingUp} color="text-neumo-brand" />
-                <StatCard label="月平均薪資 (Rolling 365)" value={`$${Math.round(stats?.rollingMonthlySalary || 0).toLocaleString()}`} sub="Monthly Projection" icon={Calendar} color="text-blue-500" />
+                <StatCard label="當年年薪 (Rolling 365)" value={mask(`$${Math.round(stats?.rollingAnnualSalary || 0).toLocaleString()}`)} sub="Estimated Cumulative" icon={TrendingUp} color="text-neumo-brand" />
+                <StatCard label="月平均薪資 (Rolling 365)" value={mask(`$${Math.round(stats?.rollingMonthlySalary || 0).toLocaleString()}`)} sub="Monthly Projection" icon={Calendar} color="text-blue-500" />
                 <StatCard
                     label="累計補休"
-                    value={`${stats?.totalCompInYear.toFixed(1)}`}
+                    value={mask(`${stats?.totalCompInYear.toFixed(1)}`)}
                     unit="單"
-                    sub={`本月增: ${stats?.totalCompInMonth.toFixed(1)}`}
+                    sub={`本月增: ${mask(stats?.totalCompInMonth.toFixed(1))}`}
                     icon={Coffee}
                     color="text-indigo-500"
                 />
@@ -502,8 +502,8 @@ function AnalysisPage({ isPrivacy }) {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <HistoryCard label="出差總戰績" items={countryStats().slice(0, 3)} />
-                    <HistoryCountCard label="補休總戰績" value={totalCompSum.toFixed(1)} sub="累計獲得單位" icon={Coffee} color="text-indigo-600" bgColor="text-indigo-500" />
-                    <HistoryCountCard label="加班總戰績" value={totalOTSum.toFixed(0)} sub="累計總時數 (H)" icon={Clock} color="text-blue-600" bgColor="text-blue-500" />
+                    <HistoryCountCard label="補休總戰績" value={mask(totalCompSum.toFixed(1))} sub="累計獲得單位" icon={Coffee} color="text-indigo-600" bgColor="text-indigo-500" />
+                    <HistoryCountCard label="加班總戰績" value={mask(totalOTSum.toFixed(0))} sub="累計總時數 (H)" icon={Clock} color="text-blue-600" bgColor="text-blue-500" />
                 </div>
             </div>
 

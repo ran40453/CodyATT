@@ -43,7 +43,7 @@ function App() {
             case 'analysis':
                 return <AnalysisPage isPrivacy={isPrivacy} />
             case 'settings':
-                return <SettingsPage />
+                return <SettingsPage isPrivacy={isPrivacy} />
             default:
                 return <Dashboard isPrivacy={isPrivacy} setIsPrivacy={togglePrivacy} />
         }
