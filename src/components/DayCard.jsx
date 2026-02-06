@@ -106,7 +106,8 @@ function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFo
 
     const otHoursRaw = settings ? calculateOTHours(endTime, settings.rules.standardEndTime) : 0;
     const otHours = isNaN(otHoursRaw) ? 0 : otHoursRaw;
-    const dailySalary = settings ? calculateDailySalary({ ...record, endTime, otHours, isHoliday, isLeave, otType }, settings) : 0;
+    const salaryMetrics = settings ? calculateDailySalary({ ...record, endTime, otHours, isHoliday, isLeave, otType }, settings) : { total: 0 };
+    const dailySalary = salaryMetrics?.total || 0;
     const compUnits = calculateCompLeaveUnits({ otHours, otType });
 
     const getCountryCode = (name) => {
