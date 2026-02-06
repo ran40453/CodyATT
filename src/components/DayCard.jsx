@@ -144,13 +144,19 @@ function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFo
                 catch (e) { rawTime = '17:30'; }
             }
             setEndTime(rawTime)
-            const country = record.travelCountry === '越南' || record.travelCountry === 'VIETNAM' ? 'VN' : record.travelCountry;
+            const country = standardizeCountry(record.travelCountry);
             setTravelCountry(country || '')
             setIsHoliday(record.isHoliday || false)
             setIsLeave(record.isLeave || false)
             setOtType(record.otType || 'pay')
+        } else {
+            setEndTime('17:30')
+            setTravelCountry('')
+            setIsHoliday(false)
+            setIsLeave(false)
+            setOtType('pay')
         }
-        // Removed onFocus() to keep expanded as requested
+        onFocus(); // Close the card on cancel
     }
 
     return (
