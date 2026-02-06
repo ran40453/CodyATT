@@ -75,8 +75,13 @@ export const calculateDailySalary = (record, settings) => {
 
     const hourlyRate = baseMonthly / 30 / 8;
     const daySalary = baseMonthly / 30;
-    const otHours = parseFloat(record.otHours) || 0;
     const otType = record.otType || 'pay';
+    let otHours = parseFloat(record.otHours) || 0;
+
+    // Fallback: Recalculate if endTime exists but otHours is 0/missing
+    if ((!otHours || otHours === 0) && record.endTime && settings?.rules?.standardEndTime) {
+        otHours = calculateOTHours(record.endTime, settings.rules.standardEndTime);
+    }
 
     let otPay = 0;
     if (otHours > 0 && otType === 'pay') {

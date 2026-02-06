@@ -70,7 +70,13 @@ function Dashboard() {
         // Robust trip count: Any day with a travel country is a trip day
         const tripCount = records.filter(r => r.travelCountry && r.travelCountry.trim() !== '').length
 
-        const totalOT = records.reduce((sum, r) => sum + (parseFloat(r.otHours) || 0), 0)
+        const totalOT = records.reduce((sum, r) => {
+            let hours = parseFloat(r.otHours) || 0;
+            if ((!hours || hours === 0) && r.endTime && settings?.rules?.standardEndTime) {
+                hours = calculateOTHours(r.endTime, settings.rules.standardEndTime);
+            }
+            return sum + hours;
+        }, 0)
         const totalComp = records.reduce((sum, r) => sum + calculateCompLeaveUnits(r), 0)
         const totalLeave = records.filter(r => r.isLeave).length
 

@@ -282,7 +282,13 @@ function AnalysisPage() {
         return Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
     }
 
-    const totalOTSum = data.reduce((sum, r) => sum + (parseFloat(r.otHours) || 0), 0)
+    const totalOTSum = data.reduce((sum, r) => {
+        let hours = parseFloat(r.otHours) || 0;
+        if ((!hours || hours === 0) && r.endTime && settings?.rules?.standardEndTime) {
+            hours = calculateOTHours(r.endTime, settings.rules.standardEndTime);
+        }
+        return sum + hours;
+    }, 0)
     const totalCompSum = data.reduce((sum, r) => sum + calculateCompLeaveUnits(r), 0)
 
     return (
