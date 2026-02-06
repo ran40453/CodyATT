@@ -140,7 +140,11 @@ export const standardizeRecords = (records) => {
             isRestDay,
             endTime,
             otType,
-            bonusEntries: Array.isArray(nr.bonusEntries) ? nr.bonusEntries : (bonus > 0 ? [{
+            bonusEntries: Array.isArray(nr.bonusEntries) ? nr.bonusEntries.map(be => ({
+                ...be,
+                id: be.id || `be-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+            })) : (bonus > 0 ? [{
+                id: `be-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 amount: bonus,
                 category: nr.bonusCategory || '其他',
                 name: nr.bonusName || '',
@@ -461,6 +465,7 @@ export const addOrUpdateRecord = (record) => {
             const newEntries = [...(existing.bonusEntries || [])];
             if (record.bonus > 0) {
                 newEntries.push({
+                    id: `be-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                     amount: record.bonus,
                     category: record.bonusCategory,
                     name: record.bonusName,

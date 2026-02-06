@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { format, startOfYear, endOfYear, eachMonthOfInterval, isSameMonth, subDays, isWithinInterval, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, subMonths } from 'date-fns'
-import { TrendingUp, Clock, Calendar, Globe, ArrowUpRight, Coffee, Trophy, BarChart3, Gift, X } from 'lucide-react'
+import { TrendingUp, Clock, Calendar, Globe, ArrowUpRight, Coffee, Trophy, BarChart3, Gift, X, Edit2, Trash2, Check } from 'lucide-react'
 import { motion } from 'framer-motion'
 import {
     Chart as ChartJS,
@@ -18,7 +18,7 @@ import {
 } from 'chart.js'
 import { Bar, Line, Chart } from 'react-chartjs-2'
 import { cn } from '../lib/utils'
-import { loadData, fetchRecordsFromGist, loadSettings, calculateDailySalary, fetchExchangeRate, calculateCompLeaveUnits, calculateOTHours, standardizeCountry } from '../lib/storage'
+import { loadData, fetchRecordsFromGist, loadSettings, calculateDailySalary, fetchExchangeRate, calculateCompLeaveUnits, calculateOTHours, standardizeCountry, saveData, syncRecordsToGist } from '../lib/storage'
 
 ChartJS.register(
     CategoryScale,
@@ -509,6 +509,12 @@ function AnalysisPage() {
                 isOpen={isBonusDetailOpen}
                 onClose={() => setIsBonusDetailOpen(false)}
                 data={data}
+                onUpdate={(newData) => {
+                    setData(newData);
+                    // Also trigger back-end sync
+                    saveData(newData);
+                    syncRecordsToGist(newData);
+                }}
             />
         </div>
     )
@@ -559,25 +565,66 @@ function HistoryCountCard({ label, value, sub, icon: Icon, color, bgColor }) {
     )
 }
 
-function BonusDetailModal({ isOpen, onClose, data }) {
+function BonusDetailModal({ isOpen, onClose, data, onUpdate }) {
+    const [editingId, setEditingId] = useState(null);
+    const [editForm, setEditForm] = useState({ amount: 0, category: '', name: '' });
+
     if (!isOpen) return null;
 
     const bonusRecords = data
         .flatMap(r => {
+            const dateStr = format(new Date(r.date), 'yyyy-MM-dd');
             if (Array.isArray(r.bonusEntries) && r.bonusEntries.length > 0) {
-                return r.bonusEntries;
+                return r.bonusEntries.map(be => ({ ...be, parentDate: dateStr }));
             }
             if (parseFloat(r.bonus) > 0) {
                 return [{
+                    id: `legacy-${dateStr}`,
                     date: r.date,
                     amount: r.bonus,
                     category: r.bonusCategory || '獎金',
-                    name: r.bonusName || ''
+                    name: r.bonusName || '',
+                    parentDate: dateStr
                 }];
             }
             return [];
         })
         .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const startEdit = (b) => {
+        setEditingId(b.id);
+        setEditForm({ amount: b.amount, category: b.category, name: b.name });
+    };
+
+    const handleSave = (parentDate, id) => {
+        const newData = data.map(r => {
+            const rDate = format(new Date(r.date), 'yyyy-MM-dd');
+            if (rDate === parentDate) {
+                const updatedEntries = r.bonusEntries.map(be =>
+                    be.id === id ? { ...be, ...editForm, amount: parseFloat(editForm.amount) || 0 } : be
+                );
+                const newTotalBonus = updatedEntries.reduce((sum, be) => sum + be.amount, 0);
+                return { ...r, bonusEntries: updatedEntries, bonus: newTotalBonus };
+            }
+            return r;
+        });
+        onUpdate(newData);
+        setEditingId(null);
+    };
+
+    const handleDelete = (parentDate, id) => {
+        if (!window.confirm('確定要刪除此筆獎金紀錄嗎？')) return;
+        const newData = data.map(r => {
+            const rDate = format(new Date(r.date), 'yyyy-MM-dd');
+            if (rDate === parentDate) {
+                const updatedEntries = r.bonusEntries.filter(be => be.id !== id);
+                const newTotalBonus = updatedEntries.reduce((sum, be) => sum + be.amount, 0);
+                return { ...r, bonusEntries: updatedEntries, bonus: newTotalBonus };
+            }
+            return r;
+        });
+        onUpdate(newData);
+    };
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -602,26 +649,72 @@ function BonusDetailModal({ isOpen, onClose, data }) {
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
                     {bonusRecords.length === 0 ? (
                         <div className="text-center py-10 text-gray-400 font-bold italic">尚無獎金紀錄</div>
                     ) : (
                         bonusRecords.map((b, idx) => (
-                            <div key={idx} className="neumo-pressed p-4 rounded-2xl flex justify-between items-center">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-black text-gray-400 bg-white/50 px-2 py-0.5 rounded shadow-sm">
-                                            {format(new Date(b.date), 'yyyy/MM/dd')}
-                                        </span>
-                                        <span className="text-[10px] font-black text-amber-600 border border-amber-200 px-2 py-0.5 rounded uppercase tracking-wider">
-                                            {b.category}
-                                        </span>
+                            <div key={idx} className="neumo-pressed p-4 rounded-2xl">
+                                {editingId === b.id ? (
+                                    <div className="space-y-3">
+                                        <div className="flex gap-2">
+                                            <input
+                                                className="neumo-input h-10 px-3 text-xs font-black flex-1"
+                                                value={editForm.category}
+                                                onChange={e => setEditForm({ ...editForm, category: e.target.value })}
+                                                placeholder="類別"
+                                            />
+                                            <input
+                                                type="number"
+                                                className="neumo-input h-10 px-3 text-xs font-black w-24"
+                                                value={editForm.amount}
+                                                onChange={e => setEditForm({ ...editForm, amount: e.target.value })}
+                                                placeholder="金額"
+                                            />
+                                        </div>
+                                        <input
+                                            className="neumo-input h-10 px-3 text-xs font-bold w-full"
+                                            value={editForm.name}
+                                            onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                                            placeholder="備註"
+                                        />
+                                        <div className="flex justify-end gap-2 pt-1">
+                                            <button onClick={() => setEditingId(null)} className="neumo-button p-2 text-gray-400">
+                                                <X size={16} />
+                                            </button>
+                                            <button onClick={() => handleSave(b.parentDate, b.id)} className="neumo-button p-2 text-green-500">
+                                                <Check size={16} strokeWidth={3} />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <p className="text-xs font-black text-gray-600">{b.name || '無備註'}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm font-black text-gray-800">${Math.round(b.amount).toLocaleString()}</p>
-                                </div>
+                                ) : (
+                                    <div className="flex justify-between items-center">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] font-black text-gray-400 bg-white/50 px-2 py-0.5 rounded shadow-sm">
+                                                    {format(new Date(b.date), 'yyyy/MM/dd')}
+                                                </span>
+                                                <span className="text-[10px] font-black text-amber-600 border border-amber-200 px-2 py-0.5 rounded uppercase tracking-wider">
+                                                    {b.category}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs font-black text-gray-600">{b.name || '無備註'}</p>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <div className="text-right">
+                                                <p className="text-sm font-black text-gray-800">${Math.round(b.amount).toLocaleString()}</p>
+                                            </div>
+                                            <div className="flex gap-1">
+                                                <button onClick={() => startEdit(b)} className="p-1.5 text-gray-400 hover:text-blue-500 transition-colors">
+                                                    <Edit2 size={14} />
+                                                </button>
+                                                <button onClick={() => handleDelete(b.parentDate, b.id)} className="p-1.5 text-gray-400 hover:text-rose-500 transition-colors">
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ))
                     )}
