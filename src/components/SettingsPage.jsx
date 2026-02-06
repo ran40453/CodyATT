@@ -25,6 +25,14 @@ function SettingsPage({ isPrivacy }) {
         init()
     }, [])
 
+    // Auto-save settings to localStorage whenever they change
+    // This ensures other components (and sync logic) can access the token immediately
+    useEffect(() => {
+        if (settings) {
+            saveSettings(settings)
+        }
+    }, [settings])
+
     if (!settings) return null
 
     const handleSave = async () => {
@@ -102,7 +110,7 @@ function SettingsPage({ isPrivacy }) {
                     )}
                 >
                     {isSaving ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />}
-                    {isSaving ? 'SAVING...' : 'SAVE'}
+                    {isSaving ? 'SYNCING...' : 'SAVE & SYNC'}
                 </button>
             </header>
 
