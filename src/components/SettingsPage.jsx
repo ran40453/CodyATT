@@ -233,25 +233,46 @@ function SettingsPage({ isPrivacy }) {
                 {/* 3. OT Rules */}
                 <SettingsCard
                     id="ot"
-                    title="加班與補休倍率"
+                    title="加班與補休規則"
                     icon={Calculator}
                     color="text-blue-500"
                     isExpanded={expandedSection === 'ot'}
                     onToggle={() => toggleSection('ot')}
                 >
-                    <div className="space-y-4 p-1">
-                        <div className="grid grid-cols-1 gap-2">
-                            <RuleRow label="平日前 2H" value="1.34x" />
-                            <RuleRow label="平日之後" value="1.67x" />
-                            <RuleRow label="例假日" value="1.34 / 1.67 / 2.67x" />
-                            <RuleRow label="國定假日" value="2.0x (前 8H)" />
-                        </div>
-                        <div className="pt-4 border-t border-gray-100/50">
-                            <div className="flex justify-between items-center mb-1.5 px-1">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">下班起算時間</label>
-                                <span className="text-[10px] font-black text-neumo-brand uppercase tracking-widest">核心規則</span>
+                    <div className="space-y-6 p-1">
+                        {/* OT Pay Section */}
+                        <div className="space-y-2">
+                            <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest pl-1 mb-2 border-b border-blue-100 pb-1">加班費倍率 (Overtime Pay)</h4>
+                            <div className="grid grid-cols-1 gap-2">
+                                <RuleRow label="平日前 2H" value="1.34x" />
+                                <RuleRow label="平日之後" value="1.67x" />
+                                <RuleRow label="例假日" value="1.34 / 1.67 / 2.67x" />
+                                <RuleRow label="國定假日" value="2.0x (前 8H)" />
                             </div>
-                            <div className="neumo-pressed h-11 flex items-center px-4 text-xs font-black text-gray-400 rounded-xl bg-gray-50/50 italic">
+                        </div>
+
+                        {/* Comp Leave Section */}
+                        <div className="space-y-2">
+                            <h4 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest pl-1 mb-2 border-b border-indigo-100 pb-1">補休換算 (Comp Leave)</h4>
+                            <div className="neumo-pressed p-3 rounded-2xl space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">換算單位</span>
+                                    <span className="text-xs font-black text-[#202731]">0.5H = 1 單位</span>
+                                </div>
+                                <div className="flex justify-between items-center border-t border-gray-100/50 pt-2">
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">計算公式</span>
+                                    <span className="text-[10px] font-bold text-gray-500 italic">floor(時數 * 2)</span>
+                                </div>
+                                <p className="text-[8px] text-gray-400 font-bold italic text-right pt-1">* 不滿 0.5H 不計入</p>
+                            </div>
+                        </div>
+
+                        {/* Standard Time Section */}
+                        <div className="pt-2">
+                            <div className="flex justify-between items-center mb-1.5 px-1">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">加班起算時間 (Standard End Time)</label>
+                            </div>
+                            <div className="neumo-pressed h-10 flex items-center px-4 text-[10px] font-black text-gray-400 rounded-xl bg-gray-50/50 italic">
                                 預設固定 17:30 (下班後 0.5H 起算)
                             </div>
                         </div>

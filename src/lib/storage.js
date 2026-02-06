@@ -93,9 +93,10 @@ export const calculateOTHours = (endTimeStr, standardEndTimeStr = "17:30") => {
  */
 export const calculateCompLeaveUnits = (record) => {
     if (record.otType === 'leave' && record.otHours) {
-        // User requested: 以 1 為單位，半小時不計入
+        // User requested: 0.5h = 1 unit, 1.0h = 2 units (floor(hours * 2))
         const h = parseFloat(record.otHours);
-        return isNaN(h) ? 0 : Math.floor(h);
+        if (isNaN(h) || h < 0.5) return 0;
+        return Math.floor(h * 2);
     }
     return 0;
 };

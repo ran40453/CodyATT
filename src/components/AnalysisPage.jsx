@@ -39,6 +39,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
     const [isLoading, setIsLoading] = useState(true);
     const [liveRate, setLiveRate] = useState(32.5);
     const [isSalaryDetailOpen, setIsSalaryDetailOpen] = useState(false);
+    const [isBonusDetailOpen, setIsBonusDetailOpen] = useState(false);
 
     const mask = (val) => isPrivacy ? '••••' : val;
 
