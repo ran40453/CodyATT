@@ -14,18 +14,29 @@ function Dashboard() {
 
     useEffect(() => {
         const init = async () => {
+            console.log('Dashboard: Initializing...');
             const localData = loadData();
+            console.log('Dashboard: Local records count:', localData.length);
             setData(localData);
             const s = loadSettings();
             setSettings(s);
 
-            const [rate, remote] = await Promise.all([
-                fetchExchangeRate().catch(() => 32.5),
-                fetchRecordsFromGist().catch(() => null)
-            ]);
+            try {
+                const [rate, remote] = await Promise.all([
+                    fetchExchangeRate().catch(() => 32.5),
+                    fetchRecordsFromGist().catch(() => null)
+                ]);
 
-            if (rate) setLiveRate(rate);
-            if (remote) setData(remote);
+                if (rate) setLiveRate(rate);
+                if (remote) {
+                    console.log('Dashboard: Gist remote records count:', remote.length);
+                    setData(remote);
+                } else {
+                    console.warn('Dashboard: Failed to fetch from Gist or Gist is empty.');
+                }
+            } catch (err) {
+                console.error('Dashboard: Init fetch error:', err);
+            }
         };
         init();
     }, [])
@@ -55,17 +66,25 @@ function Dashboard() {
         return d instanceof Date && !isNaN(d) && isWithinInterval(d, rollingYearInterval);
     })
 
-    const calcMetrics = (records) => {
-        const tripCount = records.filter(r => r.travelCountry && (r.travelCountry.toUpperCase() === 'VN' || r.travelCountry === '越南' || r.travelCountry.toUpperCase() === 'IN' || r.travelCountry === '印度' || r.travelCountry.toUpperCase() === 'CN' || r.travelCountry === '大陸')).length
+    const calcMetrics = (records, isMonth = false) => {
+        // Robust trip count: Any day with a travel country is a trip day
+        const tripCount = records.filter(r => r.travelCountry && r.travelCountry.trim() !== '').length
 
         const totalOT = records.reduce((sum, r) => sum + (parseFloat(r.otHours) || 0), 0)
         const totalComp = records.reduce((sum, r) => sum + calculateCompLeaveUnits(r), 0)
         const totalLeave = records.filter(r => r.isLeave).length
-        const totalSalary = records.reduce((sum, r) => sum + calculateDailySalary(r, { ...settings, liveRate }), 0)
 
-        // Rolling salary logic: Base * 12 + extra from records
-        const baseMonthly = settings.salary.baseMonthly || 50000;
-        const estTotal = (baseMonthly * 12) + totalSalary; // Overly simplistic but fits "estimated annual"
+        // Sum of all daily calculated salaries (OT pay + Allowances)
+        const extraPay = records.reduce((sum, r) => {
+            const val = calculateDailySalary(r, { ...settings, liveRate });
+            return sum + (isNaN(val) ? 0 : val);
+        }, 0)
+
+        const baseMonthly = settings?.salary?.baseMonthly || 50000;
+
+        // Monthly Total = Base + Extra for this month
+        // Annual Total = Base * 12 + Extra for the rolling 365 days
+        const totalSalary = isMonth ? (baseMonthly + extraPay) : (baseMonthly * 12 + extraPay);
 
         // Allowance recalculation based on per-country rules
         const allowance = records.reduce((total, r) => {
@@ -78,11 +97,20 @@ function Dashboard() {
             return total + (usd * (liveRate || settings.allowance.exchangeRate || 32.5));
         }, 0);
 
-        return { tripCount, totalOT, totalComp, totalLeave, totalSalary: estTotal, allowance }
+        return { tripCount, totalOT, totalComp, totalLeave, totalSalary, allowance }
     }
 
-    const monthStats = calcMetrics(currentMonthRecords)
-    const yearStats = calcMetrics(rollingYearRecords)
+    const monthStats = calcMetrics(currentMonthRecords, true)
+    const yearStats = calcMetrics(rollingYearRecords, false)
+
+    console.log('Dashboard Data Audit:', {
+        allData: data.length,
+        monthRecords: currentMonthRecords.length,
+        yearRecords: rollingYearRecords.length,
+        monthOT: monthStats.totalOT,
+        monthSalary: monthStats.totalSalary,
+        tripCount: monthStats.tripCount
+    });
 
     const StatPair = ({ yearVal, monthVal, unit, color }) => (
         <div className="flex flex-col gap-2 w-full">
@@ -101,7 +129,7 @@ function Dashboard() {
         { label: '獎金計算', main: mask(0), sub: 'Bonus Calculation', icon: Gift, color: 'text-amber-500', single: true },
         { label: '出差天數', year: yearStats.tripCount, month: monthStats.tripCount, unit: 'd', icon: Globe, color: 'text-green-500' },
         { label: '津貼估計', year: `$${Math.round(yearStats.allowance).toLocaleString()}`, month: `$${Math.round(monthStats.allowance).toLocaleString()}`, icon: Wallet, color: 'text-orange-500' },
-        { label: '薪資估計', year: `$${Math.round(yearStats.totalSalary).toLocaleString()}`, month: `$${Math.round(monthStats.totalSalary / 12).toLocaleString()}`, icon: TrendingUp, color: 'text-purple-500' },
+        { label: '薪資估計', year: `$${Math.round(yearStats.totalSalary).toLocaleString()}`, month: `$${Math.round(monthStats.totalSalary).toLocaleString()}`, icon: TrendingUp, color: 'text-purple-500' },
     ]
 
     return (

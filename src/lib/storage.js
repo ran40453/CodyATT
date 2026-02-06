@@ -173,7 +173,13 @@ export const fetchRecordsFromGist = async () => {
         const response = await fetch(GET_GIST_URL(GIST_ID), { headers });
         const gist = await response.json();
         if (gist.files && gist.files['records.json']) {
-            const records = JSON.parse(gist.files['records.json'].content);
+            const recordsContent = gist.files['records.json'].content;
+            if (!recordsContent) throw new Error('Gist content is empty');
+
+            const records = JSON.parse(recordsContent);
+            if (!Array.isArray(records)) throw new Error('Gist data is not an array');
+
+            console.log(`Gist Sync: Successfully fetched ${records.length} records.`);
             saveData(records);
             return records;
         }

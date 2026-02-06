@@ -148,22 +148,50 @@ function AnalysisPage() {
             const match = d instanceof Date && !isNaN(d) && isSameMonth(d, month);
             return match;
         })
-        return filtered.reduce((sum, r) => {
+        const result = filtered.reduce((sum, r) => {
             const val = fn(r);
             return sum + (isNaN(val) ? 0 : val);
         }, 0)
+        return result;
     }
 
-    const otByMonth = chartMonths.map(m => getMonthlyStat(m, r => {
-        let hours = parseFloat(r.otHours)
-        if ((!hours || hours === 0) && r.endTime && settings?.rules?.standardEndTime) {
-            hours = calculateOTHours(r.endTime, settings.rules.standardEndTime)
-        }
-        return isNaN(hours) ? 0 : hours;
-    }))
+    const otByMonth = chartMonths.map(m => {
+        const val = getMonthlyStat(m, r => {
+            // Always prefer recalculating from endTime in chart to ensure it matches current settings
+            if (r.endTime && settings?.rules?.standardEndTime) {
+                hours = calculateOTHours(r.endTime, settings.rules.standardEndTime);
+            }
+            // console.log(`Analysis: OT for ${format(m, 'MMM-yyyy')} record ${r.date}: ${hours}`); // Diagnostic log
+            return hours;
+        });
+        console.log(`Analysis: OT for ${format(m, 'MMM-yyyy')}: ${val}`); // Diagnostic log
+        return val;
+    })
 
-    console.log('Analysis: OT by month array:', otByMonth);
-    const compByMonth = chartMonths.map(m => getMonthlyStat(m, r => calculateCompLeaveUnits(r)))
+    console.log('Analysis: Calculating Comp Leave units by month...');
+    const compByMonth = chartMonths.map(m => {
+        const val = getMonthlyStat(m, r => {
+            // Recalculate hours for comp leave as well, ensuring accuracy
+            if (r.otType === 'leave') {
+                let h = parseFloat(r.otHours) || 0;
+                if (r.endTime && settings?.rules?.standardEndTime) {
+                    h = calculateOTHours(r.endTime, settings.rules.standardEndTime);
+                }
+                // console.log(`Analysis: Comp for ${format(m, 'MMM-yyyy')} record ${r.date}: ${Math.floor(h)}`); // Diagnostic log
+                return Math.floor(h); // Comp leave units are typically whole numbers
+            }
+            return 0;
+        });
+        console.log(`Analysis: Comp for ${format(m, 'MMM-yyyy')}: ${val}`); // Diagnostic log
+        return val;
+    })
+
+    console.log('Analysis Chart Summary:', {
+        months: chartMonths.map(m => format(m, 'MMM-yyyy')),
+        otValues: otByMonth,
+        compValues: compByMonth,
+        totalDataRecords: data.length
+    });
 
     // 1. Merged Chart: OT Hours & Comp Leave
     const mergedData = {
@@ -209,6 +237,9 @@ function AnalysisPage() {
         return { day, type };
     })
 
+    const attendanceCount = attendanceBoxes.filter(b => b.type === 'attendance').length;
+    const attendancePercent = Math.round((attendanceCount / currentMonthDays.length) * 100);
+
     // Options for OT/Comp Chart
     const mergedOptions = {
         responsive: true,
@@ -247,6 +278,21 @@ function AnalysisPage() {
                 <div className="space-y-1">
                     <h1 className="text-3xl font-black tracking-tight">Analysis</h1>
                     <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">Efficiency Dashboard (Rolling 365D)</p>
+                </div>
+
+                {/* Attendance Percentage Widget */}
+                <div className="neumo-card py-2 px-6 flex items-center gap-4">
+                    <div className="relative w-12 h-12 flex items-center justify-center">
+                        <svg className="w-12 h-12 transform -rotate-90">
+                            <circle cx="24" cy="24" r="20" fill="transparent" stroke="currentColor" strokeWidth="4" className="text-gray-100" />
+                            <circle cx="24" cy="24" r="20" fill="transparent" stroke="currentColor" strokeWidth="4" strokeDasharray={126} strokeDashoffset={126 - (126 * attendancePercent) / 100} className="text-neumo-brand transition-all duration-1000" />
+                        </svg>
+                        <span className="absolute text-[10px] font-black">{attendancePercent}%</span>
+                    </div>
+                    <div>
+                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">本月出勤率</p>
+                        <p className="text-xs font-black text-neumo-brand">{attendanceCount} / {currentMonthDays.length} 天</p>
+                    </div>
                 </div>
                 <div className="neumo-pressed px-4 py-2 rounded-2xl flex items-center gap-2 text-[10px] font-black text-green-600">
                     <Globe size={14} className="animate-pulse" />
