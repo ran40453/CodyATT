@@ -353,13 +353,5 @@ function RuleRow({ label, value }) {
     )
 }
 
-function RuleRow({ label, value }) {
-    return (
-        <div className="flex justify-between items-center px-2 py-1">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{label}</span>
-            <span className="text-sm font-black text-[#202731] neumo-pressed px-3 py-1 rounded-lg">{value}</span>
-        </div>
-    )
-}
 
 export default SettingsPage

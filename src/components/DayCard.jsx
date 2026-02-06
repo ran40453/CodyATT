@@ -118,7 +118,7 @@ function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFo
     const mask = (val) => isPrivacy ? '••••' : val;
 
     const getCountryCode = (name) => {
-        const mapping = { '印度': 'IN', '越南': 'VN', '越南': 'VN', 'VIETNAM': 'VN', '大陸': 'CN' };
+        const mapping = { '印度': 'IN', '越南': 'VN', 'VIETNAM': 'VN', '大陸': 'CN' };
         return mapping[name] || name;
     }
 
