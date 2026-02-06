@@ -107,7 +107,8 @@ function AnalysisPage() {
         const getMetrics = (records) => {
             const extraTotal = records.reduce((sum, r) => {
                 const results = calculateDailySalary(r, { ...settings, liveRate });
-                return sum + (results?.extra || 0);
+                const val = results?.extra || 0;
+                return sum + (isNaN(val) ? 0 : val);
             }, 0)
             const totalOT = records.reduce((sum, r) => {
                 let hours = parseFloat(r.otHours)
@@ -288,7 +289,7 @@ function AnalysisPage() {
         if ((!hours || hours === 0) && r.endTime && settings?.rules?.standardEndTime) {
             hours = calculateOTHours(r.endTime, settings.rules.standardEndTime);
         }
-        return sum + hours;
+        return sum + (isNaN(hours) ? 0 : hours);
     }, 0)
     const totalCompSum = data.reduce((sum, r) => sum + calculateCompLeaveUnits(r), 0)
 

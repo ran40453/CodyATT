@@ -75,7 +75,7 @@ function Dashboard() {
             if ((!hours || hours === 0) && r.endTime && settings?.rules?.standardEndTime) {
                 hours = calculateOTHours(r.endTime, settings.rules.standardEndTime);
             }
-            return sum + hours;
+            return sum + (isNaN(hours) ? 0 : hours);
         }, 0)
         const totalComp = records.reduce((sum, r) => sum + calculateCompLeaveUnits(r), 0)
         const totalLeave = records.filter(r => r.isLeave).length
@@ -83,7 +83,8 @@ function Dashboard() {
         // Sum of all daily calculated salaries (OT pay + Allowances)
         const extraPay = records.reduce((sum, r) => {
             const metrics = calculateDailySalary(r, { ...settings, liveRate });
-            return sum + (metrics?.extra || 0);
+            const val = metrics?.extra || 0;
+            return sum + (isNaN(val) ? 0 : val);
         }, 0)
 
         const baseMonthly = settings?.salary?.baseMonthly || 50000;
@@ -100,7 +101,8 @@ function Dashboard() {
             if (country === 'VN') usd = 40;
             else if (country === 'IN') usd = 70;
             else if (country === 'CN') usd = 33;
-            return total + (usd * (liveRate || settings.allowance?.exchangeRate || 32.5));
+            const lineVal = usd * (liveRate || settings.allowance?.exchangeRate || 32.5);
+            return total + (isNaN(lineVal) ? 0 : lineVal);
         }, 0);
 
         return { tripCount, totalOT, totalComp, totalLeave, totalSalary, allowance }
