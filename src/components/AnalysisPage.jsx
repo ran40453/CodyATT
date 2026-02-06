@@ -389,20 +389,6 @@ function AnalysisPage() {
                     <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">Efficiency Dashboard (Rolling 365D)</p>
                 </div>
 
-                {/* Attendance Percentage Widget */}
-                <div className="neumo-card py-2 px-6 flex items-center gap-4">
-                    <div className="relative w-12 h-12 flex items-center justify-center">
-                        <svg className="w-12 h-12 transform -rotate-90">
-                            <circle cx="24" cy="24" r="20" fill="transparent" stroke="currentColor" strokeWidth="4" className="text-gray-100" />
-                            <circle cx="24" cy="24" r="20" fill="transparent" stroke="currentColor" strokeWidth="4" strokeDasharray={126} strokeDashoffset={126 - (126 * attendancePercent) / 100} className="text-neumo-brand transition-all duration-1000" />
-                        </svg>
-                        <span className="absolute text-[10px] font-black">{attendancePercent}%</span>
-                    </div>
-                    <div>
-                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">本月出勤率</p>
-                        <p className="text-xs font-black text-neumo-brand">{attendanceCount} / {currentMonthDays.length} 天</p>
-                    </div>
-                </div>
                 <div className="neumo-pressed px-4 py-2 rounded-2xl flex items-center gap-2 text-[10px] font-black text-green-600">
                     <Globe size={14} className="animate-pulse" />
                     USD Rate: {liveRate.toFixed(2)}
@@ -445,10 +431,25 @@ function AnalysisPage() {
 
                 {/* Chart 2: Attendance Registry (GitHub Style) */}
                 <div className="neumo-card flex flex-col p-6">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="font-black italic flex items-center gap-2 text-sm text-[#202731] uppercase tracking-widest">
-                            本月出勤紀錄 (Contribution Grid) <BarChart3 size={14} className="text-neumo-brand" />
-                        </h3>
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+                        <div className="flex items-center gap-6">
+                            {/* Attendance Percentage Widget - Moved here */}
+                            <div className="relative w-14 h-14 flex items-center justify-center">
+                                <svg className="w-14 h-14 transform -rotate-90">
+                                    <circle cx="28" cy="28" r="24" fill="transparent" stroke="currentColor" strokeWidth="4" className="text-gray-100" />
+                                    <circle cx="28" cy="28" r="24" fill="transparent" stroke="currentColor" strokeWidth="4" strokeDasharray={151} strokeDashoffset={151 - (151 * attendancePercent) / 100} className="text-neumo-brand transition-all duration-1000" />
+                                </svg>
+                                <span className="absolute text-[11px] font-black">{attendancePercent}%</span>
+                            </div>
+                            <div className="space-y-0.5">
+                                <h3 className="font-black italic flex items-center gap-2 text-sm text-[#202731] uppercase tracking-widest">
+                                    本月出勤紀錄 (Contribution Grid) <BarChart3 size={14} className="text-neumo-brand" />
+                                </h3>
+                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                                    {attendanceCount} / {currentMonthDays.length} Days Active
+                                </p>
+                            </div>
+                        </div>
                         <div className="flex items-center gap-4 text-[8px] font-black uppercase tracking-widest">
                             <span className="flex items-center gap-1"><div className="w-2 h-2 bg-green-500 rounded-sm" /> 出勤</span>
                             <span className="flex items-center gap-1"><div className="w-2 h-2 bg-rose-500 rounded-sm" /> 休假</span>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Plus, Calendar, Globe, Palmtree, Moon, Clock, CreditCard, Coffee } from 'lucide-react'
+import { X, Plus, Calendar, Globe, Palmtree, Moon, Clock, CreditCard, Coffee, Gift } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '../lib/utils'
 

@@ -40,12 +40,17 @@ function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFo
                 catch (e) { rawTime = '17:30'; }
             }
             setEndTime(rawTime)
-            // Use global standardization
             const country = standardizeCountry(record.travelCountry);
             setTravelCountry(country)
             setIsHoliday(record.isHoliday || false)
             setIsLeave(record.isLeave || false)
             setOtType(record.otType || 'pay')
+        } else {
+            setEndTime('17:30')
+            setTravelCountry('')
+            setIsHoliday(false)
+            setIsLeave(false)
+            setOtType('pay')
         }
     }, [record])
 
@@ -183,12 +188,12 @@ function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFo
                         </span>
                     )}
 
-                    {/* Icons below date - Hidden on mobile compact unless focused */}
-                    <div className={cn("items-center gap-1.2 md:gap-1.5 h-3 md:h-4", isFocused ? "flex" : "hidden md:flex")}>
-                        {isHoliday && <Palmtree size={10} className="text-orange-500 md:w-3" strokeWidth={3} />}
-                        {isLeave && <Moon size={10} className="text-indigo-400 md:w-3" strokeWidth={3} />}
+                    {/* Icons below date - Now always flex and larger icons */}
+                    <div className="flex items-center gap-1.2 md:gap-1.5 h-3 md:h-4">
+                        {isHoliday && <Palmtree size={12} className="text-orange-500 md:w-3.5" strokeWidth={3} />}
+                        {isLeave && <Moon size={12} className="text-indigo-400 md:w-3.5" strokeWidth={3} />}
                         {travelCountry && (
-                            <span className="text-[6px] md:text-[7px] font-black text-green-600 uppercase border border-green-200 px-0.5 rounded">
+                            <span className="text-[7px] md:text-[8px] font-black text-green-600 uppercase border border-green-200 px-0.8 rounded">
                                 {getCountryCode(travelCountry)}
                             </span>
                         )}
