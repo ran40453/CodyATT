@@ -90,82 +90,95 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
     })
 
     const calcStats = () => {
-        const getMetrics = (records) => {
-            const extraTotal = records.reduce((sum, r) => {
-                const results = calculateDailySalary(r, { ...settings, liveRate });
-                const val = results?.extra || 0;
-                return sum + (isNaN(val) ? 0 : val);
-            }, 0)
-            const totalOT = records.reduce((sum, r) => {
-                let hours = parseFloat(r.otHours)
-                if ((!hours || hours === 0) && r.endTime && settings?.rules?.standardEndTime) {
-                    hours = calculateOTHours(r.endTime, settings.rules.standardEndTime)
+        try {
+            const getMetrics = (records) => {
+                const extraTotal = records.reduce((sum, r) => {
+                    const results = calculateDailySalary(r, { ...settings, liveRate });
+                    const val = results?.extra || 0;
+                    return sum + (isNaN(val) ? 0 : val);
+                }, 0)
+                const totalOT = records.reduce((sum, r) => {
+                    let hours = parseFloat(r.otHours)
+                    if ((!hours || hours === 0) && r.endTime && settings?.rules?.standardEndTime) {
+                        hours = calculateOTHours(r.endTime, settings.rules.standardEndTime)
+                    }
+                    return sum + (isNaN(hours) ? 0 : hours)
+                }, 0)
+                const totalComp = records.reduce((sum, r) => sum + calculateCompLeaveUnits(r), 0)
+                const totalBonus = records.reduce((sum, r) => sum + (parseFloat(r.bonus) || 0), 0)
+
+                // Calculate components for detail modal
+                const totalOTPay = records.reduce((sum, r) => {
+                    const results = calculateDailySalary(r, { ...settings, liveRate });
+                    return sum + (results?.otPay || 0);
+                }, 0);
+                const totalTravel = records.reduce((sum, r) => {
+                    const results = calculateDailySalary(r, { ...settings, liveRate });
+                    return sum + (results?.travelAllowance || 0);
+                }, 0);
+
+                return { extraTotal, totalOT, totalComp, totalBonus, totalOTPay, totalTravel }
+            }
+
+            const yearMetrics = getMetrics(rollingYearRecords)
+            const monthMetrics = getMetrics(currentMonthRecords)
+
+            // Calculate Base Salary Sum for Rolling Year
+            let totalBaseInYear = 0;
+            const monthsInYear = eachMonthOfInterval({ start: subDays(now, 365), end: now });
+            monthsInYear.forEach(m => {
+                let base = parseFloat(settings.salary?.baseMonthly) || 50000;
+                if (settings.salaryHistory && Array.isArray(settings.salaryHistory)) {
+                    const sortedHistory = [...settings.salaryHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+                    const monthEnd = endOfMonth(m);
+                    const applicable = sortedHistory.find(h => new Date(h.date) <= monthEnd);
+                    if (applicable) base = parseFloat(applicable.amount) || base;
                 }
-                return sum + (isNaN(hours) ? 0 : hours)
-            }, 0)
-            const totalComp = records.reduce((sum, r) => sum + calculateCompLeaveUnits(r), 0)
-            const totalBonus = records.reduce((sum, r) => sum + (parseFloat(r.bonus) || 0), 0)
+                totalBaseInYear += base;
+            });
 
-            // Calculate components for detail modal
-            const totalOTPay = records.reduce((sum, r) => {
-                const results = calculateDailySalary(r, { ...settings, liveRate });
-                return sum + (results?.otPay || 0);
-            }, 0);
-            const totalTravel = records.reduce((sum, r) => {
-                const results = calculateDailySalary(r, { ...settings, liveRate });
-                return sum + (results?.travelAllowance || 0);
-            }, 0);
+            const rollingAnnualSalary = totalBaseInYear + yearMetrics.extraTotal
+            const rollingMonthlySalary = rollingAnnualSalary / 12
 
-            return { extraTotal, totalOT, totalComp, totalBonus, totalOTPay, totalTravel }
-        }
+            // Month Salary Verification: Base + this month's extra
+            const baseMonthly = parseFloat(settings.salary?.baseMonthly) || 50000;
+            const monthTotalIncome = baseMonthly + monthMetrics.extraTotal;
 
-        const yearMetrics = getMetrics(rollingYearRecords)
-        const monthMetrics = getMetrics(currentMonthRecords)
+            console.log('Analysis: Data Verification Audit', {
+                baseMonthly,
+                monthExtra: monthMetrics.extraTotal,
+                monthTotal: monthTotalIncome,
+                yearExtra: yearMetrics.extraTotal,
+                yearTotal: rollingAnnualSalary
+            });
 
-        // Calculate Base Salary Sum for Rolling Year
-        let totalBaseInYear = 0;
-        const monthsInYear = eachMonthOfInterval({ start: subDays(now, 365), end: now });
-        monthsInYear.forEach(m => {
-            let base = settings.salary?.baseMonthly || 50000;
-            if (settings.salaryHistory && Array.isArray(settings.salaryHistory)) {
-                const sortedHistory = [...settings.salaryHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
-                const monthEnd = endOfMonth(m);
-                const applicable = sortedHistory.find(h => new Date(h.date) <= monthEnd);
-                if (applicable) base = parseFloat(applicable.amount) || base;
+            return {
+                rollingAnnualSalary,
+                rollingMonthlySalary,
+                totalCompInYear: yearMetrics.totalComp,
+                totalCompInMonth: monthMetrics.totalComp,
+                totalBonusInYear: yearMetrics.totalBonus,
+                totalBonusInMonth: monthMetrics.totalBonus,
+
+                // Detailed Breakdown for Annual Salary Modal
+                breakdown: {
+                    base: totalBaseInYear,
+                    ot: yearMetrics.totalOTPay,
+                    travel: yearMetrics.totalTravel,
+                    bonus: yearMetrics.totalBonus
+                }
             }
-            totalBaseInYear += base;
-        });
-
-        const rollingAnnualSalary = totalBaseInYear + yearMetrics.extraTotal
-        const rollingMonthlySalary = rollingAnnualSalary / 12
-
-        // Month Salary Verification: Base + this month's extra
-        const baseMonthly = settings.salary?.baseMonthly || 50000; // Simplified for current metric
-        const monthTotalIncome = baseMonthly + monthMetrics.extraTotal;
-
-        console.log('Analysis: Data Verification Audit', {
-            baseMonthly,
-            monthExtra: monthMetrics.extraTotal,
-            monthTotal: monthTotalIncome,
-            yearExtra: yearMetrics.extraTotal,
-            yearTotal: rollingAnnualSalary
-        });
-
-        return {
-            rollingAnnualSalary,
-            rollingMonthlySalary,
-            totalCompInYear: yearMetrics.totalComp,
-            totalCompInMonth: monthMetrics.totalComp,
-            totalBonusInYear: yearMetrics.totalBonus,
-            totalBonusInMonth: monthMetrics.totalBonus,
-
-            // Detailed Breakdown for Annual Salary Modal
-            breakdown: {
-                base: totalBaseInYear,
-                ot: yearMetrics.totalOTPay,
-                travel: yearMetrics.totalTravel,
-                bonus: yearMetrics.totalBonus
-            }
+        } catch (error) {
+            console.error("AnalysisPage: calcStats Crashed", error);
+            return {
+                rollingAnnualSalary: 0,
+                rollingMonthlySalary: 0,
+                totalCompInYear: 0,
+                totalCompInMonth: 0,
+                totalBonusInYear: 0,
+                totalBonusInMonth: 0,
+                breakdown: { base: 0, ot: 0, travel: 0, bonus: 0 }
+            };
         }
     }
 
