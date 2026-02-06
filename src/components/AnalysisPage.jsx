@@ -78,11 +78,9 @@ function AnalysisPage() {
     const parse = (d) => {
         if (!d) return new Date(0);
         if (d instanceof Date) return d;
-        try {
-            return parseISO(d);
-        } catch (e) {
-            return new Date(d);
-        }
+        const parsed = parseISO(d);
+        if (!isNaN(parsed.getTime())) return parsed;
+        return new Date(d);
     }
     const rollingYearRecords = data.filter(r => {
         const d = parse(r.date);
@@ -124,10 +122,9 @@ function AnalysisPage() {
     })
 
     const getMonthlyStat = (month, fn) => {
-        const monthStr = format(month, 'yyyy-MM')
         const filtered = data.filter(r => {
             const d = parse(r.date);
-            return d instanceof Date && !isNaN(d) && format(d, 'yyyy-MM') === monthStr;
+            return d instanceof Date && !isNaN(d) && isSameMonth(d, month);
         })
         return filtered.reduce((sum, r) => sum + fn(r), 0)
     }

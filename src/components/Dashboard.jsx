@@ -42,11 +42,9 @@ function Dashboard() {
     const parse = (d) => {
         if (!d) return new Date(0);
         if (d instanceof Date) return d;
-        try {
-            return parseISO(d);
-        } catch (e) {
-            return new Date(d);
-        }
+        const parsed = parseISO(d);
+        if (!isNaN(parsed.getTime())) return parsed;
+        return new Date(d);
     }
     const currentMonthRecords = data.filter(r => {
         const d = parse(r.date);
