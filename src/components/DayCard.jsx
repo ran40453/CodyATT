@@ -181,6 +181,18 @@ function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFo
                         {format(day, 'dd')}
                     </span>
 
+                    {/* OT under date on mobile */}
+                    {otHours > 0 && (
+                        <div className="flex md:hidden items-center gap-0.5">
+                            <span className="text-[10px] font-black text-neumo-brand">{otHours.toFixed(1)}h</span>
+                            {otType === 'leave' ? (
+                                <Coffee size={8} className="text-indigo-500" />
+                            ) : (
+                                <DollarSign size={8} className="text-green-500" />
+                            )}
+                        </div>
+                    )}
+
                     {/* Salary under date on mobile/compact */}
                     {dailySalary > 0 && !isLeave && (
                         <span className={cn("text-[7px] md:hidden font-bold text-gray-400 tabular-nums")}>
@@ -203,7 +215,7 @@ function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFo
                 {/* Right of date: OT & Money - Money shown on right ONLY for Desktop */}
                 <div className="flex flex-col items-end">
                     {otHours > 0 && (
-                        <div className="flex items-center gap-0.5 md:gap-1">
+                        <div className="hidden md:flex items-center gap-0.5 md:gap-1">
                             <span className="text-xs md:text-sm font-black text-neumo-brand">{otHours.toFixed(1)}h</span>
                             {otType === 'leave' ? (
                                 <Coffee size={8} className="text-indigo-500 md:w-2.5" />
