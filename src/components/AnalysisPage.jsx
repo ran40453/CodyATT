@@ -226,34 +226,15 @@ function AnalysisPage({ isPrivacy }) {
         labels: chartMonths.map(m => format(m, 'MMM')),
         datasets: [
             {
-                label: '加班費',
-                data: otPayByMonth,
-                borderColor: 'rgb(255, 69, 0)', // Orange Red
-                backgroundColor: 'rgba(255, 69, 0, 0.95)',
-                fill: true,
+                label: '當月總收入',
+                data: totalIncomeByMonth,
+                borderColor: 'rgb(253, 224, 71)', // Yellow
+                backgroundColor: 'rgba(253, 224, 71, 0.1)',
+                fill: false,
                 tension: 0.4,
-                pointRadius: 4,
-                pointBackgroundColor: 'rgb(255, 69, 0)',
-            },
-            {
-                label: '獎金',
-                data: bonusByMonth,
-                borderColor: 'rgb(245, 158, 11)', // Amber 500
-                backgroundColor: 'rgba(245, 158, 11, 0.95)',
-                fill: true,
-                tension: 0.4,
-                pointRadius: 4,
-                pointBackgroundColor: 'rgb(245, 158, 11)',
-            },
-            {
-                label: '出差費',
-                data: travelByMonth,
-                borderColor: 'rgb(16, 185, 129)', // Emerald 500
-                backgroundColor: 'rgba(16, 185, 129, 0.95)',
-                fill: true,
-                tension: 0.4,
-                pointRadius: 4,
-                pointBackgroundColor: 'rgb(16, 185, 129)',
+                pointRadius: 5,
+                pointBackgroundColor: 'rgb(253, 224, 71)',
+                borderWidth: 3,
             },
             {
                 label: '底薪',
@@ -266,15 +247,34 @@ function AnalysisPage({ isPrivacy }) {
                 pointBackgroundColor: 'rgb(56, 189, 248)',
             },
             {
-                label: '當月總收入',
-                data: totalIncomeByMonth,
-                borderColor: 'rgb(253, 224, 71)', // Yellow
-                backgroundColor: 'rgba(253, 224, 71, 0.1)',
-                fill: false,
+                label: '出差費',
+                data: travelByMonth,
+                borderColor: 'rgb(16, 185, 129)', // Emerald 500
+                backgroundColor: 'rgba(16, 185, 129, 0.95)',
+                fill: true,
                 tension: 0.4,
-                pointRadius: 5,
-                pointBackgroundColor: 'rgb(253, 224, 71)',
-                borderWidth: 3,
+                pointRadius: 4,
+                pointBackgroundColor: 'rgb(16, 185, 129)',
+            },
+            {
+                label: '獎金',
+                data: bonusByMonth,
+                borderColor: 'rgb(245, 158, 11)', // Amber 500
+                backgroundColor: 'rgba(245, 158, 11, 0.95)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: 'rgb(245, 158, 11)',
+            },
+            {
+                label: '加班費',
+                data: otPayByMonth,
+                borderColor: 'rgb(255, 69, 0)', // Orange Red
+                backgroundColor: 'rgba(255, 69, 0, 0.95)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: 'rgb(255, 69, 0)',
             }
         ]
     }
@@ -340,7 +340,7 @@ function AnalysisPage({ isPrivacy }) {
             tooltip: {
                 callbacks: {
                     label: (context) => {
-                        return `${context.dataset.label}: ${mask('$' + Math.round(context.raw).toLocaleString())}`;
+                        return `${context.dataset.label}: ${mask('$' + Math.round(context.raw).toLocaleString())} `;
                     }
                 }
             }
@@ -403,21 +403,21 @@ function AnalysisPage({ isPrivacy }) {
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <StatCard label="當年年薪 (Rolling 365)" value={mask(`$${Math.round(stats?.rollingAnnualSalary || 0).toLocaleString()}`)} sub="Estimated Cumulative" icon={TrendingUp} color="text-neumo-brand" />
-                <StatCard label="月平均薪資 (Rolling 365)" value={mask(`$${Math.round(stats?.rollingMonthlySalary || 0).toLocaleString()}`)} sub="Monthly Projection" icon={Calendar} color="text-blue-500" />
+                <StatCard label="當年年薪 (Rolling 365)" value={mask(`$${Math.round(stats?.rollingAnnualSalary || 0).toLocaleString()} `)} sub="Estimated Cumulative" icon={TrendingUp} color="text-neumo-brand" />
+                <StatCard label="月平均薪資 (Rolling 365)" value={mask(`$${Math.round(stats?.rollingMonthlySalary || 0).toLocaleString()} `)} sub="Monthly Projection" icon={Calendar} color="text-blue-500" />
                 <StatCard
                     label="累計補休"
-                    value={mask(`${stats?.totalCompInYear.toFixed(1)}`)}
+                    value={mask(`${stats?.totalCompInYear.toFixed(1)} `)}
                     unit="單"
-                    sub={`本月增: ${mask(stats?.totalCompInMonth.toFixed(1))}`}
+                    sub={`本月增: ${mask(stats?.totalCompInMonth.toFixed(1))} `}
                     icon={Coffee}
                     color="text-indigo-500"
                 />
                 <div onClick={() => setIsBonusDetailOpen(true)} className="cursor-pointer">
                     <StatCard
                         label="累計獎金"
-                        value={mask(`$${Math.round(stats?.totalBonusInYear || 0).toLocaleString()}`)}
-                        sub={`本月增: ${mask('$' + Math.round(stats?.totalBonusInMonth || 0).toLocaleString())}`}
+                        value={mask(`$${Math.round(stats?.totalBonusInYear || 0).toLocaleString()} `)}
+                        sub={`本月增: ${mask('$' + Math.round(stats?.totalBonusInMonth || 0).toLocaleString())} `}
                         icon={Gift}
                         color="text-amber-500"
                     />
@@ -486,7 +486,7 @@ function AnalysisPage({ isPrivacy }) {
                                             box.type === 'leave' ? "bg-rose-500 shadow-rose-200" :
                                                 "bg-gray-100"
                                     )}
-                                    title={`${format(box.day, 'yyyy-MM-dd')}: ${box.type}`}
+                                    title={`${format(box.day, 'yyyy-MM-dd')}: ${box.type} `}
                                 />
                                 <span className="text-[7px] font-black text-gray-400">{format(box.day, 'd')}</span>
                             </div>
@@ -548,7 +548,7 @@ function HistoryCard({ label, items }) {
                             <span className="text-neumo-brand">{c.count} 天</span>
                         </div>
                         <div className="h-1.5 neumo-pressed rounded-full overflow-hidden">
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${(c.count / (items[0]?.count || 1)) * 100}%` }} className="h-full bg-neumo-brand" />
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${(c.count / (items[0]?.count || 1)) * 100}% ` }} className="h-full bg-neumo-brand" />
                         </div>
                     </div>
                 ))}
@@ -584,7 +584,7 @@ function BonusDetailModal({ isOpen, onClose, data, onUpdate, isPrivacy }) {
             }
             if (parseFloat(r.bonus) > 0) {
                 return [{
-                    id: `legacy-${dateStr}`,
+                    id: `legacy - ${dateStr} `,
                     date: r.date,
                     amount: r.bonus,
                     category: r.bonusCategory || '獎金',
