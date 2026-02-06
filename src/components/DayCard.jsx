@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { format, isToday, getDay, isSameDay } from 'date-fns'
+import { format, isToday, getDay, isSameDay, isAfter, startOfDay } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MapPin, Clock, ChevronDown, ChevronUp, Check, Palmtree, Moon, DollarSign, Coffee, CreditCard, X } from 'lucide-react'
 import { cn } from '../lib/utils'
@@ -157,7 +157,8 @@ function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFo
                 isToday(day) && "ring-2 ring-neumo-brand/40",
                 isHoliday && "bg-orange-50/30",
                 isLeave && "opacity-50",
-                isSunday && !isFocused && "bg-[#d1d5db] shadow-inner",
+                isSunday && !isFocused && "bg-[#e0f2fe] shadow-inner text-sky-900", // New Light Sky Blue Sunday style
+                !isSunday && isAfter(startOfDay(day), startOfDay(new Date())) && !isFocused && "bg-[#d1d5db] shadow-inner", // Future style
                 "cursor-pointer overflow-hidden",
                 !isCurrentMonth && "opacity-10 pointer-events-none scale-95",
                 isFocused ? "md:flex-[2] z-10" : "flex-1"
