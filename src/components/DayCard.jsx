@@ -156,7 +156,10 @@ function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFo
     return (
         <motion.div
             layout
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            transition={{
+                layout: { type: 'spring', stiffness: 200, damping: 25, mass: 0.8 },
+                opacity: { duration: 0.2 }
+            }}
             onClick={onFocus}
             className={cn(
                 "neumo-card transition-all flex flex-col p-3 md:p-4", // Slightly smaller padding on mobile
@@ -236,10 +239,24 @@ function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFo
                 {isFocused && (
                     <motion.div
                         initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
+                        animate={{
+                            opacity: 1,
+                            height: 'auto',
+                            transition: {
+                                height: { type: 'spring', stiffness: 200, damping: 25 },
+                                opacity: { duration: 0.3, delay: 0.1 }
+                            }
+                        }}
+                        exit={{
+                            opacity: 0,
+                            height: 0,
+                            transition: {
+                                height: { type: 'spring', stiffness: 250, damping: 30 },
+                                opacity: { duration: 0.2 }
+                            }
+                        }}
                         onClick={(e) => e.stopPropagation()}
-                        className="mt-6 pt-6 border-t border-gray-100/50 space-y-6"
+                        className="mt-6 pt-6 border-t border-gray-100/50 space-y-6 overflow-hidden"
                     >
                         {/* Status Grid */}
                         <div className="flex gap-2">

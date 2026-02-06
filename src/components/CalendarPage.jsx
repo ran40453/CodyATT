@@ -113,7 +113,11 @@ function CalendarPage() {
                 </div>
 
                 {weeks.map((week, weekIdx) => (
-                    <div key={weekIdx} className="flex flex-row gap-2 md:gap-4 min-h-[60px] md:min-h-[100px]">
+                    <motion.div
+                        layout
+                        key={weekIdx}
+                        className="flex flex-row gap-2 md:gap-4 min-h-[60px] md:min-h-[100px]"
+                    >
                         {week.map((day) => (
                             <DayCard
                                 key={format(day, 'yyyy-MM-dd')}
@@ -125,7 +129,7 @@ function CalendarPage() {
                                 onFocus={() => setFocusedDay(isSameDay(day, focusedDay) ? null : day)}
                             />
                         ))}
-                    </div>
+                    </motion.div>
                 ))}
             </div>
         </div>
