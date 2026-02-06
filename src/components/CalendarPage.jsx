@@ -179,14 +179,23 @@ function CalendarOverlay({ day, record, geometry, onUpdate, onClose, isPrivacy, 
     const { row, col, targetStartRow, targetStartCol, isInside } = geometry;
 
     // CSS Grid Positions (1-based)
+    // Using absolute positioning to let it float over the grid without affecting flow
     const blockStyle = {
         gridColumn: `${targetStartCol + 1} / span 2`,
         gridRow: `${targetStartRow + 1} / span 3`,
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        zIndex: 50
     };
 
     const cellStyle = {
         gridColumn: `${col + 1} / span 1`,
         gridRow: `${row + 1} / span 1`,
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        zIndex: 51
     };
 
     // Corner Logic: Where is the junction?
@@ -211,7 +220,7 @@ function CalendarOverlay({ day, record, geometry, onUpdate, onClose, isPrivacy, 
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
                 style={blockStyle}
-                className="z-50 relative pointer-events-auto"
+                className="relative pointer-events-auto"
             >
                 <DayCardExpanded
                     day={day}
@@ -229,9 +238,7 @@ function CalendarOverlay({ day, record, geometry, onUpdate, onClose, isPrivacy, 
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     style={cellStyle}
-                    className="z-[51] relative pointer-events-none" // Higher than block, but pass events? 
-                // Actually, if we click this, it should probably do nothing or close.
-                // Visually it's the "Header" of the card.
+                    className="relative pointer-events-none"
                 >
                     {/* We render a "Fake" DayCard that looks selected/merging */}
                     <div
@@ -244,7 +251,6 @@ function CalendarOverlay({ day, record, geometry, onUpdate, onClose, isPrivacy, 
                             borderTopRightRadius: stickDir === 'bottom' && col === targetStartCol ? '0' : undefined,
                             // Mask the border where it meets the block
                             boxShadow: 'none', // Remove shadow to blend
-                            zIndex: 52
                         }}
                     >
                         {/* Just minimal content to show 'It's this day' */}
