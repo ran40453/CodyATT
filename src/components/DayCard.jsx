@@ -12,6 +12,7 @@ function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFo
     const [isLeave, setIsLeave] = useState(record?.isLeave || false)
     const [otType, setOtType] = useState(record?.otType || 'pay')
     const [isDragging, setIsDragging] = useState(false)
+    const [isSaved, setIsSaved] = useState(false)
     const [settings, setSettings] = useState(null)
 
     const dragStartY = useRef(0)
@@ -122,7 +123,8 @@ function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFo
         if (e) e.stopPropagation();
         console.log(`DayCard: Saving ${format(day, 'yyyy-MM-dd')}`, { endTime, travelCountry, isHoliday, isLeave, otType });
         syncUpdate();
-        // Removed onFocus() to keep expanded as requested
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 2000);
     }
 
     const handleCancel = (e) => {
@@ -256,49 +258,39 @@ function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFo
                             </div>
                         )}
 
-                        {/* OT Controls */}
+                        {/* OT Details - No boxes, just layout */}
                         {otHours >= 0.5 ? (
-                            <div className="space-y-3">
-                                <div className="flex items-center gap-3">
-                                    {/* OT Info & Cycle Button */}
-                                    <div className="flex-1 neumo-raised p-3 rounded-2xl flex items-center justify-between">
-                                        <div className="space-y-0.5">
-                                            <p className="text-[7px] font-black text-gray-400 uppercase">加班時數</p>
-                                            <p className="text-xl font-black text-neumo-brand leading-none">{otHours.toFixed(1)}h</p>
-                                        </div>
+                            <div className="flex items-center justify-between px-2">
+                                <div className="space-y-1">
+                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">加班時數 / 類型</p>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-2xl font-black text-neumo-brand leading-none">{otHours.toFixed(1)}h</span>
                                         <button
                                             onClick={toggleOtType}
                                             className={cn(
-                                                "w-10 h-10 rounded-full flex items-center justify-center transition-all",
+                                                "w-8 h-8 rounded-full flex items-center justify-center transition-all",
                                                 otType === 'pay' ? "bg-green-500 text-white shadow-lg" : "bg-indigo-500 text-white shadow-lg"
                                             )}
                                         >
-                                            {otType === 'pay' ? <DollarSign size={18} /> : <Coffee size={18} />}
+                                            {otType === 'pay' ? <DollarSign size={14} /> : <Coffee size={14} />}
                                         </button>
                                     </div>
+                                </div>
 
-                                    {/* Unified Sub-card Layout (Same size for both modes) */}
-                                    <div className={cn(
-                                        "flex-1 neumo-pressed p-3 rounded-2xl flex flex-col justify-center items-center h-[60px] transition-all duration-300",
-                                        otType === 'leave' ? "bg-indigo-50/20" : "bg-green-50/20"
-                                    )}>
-                                        <p className={cn(
-                                            "text-[7px] font-black uppercase tracking-widest mb-1",
-                                            otType === 'leave' ? "text-indigo-400" : "text-green-600"
+                                <div className="text-right space-y-1">
+                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
+                                        預估 {otType === 'leave' ? '補休' : '薪資'}
+                                    </p>
+                                    <div className="flex items-baseline justify-end gap-1">
+                                        <span className={cn(
+                                            "text-2xl font-black tabular-nums",
+                                            otType === 'leave' ? "text-indigo-600" : "text-green-600"
                                         )}>
-                                            {otType === 'leave' ? '今日補休' : '今日加班費'}
-                                        </p>
-                                        <div className="flex items-baseline gap-1">
-                                            <span className={cn(
-                                                "text-xl font-black tabular-nums",
-                                                otType === 'leave' ? "text-indigo-600" : "text-green-700"
-                                            )}>
-                                                {otType === 'leave' ? compUnits.toFixed(0) : `${Math.round(dailySalary).toLocaleString()}`}
-                                            </span>
-                                            <span className="text-[8px] font-bold text-gray-400 uppercase">
-                                                {otType === 'leave' ? '單' : 'TWD'}
-                                            </span>
-                                        </div>
+                                            {otType === 'leave' ? compUnits.toFixed(0) : `${Math.round(dailySalary).toLocaleString()}`}
+                                        </span>
+                                        <span className="text-[9px] font-bold text-gray-400 uppercase">
+                                            {otType === 'leave' ? '單' : 'TWD'}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -319,10 +311,23 @@ function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFo
                             </button>
                             <button
                                 onClick={handleSave}
-                                className="flex-[2] neumo-button h-12 flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-neumo-brand"
+                                disabled={isSaved}
+                                className={cn(
+                                    "flex-[2] neumo-button h-12 flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] transition-all duration-500",
+                                    isSaved ? "text-green-600 neumo-pressed scale-[0.98]" : "text-neumo-brand"
+                                )}
                             >
-                                <Check size={16} strokeWidth={3} />
-                                儲存變更
+                                {isSaved ? (
+                                    <>
+                                        <Check size={16} strokeWidth={4} className="animate-bounce" />
+                                        已儲存變更
+                                    </>
+                                ) : (
+                                    <>
+                                        <Check size={16} strokeWidth={3} />
+                                        儲存變更
+                                    </>
+                                )}
                             </button>
                         </div>
                     </motion.div>

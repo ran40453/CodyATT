@@ -85,14 +85,14 @@ function Dashboard() {
     const yearStats = calcMetrics(rollingYearRecords)
 
     const StatPair = ({ yearVal, monthVal, unit, color }) => (
-        <div className="flex items-center gap-1 w-full justify-center">
-            <div className="flex-1 neumo-pressed py-1 rounded-lg text-center">
-                <span className="text-[8px] block text-gray-400 font-bold uppercase mb-0.5">年</span>
-                <span className={cn("text-xs font-black tracking-tight", color)}>{mask(yearVal)}{unit}</span>
+        <div className="flex flex-col gap-2 w-full">
+            <div className="flex justify-between items-baseline px-1">
+                <span className="text-[9px] font-black text-gray-400 uppercase">Year</span>
+                <span className={cn("text-sm font-black tracking-tight", color)}>{mask(yearVal)}{unit}</span>
             </div>
-            <div className="flex-1 neumo-pressed py-1 rounded-lg text-center">
-                <span className="text-[8px] block text-gray-400 font-bold uppercase mb-0.5">月</span>
-                <span className={cn("text-xs font-black tracking-tight", color)}>{mask(monthVal)}{unit}</span>
+            <div className="flex justify-between items-baseline px-1 border-t border-gray-100/50 pt-1">
+                <span className="text-[9px] font-black text-gray-400 uppercase">Month</span>
+                <span className={cn("text-xs font-black tracking-tight opacity-80", color)}>{mask(monthVal)}{unit}</span>
             </div>
         </div>
     )
@@ -193,27 +193,32 @@ function Dashboard() {
 function AccumulationCard({ label, yearVal, monthVal, unit, icon: Icon, color, mask }) {
     return (
         <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="neumo-card p-5 flex items-center justify-between"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="neumo-card p-6 flex items-center gap-6"
         >
-            <div className="space-y-3 flex-1">
+            <div className={cn("w-12 h-12 rounded-2xl neumo-pressed flex items-center justify-center flex-shrink-0", color)}>
+                <Icon size={24} />
+            </div>
+
+            <div className="flex-1 space-y-3">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{label}</p>
-                <div className="flex items-center gap-2">
-                    <div className="flex-1 neumo-pressed px-3 py-2 rounded-xl text-center">
-                        <span className={cn("text-xl font-black tabular-nums", color)}>{mask(yearVal)}</span>
-                        <span className="text-[9px] font-bold text-gray-400 ml-1 uppercase">{unit}</span>
-                        <div className="text-[7px] font-bold text-gray-400 uppercase mt-0.5">Year</div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-0.5">
+                        <p className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">Rolling Year</p>
+                        <div className="flex items-baseline gap-1">
+                            <span className={cn("text-2xl font-black tabular-nums tracking-tighter", color)}>{mask(yearVal)}</span>
+                            <span className="text-[9px] font-black text-gray-400 uppercase">{unit}</span>
+                        </div>
                     </div>
-                    <div className="flex-1 bg-white/40 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.05)] px-3 py-2 rounded-xl text-center">
-                        <span className={cn("text-xl font-black tabular-nums opacity-80", color)}>{mask(monthVal)}</span>
-                        <span className="text-[9px] font-bold text-gray-400 ml-1 uppercase">{unit}</span>
-                        <div className="text-[7px] font-bold text-gray-400 uppercase mt-0.5">Month</div>
+                    <div className="space-y-0.5 border-l border-gray-100 pl-4">
+                        <p className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">This Month</p>
+                        <div className="flex items-baseline gap-1">
+                            <span className={cn("text-lg font-black tabular-nums tracking-tighter opacity-70", color)}>{mask(monthVal)}</span>
+                            <span className="text-[9px] font-black text-gray-400 uppercase">{unit}</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div className={cn("ml-4 w-12 h-12 rounded-full neumo-pressed flex items-center justify-center opacity-20", color)}>
-                <Icon size={20} />
             </div>
         </motion.div>
     )
