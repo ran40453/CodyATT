@@ -173,30 +173,26 @@ function AnalysisPage() {
     const otByMonth = chartMonths.map(m => {
         const val = getMonthlyStat(m, r => {
             let hours = parseFloat(r.otHours) || 0;
-            if (r.endTime && settings?.rules?.standardEndTime) {
+            if (hours === 0 && r.endTime && settings?.rules?.standardEndTime) {
                 hours = calculateOTHours(r.endTime, settings.rules.standardEndTime);
             }
             return hours;
         });
-        console.log(`Analysis: OT for ${format(m, 'MMM-yyyy')}: ${val}`); // Diagnostic log
         return val;
     })
 
     console.log('Analysis: Calculating Comp Leave units by month...');
     const compByMonth = chartMonths.map(m => {
         const val = getMonthlyStat(m, r => {
-            // Recalculate hours for comp leave as well, ensuring accuracy
             if (r.otType === 'leave') {
                 let h = parseFloat(r.otHours) || 0;
-                if (r.endTime && settings?.rules?.standardEndTime) {
+                if (h === 0 && r.endTime && settings?.rules?.standardEndTime) {
                     h = calculateOTHours(r.endTime, settings.rules.standardEndTime);
                 }
-                // console.log(`Analysis: Comp for ${format(m, 'MMM-yyyy')} record ${r.date}: ${Math.floor(h)}`); // Diagnostic log
-                return Math.floor(h); // Comp leave units are typically whole numbers
+                return Math.floor(h);
             }
             return 0;
         });
-        console.log(`Analysis: Comp for ${format(m, 'MMM-yyyy')}: ${val}`); // Diagnostic log
         return val;
     })
 

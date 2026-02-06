@@ -72,8 +72,8 @@ function Dashboard() {
 
         const totalOT = records.reduce((sum, r) => {
             let hours = parseFloat(r.otHours) || 0;
-            if ((!hours || hours === 0) && r.endTime && settings?.rules?.standardEndTime) {
-                hours = calculateOTHours(r.endTime, settings.rules.standardEndTime);
+            if (hours === 0 && r.endTime) {
+                hours = calculateOTHours(r.endTime, settings?.rules?.standardEndTime || "17:30");
             }
             return sum + (isNaN(hours) ? 0 : hours);
         }, 0)

@@ -35,20 +35,21 @@ export const standardizeCountry = (c) => {
  */
 export const calculateOTHours = (endTimeStr, standardEndTimeStr = "17:30") => {
     if (!endTimeStr) return 0;
-    if (!standardEndTimeStr) standardEndTimeStr = "17:30";
+    const finalStandardTime = standardEndTimeStr || "17:30";
 
     const extractTime = (str) => {
         if (typeof str !== 'string') return null;
-        // If it's a full ISO string (contains 'T'), extract the HH:mm from the middle
-        if (str.includes('T')) {
-            const timePart = str.split('T')[1];
-            if (timePart) return timePart.substring(0, 5); // Take HH:mm
-        }
-        // If it's already HH:mm:ss or similar, take the first 5 chars
-        return str.substring(0, 5);
+        // Search for HH:mm or HH:mm:ss format
+        const timeMatch = str.match(/(\d{1,2}:\d{2})/);
+        if (timeMatch) return timeMatch[1];
+
+        // Fallback for strings starting with HH:mm
+        if (/^\d{1,2}:\d{2}/.test(str)) return str.substring(0, 5);
+
+        return null;
     };
 
-    const t1 = extractTime(standardEndTimeStr);
+    const t1 = extractTime(finalStandardTime);
     const t2 = extractTime(endTimeStr);
 
     if (!t1 || !t2) return 0;
@@ -109,8 +110,8 @@ export const calculateDailySalary = (record, settings) => {
     if (isNaN(otHours)) otHours = 0;
 
     // Fallback: Recalculate if endTime exists but otHours is 0/missing
-    if ((!otHours || otHours === 0) && record.endTime && settings?.rules?.standardEndTime) {
-        otHours = calculateOTHours(record.endTime, settings.rules.standardEndTime);
+    if (otHours === 0 && record.endTime) {
+        otHours = calculateOTHours(record.endTime, settings?.rules?.standardEndTime || "17:30");
     }
 
     let otPay = 0;
