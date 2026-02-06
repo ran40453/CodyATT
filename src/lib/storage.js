@@ -525,7 +525,7 @@ export const saveSettings = (settings) => {
     }
 };
 
-export const addOrUpdateRecord = (record) => {
+export const addOrUpdateRecord = async (record) => {
     const data = loadData();
     const dateStr = format(new Date(record.date), 'yyyy-MM-dd');
     const index = data.findIndex(r => format(new Date(r.date), 'yyyy-MM-dd') === dateStr);
@@ -572,14 +572,15 @@ export const addOrUpdateRecord = (record) => {
         if (!currentCats.includes(record.bonusCategory)) {
             settings.bonusCategories = [...currentCats, record.bonusCategory];
             saveSettings(settings);
-            syncSettingsToGist(settings);
+            syncSettingsToGist(settings); // Fire and forget for settings sync
         }
     }
 
     saveData(newData);
-    // Background sync
-    syncRecordsToSheets(newData);
-    return newData;
+
+    // Background sync - now awaited to give feedback
+    const syncResult = await syncRecordsToSheets(newData);
+    return { records: newData, sync: syncResult };
 };
 
 export const deleteRecord = (date) => {

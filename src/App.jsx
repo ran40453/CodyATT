@@ -39,9 +39,29 @@ function App() {
         sync();
     }, []);
 
-    const handleUpdateRecord = (updatedRecord) => {
-        const newData = addOrUpdateRecord(updatedRecord)
-        setRecords(newData)
+    const [toast, setToast] = useState(null)
+
+    React.useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000)
+            return () => clearTimeout(timer)
+        }
+    }, [toast])
+
+    const handleUpdateRecord = async (updatedRecord) => {
+        const result = await addOrUpdateRecord(updatedRecord)
+        // Check if result has { records, sync } structure (new) or just array (legacy/sync fallback)
+        if (result.records) {
+            setRecords(result.records)
+            if (!result.sync.ok && result.sync.error === 'Config missing') {
+                setToast({ type: 'warning', message: '已儲存至本機 (尚未設定雲端同步)' })
+            } else if (!result.sync.ok) {
+                setToast({ type: 'error', message: '已儲存至本機 (雲端同步失敗)' })
+            }
+        } else {
+            // Fallback if addOrUpdateRecord returns array directly (shouldn't happen with new code but safe to handle)
+            setRecords(result)
+        }
     }
 
     const renderPage = () => {
@@ -71,6 +91,14 @@ function App() {
             <main className="container mx-auto px-4 pt-6">
                 {renderPage()}
             </main>
+
+            {toast && (
+                <div className={`fixed top-4 left-1/2 -translate-x-1/2 px-4 py-3 rounded-2xl shadow-xl z-50 text-xs font-black transition-all duration-300 flex items-center gap-2 ${toast.type === 'error' ? 'bg-red-500 text-white' :
+                        toast.type === 'warning' ? 'bg-orange-400 text-white' : 'bg-green-500 text-white'
+                    }`}>
+                    <span>{toast.message}</span>
+                </div>
+            )}
 
             <Tabbar
                 tabs={tabs}
