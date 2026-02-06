@@ -280,6 +280,10 @@ export const fetchRecordsFromGist = async () => {
     const gistId = settings?.gistId;
     if (!gistId) return loadData();
 
+    // Capture the time BEFORE we start the fetch
+    // If a local save happens AFTER this time, we must NOT overwrite local data
+    const fetchStartTime = Date.now();
+
     try {
         const headers = {};
         if (token) headers['Authorization'] = `token ${token}`;
@@ -294,7 +298,18 @@ export const fetchRecordsFromGist = async () => {
             if (!Array.isArray(records)) throw new Error('Gist data is not an array');
 
             const standardized = standardizeRecords(records);
-            console.log(`Gist Sync: Successfully fetched and standardized ${standardized.length} records.`);
+            console.log(`Gist Sync: Fetched ${standardized.length} records.`);
+
+            // CRITICAL: Check race condition
+            // If the user saved data locally WHILE we were fetching, 'last-local-update' will be > fetchStartTime
+            // In that case, we should IGNORE the Gist data to prevent overwriting user's recent changes
+            const lastLocalUpdate = parseInt(localStorage.getItem('last-local-update') || '0');
+
+            if (lastLocalUpdate > fetchStartTime) {
+                console.warn('Gist Sync: Local data is newer (saved during fetch). Aborting overwrite.');
+                return loadData(); // Return local data instead
+            }
+
             saveData(standardized);
             return standardized;
         }
@@ -483,6 +498,7 @@ export const loadData = () => {
 export const saveData = (data) => {
     try {
         localStorage.setItem(DATA_KEY, JSON.stringify(Array.isArray(data) ? data : []));
+        localStorage.setItem('last-local-update', Date.now().toString());
     } catch (e) {
         console.error('Storage: Failed to save records', e);
     }
