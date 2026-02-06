@@ -221,6 +221,7 @@ function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFo
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
+                        onClick={(e) => e.stopPropagation()}
                         className="mt-6 pt-6 border-t border-gray-100/50 space-y-6"
                     >
                         {/* Status Grid */}
