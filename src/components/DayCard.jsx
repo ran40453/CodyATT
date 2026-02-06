@@ -157,7 +157,7 @@ function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFo
         <motion.div
             layout
             transition={{
-                layout: { type: 'spring', stiffness: 200, damping: 25, mass: 0.8 },
+                layout: { type: 'tween', ease: 'easeOut', duration: 0.25 },
                 opacity: { duration: 0.2 }
             }}
             onClick={onFocus}
@@ -243,16 +243,16 @@ function DayCard({ day, record, onUpdate, isCurrentMonth = true, isFocused, onFo
                             opacity: 1,
                             height: 'auto',
                             transition: {
-                                height: { type: 'spring', stiffness: 200, damping: 25 },
-                                opacity: { duration: 0.3, delay: 0.1 }
+                                height: { type: 'tween', ease: 'easeOut', duration: 0.25 },
+                                opacity: { duration: 0.2, delay: 0.05 }
                             }
                         }}
                         exit={{
                             opacity: 0,
                             height: 0,
                             transition: {
-                                height: { type: 'spring', stiffness: 250, damping: 30 },
-                                opacity: { duration: 0.2 }
+                                height: { type: 'tween', ease: 'easeIn', duration: 0.2 },
+                                opacity: { duration: 0.15 }
                             }
                         }}
                         onClick={(e) => e.stopPropagation()}

@@ -115,6 +115,7 @@ function CalendarPage() {
                 {weeks.map((week, weekIdx) => (
                     <motion.div
                         layout
+                        transition={{ duration: 0.25, ease: "easeOut" }}
                         key={weekIdx}
                         className="flex flex-row gap-2 md:gap-4 min-h-[60px] md:min-h-[100px]"
                     >
