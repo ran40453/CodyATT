@@ -157,11 +157,10 @@ function AnalysisPage() {
 
     const otByMonth = chartMonths.map(m => {
         const val = getMonthlyStat(m, r => {
-            // Always prefer recalculating from endTime in chart to ensure it matches current settings
+            let hours = parseFloat(r.otHours) || 0;
             if (r.endTime && settings?.rules?.standardEndTime) {
                 hours = calculateOTHours(r.endTime, settings.rules.standardEndTime);
             }
-            // console.log(`Analysis: OT for ${format(m, 'MMM-yyyy')} record ${r.date}: ${hours}`); // Diagnostic log
             return hours;
         });
         console.log(`Analysis: OT for ${format(m, 'MMM-yyyy')}: ${val}`); // Diagnostic log
