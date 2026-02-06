@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { format, startOfMonth, endOfMonth, isWithinInterval, subDays, isSameMonth, parseISO } from 'date-fns'
 import { TrendingUp, Globe, Wallet, Clock, Coffee, Moon, Gift, Eye, EyeOff } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { loadData, loadSettings, fetchRecordsFromGist, calculateCompLeaveUnits, calculateDailySalary, fetchExchangeRate, standardizeCountry } from '../lib/storage'
+import { loadData, loadSettings, fetchRecordsFromGist, calculateCompLeaveUnits, calculateDailySalary, fetchExchangeRate, standardizeCountry, calculateOTHours } from '../lib/storage'
 import { cn } from '../lib/utils'
 
 function Dashboard() {
