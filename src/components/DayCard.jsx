@@ -22,7 +22,8 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy }) {
     const isSaturday = dayOfWeek === 6;
 
     // Derived values for display
-    const endTime = record?.endTime || '17:30';
+    // Do NOT default to '17:30' here; if record is missing or has no time, we should treat it as 0 OT.
+    const endTime = record?.endTime;
     const travelCountry = standardizeCountry(record?.travelCountry);
     const isHoliday = record?.isHoliday || false;
     const isLeave = record?.isLeave || false;

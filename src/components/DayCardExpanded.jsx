@@ -94,6 +94,8 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
 
         if (isRestDay) {
             // Full day OT: (End - Start) - Break
+            // Only calculate if we have a valid end time (not just the default if it was never set)
+            // But wait, syncUpdate is called on save or edit, so finalEndTime IS the intended time.
             const start = settings?.rules?.standardStartTime || "08:30";
             const breakTime = settings?.rules?.lunchBreak || 1.5;
             otHours = calculateDuration(start, finalEndTime, breakTime);
@@ -120,6 +122,18 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
     if (settings) {
         const d = getDay(day);
         const isRestDay = d === 0 || d === 6 || isHoliday;
+        // Only calculate specific OT if we have a real record OR if we are in an editing state where endTime might be meaningful?
+        // Actually, if record is missing, record?.endTime is undefined.
+        // We set state `endTime` to '17:30' default.
+        // If we calculate using that default for a future Saturday, we get 7.5h.
+        // We want to show 0 if it's a "fresh" unsaved card, unless user drags.
+
+        // Strategy: If record is undefined (new), and user hasn't dragged (ref check?), maybe default to 0?
+        // But simpler: just rely on the fact that for *Display* (DayCard) we fixed it. 
+        // For *Edit* (DayCardExpanded), seeing the potential OT based on default time is actually helpful feature.
+        // The user complained about "Display" (DayCard).
+        // So we keep DayCardExpanded as is, to show them "If you work until 17:30, you get 7.5h".
+
         if (isRestDay) {
             const start = settings.rules?.standardStartTime || "08:30";
             const breakTime = settings.rules?.lunchBreak || 1.5;
