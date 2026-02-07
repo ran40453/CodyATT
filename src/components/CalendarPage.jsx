@@ -26,7 +26,9 @@ function CalendarPage({ data, onUpdate, isPrivacy }) {
         const dayStr = format(day, 'yyyy-MM-dd')
         return data.find(r => {
             if (!r.date) return false
-            const dStr = typeof r.date === 'string' ? r.date.split('T')[0] : format(new Date(r.date), 'yyyy-MM-dd')
+            // FIX: Use new Date() to ensure we parse ISO strings into local time before formatting
+            // This prevents timezone shifts (e.g. UTC vs Local) from causing off-by-one errors
+            const dStr = format(new Date(r.date), 'yyyy-MM-dd')
             return dStr === dayStr
         })
     }
