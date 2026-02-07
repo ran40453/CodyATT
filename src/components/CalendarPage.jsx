@@ -55,37 +55,24 @@ function CalendarPage({ data, onUpdate, isPrivacy }) {
         const row = Math.floor(dayIndex / 7);
         const col = dayIndex % 7;
 
-        // Vertical Logic: Bounds-aware
-        // The overlay body occupies 3 rows. We must find a valid 'targetStartRow' such that
-        // [targetStartRow, targetStartRow + 2] is within [0, totalRows - 1].
-
-        let targetStartRow = row;
-
-        // Strategy A: Stick Out Top (Body starts at row + 1) -> Preferable for top/middle
-        if (totalRows > row + 3) {
-            targetStartRow = row + 1;
-        }
-        // Strategy B: Stick Out Bottom (Body ends at row - 1 -> starts at row - 3) -> Preferable for bottom
-        else if (row >= 3) {
-            targetStartRow = row - 3;
-        }
-        // Strategy C: Overlap (Body contains row) -> Fallback for tight spaces
-        else {
-            targetStartRow = row - 1;
-            // Clamp to safe bounds
-            if (targetStartRow < 0) targetStartRow = 0;
-            if (targetStartRow > totalRows - 3) targetStartRow = totalRows - 3;
-        }
+        // Vertical Logic: Cover the clicked cell if possible
+        // Target is to start AT the clicked row: targetStartRow = row
+        // But if we are near the bottom (totalRows - 3 or less remaining), we must shift up.
+        // So targetStartRow = Math.min(row, totalRows - 3)
+        // Ensure non-negative index.
+        let targetStartRow = Math.max(0, Math.min(row, totalRows - 3));
 
         // Horizontal Logic: Expands Right [Col, Col+1] unless last column
         let targetStartCol = col;
         if (col === 6) { // Last column (G)
-            targetStartCol = 5; // Use 5,6 instead of 6,7
+            targetStartCol = 5; // Shift left to [5,6] to cover 6
         }
 
         // Is clicked cell inside the block?
         // Body Block covers 3 rows: [targetStartRow, targetStartRow + 2]
         // Body Block covers 2 cols: [targetStartCol, targetStartCol + 1]
+        // With this logic, unless row > totalRows - 3 (bottom edge case), row IS targetStartRow.
+        // So it will be inside.
         const isRowInside = row >= targetStartRow && row <= targetStartRow + 2;
         const isColInside = col >= targetStartCol && col <= targetStartCol + 1;
         const isInside = isRowInside && isColInside;
@@ -146,11 +133,10 @@ function CalendarPage({ data, onUpdate, isPrivacy }) {
                     }}
                 >
                     {days.map((day) => {
-                        const isFocused = focusedDay && isSameDay(day, focusedDay);
                         return (
                             <div
                                 key={format(day, 'yyyy-MM-dd')}
-                                className={isFocused ? "invisible" : ""} // Hide the original if focused (Overlay takes over)
+                            // Removed 'invisible' class so original card stays visible underneath
                             >
                                 <DayCard
                                     day={day}
@@ -197,13 +183,14 @@ function CalendarOverlay({ day, record, geometry, onUpdate, onClose, isPrivacy, 
         zIndex: 50
     };
 
+    // ... cellStyle removed if not needed, but keeping for safety if logic falls back ...
     const cellStyle = {
         gridColumn: `${col + 1} / span 1`,
         gridRow: `${row + 1} / span 1`,
         position: 'absolute',
         width: '100%',
         height: '100%',
-        zIndex: 51 // Tab is higher than Body
+        zIndex: 51
     };
 
     // Stick Direction relative to Body
@@ -212,16 +199,14 @@ function CalendarOverlay({ day, record, geometry, onUpdate, onClose, isPrivacy, 
     else if (row >= targetStartRow + 3) stickDir = 'bottom';
 
     // Which column of the Body does the Tab attach to?
-    // If col == targetStartCol -> Left Col
-    // If col == targetStartCol + 1 -> Right Col
     const attachCol = (col === targetStartCol) ? 'left' : 'right';
 
     return (
         <>
-            {/* Backdrop to close */}
+            {/* Backdrop to close - Transparent as requested */}
             <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="absolute inset-0 z-40 bg-gray-500/10 backdrop-blur-[1px] rounded-3xl"
+                className="absolute inset-0 z-40 bg-transparent" // Removed blur and darken
                 onClick={onClose}
             />
 
