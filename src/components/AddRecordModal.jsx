@@ -5,9 +5,21 @@ import { format } from 'date-fns'
 import { cn } from '../lib/utils'
 
 function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
+    const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
     const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+    const [mode, setMode] = useState('attendance') // attendance, bonus
+    const [country, setCountry] = useState('')
+    const [endTime, setEndTime] = useState('17:30')
+    const [otType, setOtType] = useState('pay')
+    const [isLeave, setIsLeave] = useState(false)
+    const [isHoliday, setIsHoliday] = useState(false)
     const [isWorkDay, setIsWorkDay] = useState(false)
     const [isBatchMode, setIsBatchMode] = useState(false)
+    const [bonus, setBonus] = useState('')
+    const [bonusCategory, setBonusCategory] = useState('')
+    const [bonusName, setBonusName] = useState('')
+    const [showCustomCategory, setShowCustomCategory] = useState(false)
+    const [customCategory, setCustomCategory] = useState('')
     const [showConfirm, setShowConfirm] = useState(false)
     const [conflictingDates, setConflictingDates] = useState([])
     const [pendingPayloads, setPendingPayloads] = useState(null)
