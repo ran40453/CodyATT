@@ -55,21 +55,27 @@ function CalendarPage({ data, onUpdate, isPrivacy }) {
         const row = Math.floor(dayIndex / 7);
         const col = dayIndex % 7;
 
-        // Vertical Logic:
-        // Rows 0, 1 (Top Half) -> Body occupies relative rows 1, 2, 3 (Indices 1-3).
-        // Rows 2, 3+ (Bottom Half) -> Body occupies relative rows 0, 1, 2 (Indices 0-2).
-        // Generalizing for any 4-row block:
-        const patternOffset = Math.floor(row / 4) * 4;
-        const relativeRow = row % 4;
+        // Vertical Logic: Bounds-aware
+        // The overlay body occupies 3 rows. We must find a valid 'targetStartRow' such that
+        // [targetStartRow, targetStartRow + 2] is within [0, totalRows - 1].
 
-        let bodyStartRowRelative = 0;
-        if (relativeRow < 2) {
-            bodyStartRowRelative = 1; // Expands Down
-        } else {
-            bodyStartRowRelative = 0; // Expands Up
+        let targetStartRow = row;
+
+        // Strategy A: Stick Out Top (Body starts at row + 1) -> Preferable for top/middle
+        if (totalRows > row + 3) {
+            targetStartRow = row + 1;
         }
-
-        const targetStartRow = patternOffset + bodyStartRowRelative;
+        // Strategy B: Stick Out Bottom (Body ends at row - 1 -> starts at row - 3) -> Preferable for bottom
+        else if (row >= 3) {
+            targetStartRow = row - 3;
+        }
+        // Strategy C: Overlap (Body contains row) -> Fallback for tight spaces
+        else {
+            targetStartRow = row - 1;
+            // Clamp to safe bounds
+            if (targetStartRow < 0) targetStartRow = 0;
+            if (targetStartRow > totalRows - 3) targetStartRow = totalRows - 3;
+        }
 
         // Horizontal Logic: Expands Right [Col, Col+1] unless last column
         let targetStartCol = col;
@@ -134,7 +140,7 @@ function CalendarPage({ data, onUpdate, isPrivacy }) {
 
                 {/* Main Grid */}
                 <div
-                    className="grid grid-cols-7 gap-2 md:gap-4 lg:min-h-[600px]" // Min height for desktop feel
+                    className="grid grid-cols-7 gap-2 md:gap-4 lg:min-h-[600px] relative" // Min height for desktop feel
                     style={{
                         gridAutoRows: 'minmax(80px, 1fr)' // Consistent row heights
                     }}
