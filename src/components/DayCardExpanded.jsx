@@ -101,8 +101,11 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
         })
     }
 
-    const otHoursRaw = settings ? calculateOTHours(endTime, settings.rules.standardEndTime) : 0;
-    const otHours = isNaN(otHoursRaw) ? 0 : otHoursRaw;
+    const storedOT = parseFloat(record?.otHours);
+    const calculatedOT = settings ? calculateOTHours(endTime, settings.rules?.standardEndTime) : 0;
+    // Prefer stored OT for initial display, but if user edits endTime, it will recalc via syncUpdate
+    // However, for rendering the *current* state of the card (which might be historical), trust record.otHours if valid
+    const otHours = (!isNaN(storedOT) && storedOT > 0) ? storedOT : (isNaN(calculatedOT) ? 0 : calculatedOT);
     const salaryMetrics = settings ? calculateDailySalary({ ...record, endTime, otHours, isHoliday, isLeave, otType }, settings) : { total: 0 };
     const dailySalary = salaryMetrics?.total || 0;
     const compUnits = calculateCompLeaveUnits({ otHours, otType });

@@ -26,8 +26,9 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy }) {
     const isLeave = record?.isLeave || false;
     const otType = record?.otType || 'pay';
 
-    const otHoursRaw = settings ? calculateOTHours(endTime, settings.rules?.standardEndTime) : 0;
-    const otHours = isNaN(otHoursRaw) ? 0 : otHoursRaw;
+    const storedOT = parseFloat(record?.otHours);
+    const calculatedOT = settings ? calculateOTHours(endTime, settings.rules?.standardEndTime) : 0;
+    const otHours = (!isNaN(storedOT) && storedOT > 0) ? storedOT : (isNaN(calculatedOT) ? 0 : calculatedOT);
     const salaryMetrics = settings ? calculateDailySalary({ ...record, endTime, otHours, isHoliday, isLeave, otType }, settings) : { total: 0 };
     const dailySalary = salaryMetrics?.total || 0;
 
