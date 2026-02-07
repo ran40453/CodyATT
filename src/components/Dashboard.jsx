@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from 'react'
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns'
-import { TrendingUp, Globe, Wallet, Clock, Coffee, Moon, Gift, Eye, EyeOff, Briefcase } from 'lucide-react'
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, subDays } from 'date-fns'
+import { TrendingUp, Globe, Wallet, Clock, Coffee, Moon, Gift, Eye, EyeOff, Briefcase, ChevronRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 import {
     Chart as ChartJS,
-    ArcElement,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
     Tooltip,
-    Legend,
-    PieController
+    Legend
 } from 'chart.js'
-import { Pie } from 'react-chartjs-2'
+import { Bar } from 'react-chartjs-2'
 import { loadSettings, fetchExchangeRate, standardizeCountry, calculateDailySalary, calculateCompLeaveUnits, calculateOTHours } from '../lib/storage'
 import { cn } from '../lib/utils'
 
-// Register ChartJS components for Pie chart
-ChartJS.register(ArcElement, Tooltip, Legend, PieController)
+// Register ChartJS components for Bar chart
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 function Dashboard({ data, isPrivacy, setIsPrivacy }) {
     const [settings, setSettings] = useState(null)
@@ -41,6 +43,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
 
     // Filter for Current Month Only
     const currentMonthInterval = { start: startOfMonth(today), end: endOfMonth(today) }
+    const rollingYearInterval = { start: subDays(today, 365), end: today }
 
     const parse = (d) => {
         if (!d) return new Date(0);
@@ -55,8 +58,13 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
         return d instanceof Date && !isNaN(d) && isWithinInterval(d, currentMonthInterval);
     })
 
+    const rollingYearRecords = data.filter(r => {
+        const d = parse(r.date);
+        return d instanceof Date && !isNaN(d) && isWithinInterval(d, rollingYearInterval);
+    })
+
     // Calculate Monthly Metrics
-    const calcMonthlyMetrics = (records) => {
+    const calcMetrics = (records) => {
         const totalOT = records.reduce((sum, r) => {
             let hours = parseFloat(r.otHours) || 0;
             if (hours === 0 && r.endTime) {
@@ -96,53 +104,102 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
         }
     }
 
-    const metrics = calcMonthlyMetrics(currentMonthRecords);
+    const monthMetrics = calcMetrics(currentMonthRecords);
+    const yearMetrics = calcMetrics(rollingYearRecords);
 
-    // Pie Chart Data
-    const pieData = {
-        labels: ['底薪', '加班費', '出差津貼', '獎金'],
+    // Bar Chart Data (Horizontal Stacked)
+    const barData = {
+        labels: ['Stats'],
         datasets: [
             {
-                data: [metrics.baseMonthly, metrics.otPay, metrics.travelAllowance, metrics.bonus],
-                backgroundColor: [
-                    'rgba(56, 189, 248, 0.8)', // Sky 400 (Base)
-                    'rgba(255, 69, 0, 0.8)',   // Orange Red (OT)
-                    'rgba(16, 185, 129, 0.8)', // Emerald 500 (Travel)
-                    'rgba(245, 158, 11, 0.8)', // Amber 500 (Bonus)
-                ],
-                borderColor: [
-                    'rgba(56, 189, 248, 1)',
-                    'rgba(255, 69, 0, 1)',
-                    'rgba(16, 185, 129, 1)',
-                    'rgba(245, 158, 11, 1)',
-                ],
+                label: '底薪',
+                data: [monthMetrics.baseMonthly],
+                backgroundColor: 'rgba(56, 189, 248, 0.8)', // Sky 400
+                borderColor: 'rgba(56, 189, 248, 1)',
                 borderWidth: 1,
+                barThickness: 40,
+            },
+            {
+                label: '加班',
+                data: [monthMetrics.otPay],
+                backgroundColor: 'rgba(255, 69, 0, 0.8)', // Orange Red
+                borderColor: 'rgba(255, 69, 0, 1)',
+                borderWidth: 1,
+                barThickness: 40,
+            },
+            {
+                label: '津貼',
+                data: [monthMetrics.travelAllowance],
+                backgroundColor: 'rgba(16, 185, 129, 0.8)', // Emerald 500
+                borderColor: 'rgba(16, 185, 129, 1)',
+                borderWidth: 1,
+                barThickness: 40,
+            },
+            {
+                label: '獎金',
+                data: [monthMetrics.bonus],
+                backgroundColor: 'rgba(245, 158, 11, 0.8)', // Amber 500
+                borderColor: 'rgba(245, 158, 11, 1)',
+                borderWidth: 1,
+                barThickness: 40,
             },
         ],
     };
 
-    const pieOptions = {
+    const barOptions = {
+        indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-            legend: {
-                position: 'right',
-                labels: {
-                    usePointStyle: true,
-                    pointStyle: 'circle',
-                    font: { size: 10, weight: 'bold' },
-                    padding: 15
-                }
-            },
+            legend: { display: false },
             tooltip: {
                 callbacks: {
                     label: (context) => {
-                        return `${context.label}: ${mask('$' + Math.round(context.raw).toLocaleString())}`;
+                        return `${context.dataset.label}: ${mask('$' + Math.round(context.raw).toLocaleString())}`;
+                    }
+                }
+            },
+        },
+        scales: {
+            x: { stacked: true, display: false },
+            y: { stacked: true, display: false }
+        },
+        layout: { padding: 0 }
+    };
+
+    // Plugins to draw text inside the chart
+    const textPlugin = {
+        id: 'textPlugin',
+        afterDatasetsDraw(chart) {
+            const { ctx, data } = chart;
+            ctx.save();
+            ctx.font = 'bold 10px sans-serif';
+            ctx.fillStyle = '#1f2937'; // gray-800
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Draw labels below the bars
+            // Actually, user asked to show amount inside the leftmost bar.
+            // But usually bars are small.
+            // "Show amount inside the leftmost bar"
+
+            const meta0 = chart.getDatasetMeta(0);
+            if (meta0.data.length > 0) {
+                const bar0 = meta0.data[0];
+                const value = data.datasets[0].data[0];
+                if (value > 0) {
+                    // Check if width is enough
+                    const width = bar0.width;
+                    if (width > 40) {
+                        ctx.fillStyle = '#ffffff'; // White text on colored bar
+                        ctx.fillText(mask('$' + Math.round(value).toLocaleString()), bar0.x - (width / 2), bar0.y);
                     }
                 }
             }
+
+            ctx.restore();
         }
-    };
+    }
 
     return (
         <div className="space-y-8 pb-32">
@@ -179,19 +236,19 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                     </div>
                     <div className="flex items-baseline gap-2">
                         <span className="text-4xl md:text-5xl font-black text-[#202731] tracking-tighter">
-                            {mask('$' + Math.round(metrics.estimatedTotal).toLocaleString())}
+                            {mask('$' + Math.round(monthMetrics.estimatedTotal).toLocaleString())}
                         </span>
                         <span className="text-xs font-bold text-gray-400">TWD</span>
                     </div>
                     <div className="flex gap-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
                         <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-sky-400" /> 底薪</span>
-                        <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-orange-500" /> 加班: {mask('$' + Math.round(metrics.otPay).toLocaleString())}</span>
-                        <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> 津貼: {mask('$' + Math.round(metrics.travelAllowance).toLocaleString())}</span>
+                        <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-orange-500" /> 加班: {mask('$' + Math.round(monthMetrics.otPay).toLocaleString())}</span>
+                        <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> 津貼: {mask('$' + Math.round(monthMetrics.travelAllowance).toLocaleString())}</span>
                     </div>
                 </div>
             </motion.div>
 
-            {/* 2. Work-Life Balance Board */}
+            {/* 2. Work-Life Balance Board (Updated with Year/Month stats) */}
             <div className="grid grid-cols-2 gap-4">
                 <motion.div
                     initial={{ opacity: 0, x: -10 }}
@@ -203,11 +260,19 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                         <div className="p-2 rounded-xl neumo-pressed text-blue-500 inline-flex">
                             <Clock size={18} />
                         </div>
-                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">累計加班</span>
+                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">加班統計</span>
                     </div>
-                    <div>
-                        <span className="text-2xl font-black text-[#202731]">{metrics.totalOT.toFixed(1)}</span>
-                        <span className="text-xs font-bold text-gray-400 ml-1">Hours</span>
+                    <div className="flex justify-between items-end">
+                        <div>
+                            <span className="text-xl font-black text-[#202731]">{yearMetrics.totalOT.toFixed(0)}</span>
+                            <span className="text-[9px] font-bold text-gray-400 ml-1">Yr</span>
+                            <p className="text-[8px] text-gray-400 font-bold uppercase">累計</p>
+                        </div>
+                        <div className="text-right">
+                            <span className="text-xl font-black text-blue-500">{monthMetrics.totalOT.toFixed(1)}</span>
+                            <span className="text-[9px] font-bold text-gray-400 ml-1">M</span>
+                            <p className="text-[8px] text-gray-400 font-bold uppercase">本月</p>
+                        </div>
                     </div>
                 </motion.div>
 
@@ -221,38 +286,65 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                         <div className="p-2 rounded-xl neumo-pressed text-indigo-500 inline-flex">
                             <Coffee size={18} />
                         </div>
-                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">可用補休 / 請假</span>
+                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">補休統計</span>
                     </div>
-                    <div className="flex gap-4">
+                    <div className="flex justify-between items-end">
                         <div>
-                            <span className="text-xl font-black text-[#202731]">{metrics.totalComp}</span>
-                            <span className="text-[9px] font-bold text-gray-400 ml-1">Units</span>
-                            <p className="text-[8px] text-gray-400 font-bold">補休</p>
+                            <span className="text-xl font-black text-[#202731]">{yearMetrics.totalComp}</span>
+                            <span className="text-[9px] font-bold text-gray-400 ml-1">Yr</span>
+                            <p className="text-[8px] text-gray-400 font-bold uppercase">累計</p>
                         </div>
-                        <div className="border-l border-gray-100 pl-4">
-                            <span className="text-xl font-black text-rose-500">{metrics.totalLeave}</span>
-                            <span className="text-[9px] font-bold text-gray-400 ml-1">Days</span>
-                            <p className="text-[8px] text-gray-400 font-bold">已請假</p>
+                        <div className="text-right">
+                            <span className="text-xl font-black text-indigo-500">{monthMetrics.totalComp}</span>
+                            <span className="text-[9px] font-bold text-gray-400 ml-1">M</span>
+                            <p className="text-[8px] text-gray-400 font-bold uppercase">本月 (U)</p>
                         </div>
                     </div>
                 </motion.div>
             </div>
 
-            {/* 3. Income Structure (Pie Chart) */}
+            {/* 3. Income Structure (Horizontal Bar Chart) */}
             <motion.div
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="neumo-card p-6 flex flex-col h-[300px]"
+                className="neumo-card p-6 flex flex-col"
             >
-                <div className="flex items-center gap-2 mb-4">
-                    <div className="p-2 rounded-xl neumo-pressed text-amber-500">
-                        <Briefcase size={18} />
+                <div className="flex items-center justify-between gap-2 mb-4">
+                    <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-xl neumo-pressed text-amber-500">
+                            <Briefcase size={18} />
+                        </div>
+                        <h3 className="text-sm font-black text-[#202731] uppercase tracking-widest">本月收入結構</h3>
                     </div>
-                    <h3 className="text-sm font-black text-[#202731] uppercase tracking-widest">本月收入結構</h3>
+                    <span className="text-xs font-black text-gray-400">{mask('$' + Math.round(monthMetrics.estimatedTotal).toLocaleString())}</span>
                 </div>
-                <div className="flex-1 min-h-0 relative">
-                    <Pie data={pieData} options={pieOptions} />
+
+                {/* Single Horizontal Bar */}
+                <div className="h-[60px] relative">
+                    <Bar data={barData} options={barOptions} plugins={[textPlugin]} />
+                </div>
+
+                {/* Legend */}
+                <div className="flex justify-between items-center mt-3 px-1">
+                    <div className="flex gap-4">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.6)]" />
+                            <span className="text-[9px] font-bold text-gray-400 uppercase">底薪</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(255,69,0,0.6)]" />
+                            <span className="text-[9px] font-bold text-gray-400 uppercase">加班</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+                            <span className="text-[9px] font-bold text-gray-400 uppercase">津貼</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
+                            <span className="text-[9px] font-bold text-gray-400 uppercase">獎金</span>
+                        </div>
+                    </div>
                 </div>
             </motion.div>
         </div>

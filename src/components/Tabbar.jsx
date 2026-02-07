@@ -55,10 +55,10 @@ function Tabbar({ tabs, activeTab, onChange, onAddClick }) {
                     {leftTabs.map(tab => <TabButton key={tab.id} tab={tab} />)}
                 </div>
 
-                <div className="relative flex flex-shrink-0 items-center justify-center w-[64px] h-[64px]">
+                <div className="relative flex flex-shrink-0 items-center justify-center w-[64px] h-[64px] z-50">
                     <button
                         onClick={onAddClick}
-                        className="w-[60px] h-[60px] bg-neumo-brand rounded-full flex items-center justify-center text-white shadow-[0_8px_20px_rgba(99,102,241,0.4)] active:scale-90 transition-all duration-300 relative z-20 group"
+                        className="w-[60px] h-[60px] bg-neumo-brand rounded-full flex items-center justify-center text-white shadow-[0_8px_20px_rgba(99,102,241,0.4)] active:scale-90 transition-all duration-300 relative z-50 group pointer-events-auto"
                     >
                         <Plus size={32} strokeWidth={3} className="group-hover:rotate-90 transition-transform duration-500" />
                     </button>

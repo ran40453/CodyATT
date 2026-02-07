@@ -91,8 +91,10 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                 const results = calculateDailySalary(r, { ...settings, liveRate });
                 return sum + (results?.otPay || 0);
             }, 0)
+            // Trip count (days with country)
+            const tripCount = records.filter(r => r.travelCountry && r.travelCountry.trim() !== '').length
 
-            return { extraTotal, totalOT, totalComp, totalBonus, totalTravel, totalOTPay }
+            return { extraTotal, totalOT, totalComp, totalBonus, totalTravel, totalOTPay, tripCount }
         }
 
         const yearMetrics = getMetrics(rollingYearRecords)
@@ -153,22 +155,25 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
     const incomeData = {
         labels: chartMonths.map(m => format(m, 'MMM')),
         datasets: [
-            { label: '總收入', data: totalIncomeByMonth, borderColor: 'rgb(253, 224, 71)', backgroundColor: 'rgba(253, 224, 71, 0.4)', fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0 },
-            { label: '底薪', data: baseByMonth, borderColor: 'rgb(56, 189, 248)', borderWidth: 1, pointRadius: 0 },
-            { label: '獎金', data: bonusByMonth, borderColor: 'rgb(245, 158, 11)', borderWidth: 1, pointRadius: 0 },
-            { label: '加班費', data: otPayByMonth, borderColor: 'rgb(255, 69, 0)', borderWidth: 1, pointRadius: 0 },
+            { label: '總收入', data: totalIncomeByMonth, borderColor: 'rgb(253, 224, 71)', backgroundColor: 'rgba(253, 224, 71, 0.4)', fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0, order: 1 },
+            { label: '底薪', data: baseByMonth, borderColor: 'rgb(56, 189, 248)', borderWidth: 1, pointRadius: 0, hidden: true },
+            { label: '獎金', data: bonusByMonth, borderColor: 'rgb(245, 158, 11)', borderWidth: 1, pointRadius: 0, hidden: true },
+            { label: '加班費', data: otPayByMonth, borderColor: 'rgb(255, 69, 0)', borderWidth: 1, pointRadius: 0, hidden: true },
         ]
     };
 
     // Travel Chart Data
     const otByMonth = chartMonths.map(m => getMonthlyStat(m, r => parseFloat(r.otHours) || (r.endTime ? calculateOTHours(r.endTime, settings?.rules?.standardEndTime) : 0)));
-    const compByMonth = chartMonths.map(m => getMonthlyStat(m, r => r.otType === 'leave' ? (parseFloat(r.otHours) || (r.endTime ? calculateOTHours(r.endTime, settings?.rules?.standardEndTime) : 0)) : 0));
+    const compByMonth = chartMonths.map(m => getMonthlyStat(m, r => r.otType === 'leave' ? calculateCompLeaveUnits(r) : 0)); // Wait, Comp By Month in Units or Hours?
+    // Using calculateCompLeaveUnits returns units. The chart usually compares HOURS vs UNITS or Hours vs Hours.
+    // Dashboard compares OT Hours vs Comp Units.
+    // Let's use Units for Comp.
 
     const travelData = {
         labels: chartMonths.map(m => format(m, 'MMM')),
         datasets: [
-            { type: 'bar', label: '加班時數', data: otByMonth, backgroundColor: 'rgba(99, 102, 241, 0.4)', borderColor: 'rgb(99, 102, 241)', borderWidth: 1, borderRadius: 4, yAxisID: 'y' },
-            { type: 'line', label: '補休時數', data: compByMonth, borderColor: 'rgb(79, 70, 229)', fill: false, tension: 0.4, yAxisID: 'y' }
+            { type: 'bar', label: '加班時數', data: otByMonth, backgroundColor: 'rgba(99, 102, 241, 0.4)', borderColor: 'rgb(99, 102, 241)', borderWidth: 1, borderRadius: 4, yAxisID: 'y', order: 2 },
+            { type: 'line', label: '補休單位', data: compByMonth, borderColor: 'rgb(79, 70, 229)', fill: false, tension: 0.4, yAxisID: 'y1', order: 1 }
         ]
     };
 
@@ -182,12 +187,58 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
         return { day, type };
     });
 
+    const attendedCount = attendanceBoxes.filter(b => b.type === 'attendance').length;
+    const totalDays = attendanceBoxes.length;
+    const attendedPercent = totalDays > 0 ? Math.round((attendedCount / totalDays) * 100) : 0;
+
     const options = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: { x: { grid: { display: false }, ticks: { font: { size: 9 } } }, y: { display: false } }
     };
+
+    const travelOptions = {
+        ...options,
+        scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+            y: { display: false, position: 'left' },
+            y1: { display: false, position: 'right' }
+        },
+        plugins: {
+            legend: { display: false },
+            tooltip: { enabled: true }
+        }
+    }
+
+    // Custom Plugin to draw text values on Workload Chart
+    const valuePlugin = {
+        id: 'valuePlugin',
+        afterDatasetsDraw(chart) {
+            const { ctx, data } = chart;
+            ctx.save();
+            ctx.font = 'bold 9px sans-serif';
+            ctx.fillStyle = '#6b7280'; // gray-500
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+
+            chart.data.datasets.forEach((dataset, i) => {
+                const meta = chart.getDatasetMeta(i);
+                if (!meta.hidden) {
+                    meta.data.forEach((element, index) => {
+                        const value = dataset.data[index];
+                        if (value > 0) {
+                            const position = element.tooltipPosition();
+                            ctx.fillStyle = dataset.type === 'line' ? '#4f46e5' : '#6366f1';
+                            ctx.fillText(value.toFixed(0), position.x, position.y - 2);
+                        }
+                    });
+                }
+            });
+            ctx.restore();
+        }
+    }
+
 
     const countryStats = () => {
         const counts = {}
@@ -272,10 +323,17 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                         </div>
 
                         {/* Income Trend Chart */}
-                        <div className="neumo-card h-[300px] p-4 flex flex-col">
+                        <div className="neumo-card h-[360px] p-4 flex flex-col">
                             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">年度收入趨勢</h3>
                             <div className="flex-1 min-h-0 relative">
                                 <Line data={incomeData} options={{ ...options, maintainAspectRatio: false, plugins: { legend: { display: false } } }} />
+                            </div>
+                            {/* Series Thumbnails / Legend */}
+                            <div className="flex gap-4 mt-4 overflow-x-auto pb-2 custom-scrollbar">
+                                <LegendItem color="bg-yellow-400" label="總收入" value={mask('$' + Math.round(stats.rollingAnnualSalary).toLocaleString())} />
+                                <LegendItem color="bg-sky-400" label="底薪" value={mask('$' + Math.round(stats.breakdown.base).toLocaleString())} />
+                                <LegendItem color="bg-amber-500" label="獎金" value={mask('$' + Math.round(stats.breakdown.bonus).toLocaleString())} />
+                                <LegendItem color="bg-orange-500" label="加班費" value={mask('$' + Math.round(stats.breakdown.ot).toLocaleString())} />
                             </div>
                         </div>
                     </motion.div>
@@ -290,21 +348,29 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                         transition={{ duration: 0.2 }}
                         className="space-y-6"
                     >
-                        {/* Travel Stats */}
+                        {/* Travel Stats & History */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <HistoryCard label="出差國家分佈" items={countryStats().slice(0, 3)} />
-                            <div className="neumo-card p-4 space-y-4">
-                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">請假統計 (365Days)</h3>
-                                <div className="flex items-center gap-2">
-                                    <h4 className="text-3xl font-black text-rose-500">{data.filter(r => r.isLeave).length}</h4>
-                                    <span className="text-xs font-bold text-gray-400">Total Days</span>
-                                </div>
+
+                            {/* Updated 3-col grid for stats */}
+                            <div className="grid grid-cols-3 gap-2 h-full">
+                                <MiniStatCard label="請假" value={data.filter(r => r.isLeave).length} unit="Days" color="text-rose-500" />
+                                <MiniStatCard label="出差" value={stats.yearMetrics.tripCount} unit="Days" color="text-emerald-500" />
+                                <MiniStatCard label="加班" value={stats.yearMetrics.totalOT.toFixed(0)} unit="H" color="text-indigo-500" />
                             </div>
                         </div>
 
                         {/* Attendance Grid */}
                         <div className="neumo-card p-4">
-                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">本月出勤概況</h3>
+                            <div className="flex justify-between items-end mb-4">
+                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">本月出勤概況</h3>
+                                <div className="text-[10px] font-bold text-gray-500">
+                                    <span className="text-neumo-brand">{attendedCount}</span>
+                                    <span className="text-gray-300 mx-1">/</span>
+                                    <span>{totalDays}</span>
+                                    <span className="ml-2 text-xs font-black text-gray-300">({attendedPercent}%)</span>
+                                </div>
+                            </div>
                             <div className="flex gap-1 overflow-x-auto pb-2 custom-scrollbar">
                                 {attendanceBoxes.map((box, i) => (
                                     <div key={i} className="flex flex-col items-center gap-1 min-w-[20px]">
@@ -322,7 +388,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                         <div className="neumo-card h-[300px] p-4 flex flex-col">
                             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">工作負荷趨勢 (OT vs Comp)</h3>
                             <div className="flex-1 min-h-0 relative">
-                                <Chart type="bar" data={travelData} options={{ ...options, maintainAspectRatio: false }} />
+                                <Chart type="bar" data={travelData} options={travelOptions} plugins={[valuePlugin]} />
                             </div>
                         </div>
                     </motion.div>
@@ -363,6 +429,28 @@ function StatCard({ label, value, sub, unit, icon: Icon, color }) {
                 <h4 className="text-xl font-black leading-none mb-1">{value}<span className="text-xs ml-0.5">{unit || ''}</span></h4>
                 {sub && <p className="text-[10px] font-bold text-gray-500 italic mt-1">{sub}</p>}
             </div>
+        </div>
+    )
+}
+
+function MiniStatCard({ label, value, unit, color }) {
+    return (
+        <div className="neumo-card p-3 flex flex-col items-center justify-center space-y-1 h-full">
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{label}</span>
+            <h4 className={cn("text-xl font-black leading-none", color)}>{value}</h4>
+            <span className="text-[8px] font-bold text-gray-300 lowercase">{unit}</span>
+        </div>
+    )
+}
+
+function LegendItem({ color, label, value }) {
+    return (
+        <div className="min-w-[80px] p-2 rounded-xl neumo-pressed flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+                <div className={cn("w-2 h-2 rounded-full", color.replace('bg-', 'bg-').replace('text-', 'bg-'))} />
+                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{label}</span>
+            </div>
+            <span className="text-xs font-black text-gray-600 pl-3.5">{value}</span>
         </div>
     )
 }
@@ -423,24 +511,17 @@ function SalaryDetailModal({ isOpen, onClose, data, total, mask }) {
 }
 
 function BonusDetailModal({ isOpen, onClose, data, onUpdate, isPrivacy }) {
-    // Simplified for brevity, assume similar logic to original or reuse if unchanged.
-    // For this refactor, I'll paste the essential logic but it's large. 
-    // To ensure it works, I will include the full logic.
     const [editingId, setEditingId] = useState(null);
     const [editForm, setEditForm] = useState({ amount: 0, category: '', name: '' });
     const mask = (val) => isPrivacy ? '••••' : val;
     if (!isOpen) return null;
 
-    // ... (Bonus Logic same as before)
     const bonusRecords = data.flatMap(r => {
         const dateStr = format(new Date(r.date), 'yyyy-MM-dd');
         if (Array.isArray(r.bonusEntries) && r.bonusEntries.length > 0) return r.bonusEntries.map(be => ({ ...be, parentDate: dateStr }));
         if (parseFloat(r.bonus) > 0) return [{ id: `legacy-${dateStr}`, date: r.date, amount: r.bonus, category: r.bonusCategory || '獎金', name: r.bonusName || '', parentDate: dateStr }];
         return [];
     }).sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    // Simple read-only for now to save space in this replacement, or restore full functionality? 
-    // The user didn't ask to remove it. I should keep it functional.
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

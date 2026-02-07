@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Plus, Calendar, Globe, Palmtree, Moon, Clock, CreditCard, Coffee, Gift } from 'lucide-react'
+import { X, Plus, Calendar, Globe, Palmtree, Moon, Clock, CreditCard, Coffee, Gift, Check } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '../lib/utils'
 
@@ -73,8 +73,8 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
             const payloads = dates.map(d => generatePayload(d));
 
             // Check conflicts
-            // props.records must be passed from App.jsx
-            const existingDates = (props.records || []).map(r => format(new Date(r.date), 'yyyy-MM-dd'));
+            // records must be passed from App.jsx
+            const existingDates = (records || []).map(r => format(new Date(r.date), 'yyyy-MM-dd'));
             const conflicts = dates.filter(d => existingDates.includes(d));
 
             if (conflicts.length > 0) {
