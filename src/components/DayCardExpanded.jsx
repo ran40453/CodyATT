@@ -168,7 +168,8 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
             {/* Time Picker */}
             {!isLeave && (
                 <div
-                    className="h-24 neumo-pressed rounded-3xl flex flex-col items-center justify-center relative cursor-ns-resize overflow-hidden shrink-0"
+                    className="h-24 neumo-pressed rounded-3xl flex flex-col items-center justify-center relative cursor-ns-resize overflow-hidden shrink-0 touch-action-none"
+                    style={{ touchAction: 'none' }} // Explicit inline style for safety
                     onMouseDown={handleDragStart}
                     onTouchStart={handleDragStart}
                 >

@@ -38,6 +38,14 @@ function CalendarPage({ data, onUpdate, isPrivacy }) {
         console.log('CalendarPage Data Updated:', data.length, 'records');
     }, [data]);
 
+    // Disable Body Scroll on Mount
+    useEffect(() => {
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, []);
+
     const handleUpdateRecord = (updatedRecord) => {
         onUpdate(updatedRecord)
     }
