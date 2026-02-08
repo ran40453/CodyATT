@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { format, startOfMonth, endOfMonth, eachMonthOfInterval, isSameMonth, subDays, isWithinInterval, subMonths, eachDayOfInterval, parseISO } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachMonthOfInterval, isSameMonth, subDays, isWithinInterval, subMonths, eachDayOfInterval, parseISO, isSameDay, addDays, getDay } from 'date-fns'
 import { TrendingUp, Clock, Calendar, Globe, ArrowUpRight, Coffee, Trophy, BarChart3, Gift, X, Edit2, Trash2, Check, Plane, Briefcase } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -30,6 +30,8 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
     const [isSalaryDetailOpen, setIsSalaryDetailOpen] = useState(false);
     const [isBonusDetailOpen, setIsBonusDetailOpen] = useState(false);
     const [isLeaveListOpen, setIsLeaveListOpen] = useState(false);
+    const [isTravelListOpen, setIsTravelListOpen] = useState(false);
+    const [isOTListOpen, setIsOTListOpen] = useState(false);
 
     const mask = (val) => isPrivacy ? '••••' : val;
 
@@ -583,9 +585,10 @@ function LeaveListModal({ isOpen, onClose, data }) {
                     {sorted.map((r, i) => (
                         <div key={i} className="neumo-pressed p-3 rounded-xl flex justify-between items-center">
                             <div className="flex items-center gap-3">
-                                <div className="flex flex-col items-center justify-center w-10 h-10 bg-white rounded-lg shadow-sm">
+                                <div className="flex flex-col items-center justify-center w-12 h-12 bg-white rounded-lg shadow-sm">
+                                    <span className="text-[8px] font-black text-gray-400 uppercase leading-none">{format(new Date(r.date), 'yyyy')}</span>
                                     <span className="text-[8px] font-black text-gray-400 uppercase">{format(new Date(r.date), 'MMM')}</span>
-                                    <span className="text-sm font-black text-[#202731]">{format(new Date(r.date), 'dd')}</span>
+                                    <span className="text-lg font-black text-[#202731] leading-none">{format(new Date(r.date), 'dd')}</span>
                                 </div>
                                 <div>
                                     <div className="text-xs font-black text-gray-700">{r.leaveType || '請假'}</div>
@@ -596,6 +599,119 @@ function LeaveListModal({ isOpen, onClose, data }) {
                             </div>
                             <div className="px-2 py-1 rounded bg-rose-50 text-[9px] font-black text-rose-600 border border-rose-100">
                                 {r.leaveType || 'Leave'}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </motion.div>
+        </div>
+    )
+}
+
+function TravelListModal({ isOpen, onClose, data }) {
+    if (!isOpen) return null;
+
+    // Sort asc to find ranges
+    const sorted = [...data].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const ranges = [];
+    if (sorted.length > 0) {
+        let currentRange = { start: sorted[0], end: sorted[0], country: sorted[0].travelCountry };
+        for (let i = 1; i < sorted.length; i++) {
+            const current = sorted[i];
+            const prev = currentRange.end;
+            // Check consecutive days (difference is 1 day or sameday if duplicate)
+            // Actually eachDayOfInterval includes start and end. 
+            // We just check if current date is prev + 1 day.
+            const currentDateObj = new Date(current.date);
+            const prevDateObj = new Date(prev.date);
+            const diffTime = Math.abs(currentDateObj - prevDateObj);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            // Allow same day definition? No, data is per day.
+            // isSameDay check
+            const isConsecutive = isSameDay(currentDateObj, addDays(prevDateObj, 1));
+            const isSameCountry = current.travelCountry === currentRange.country;
+
+            if (isConsecutive && isSameCountry) {
+                currentRange.end = current;
+            } else {
+                ranges.push(currentRange);
+                currentRange = { start: current, end: current, country: current.travelCountry };
+            }
+        }
+        ranges.push(currentRange);
+    }
+    // Sort ranges DESC for display
+    ranges.sort((a, b) => new Date(b.start.date) - new Date(a.start.date));
+
+    const getCountryName = (code) => {
+        const map = { 'VN': 'Vietnam', 'IN': 'India', 'CN': 'China' };
+        return map[code] || code;
+    }
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose} className="absolute inset-0 bg-gray-500/20 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative w-full max-w-sm neumo-card p-6 max-h-[80vh] flex flex-col">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-black uppercase text-emerald-500 flex items-center gap-2"><MapPin size={20} /> 出差紀錄</h3>
+                    <button onClick={onClose}><X size={18} /></button>
+                </div>
+                <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                    {ranges.length === 0 && <p className="text-center text-gray-400 text-xs">尚無出差紀錄</p>}
+                    {ranges.map((range, i) => (
+                        <div key={i} className="neumo-pressed p-4 rounded-xl flex justify-between items-center">
+                            <div>
+                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{getCountryName(range.country)}</div>
+                                <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
+                                    <span>{format(new Date(range.start.date), 'yyyy/MM/dd')}</span>
+                                    <span className="text-gray-400">&rarr;</span>
+                                    <span>{format(new Date(range.end.date), 'yyyy/MM/dd')}</span>
+                                </div>
+                            </div>
+                            <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                                <MapPin size={14} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </motion.div>
+        </div>
+    )
+}
+
+function OTListModal({ isOpen, onClose, data }) {
+    if (!isOpen) return null;
+    const sorted = [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Helper to estimate amount if needed, but we don't have settings here easily. 
+    // We can just show hours and type.
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose} className="absolute inset-0 bg-gray-500/20 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative w-full max-w-sm neumo-card p-6 max-h-[80vh] flex flex-col">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-black uppercase text-indigo-500 flex items-center gap-2"><Clock size={20} /> 加班紀錄</h3>
+                    <button onClick={onClose}><X size={18} /></button>
+                </div>
+                <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                    {sorted.length === 0 && <p className="text-center text-gray-400 text-xs">尚無加班紀錄</p>}
+                    {sorted.map((r, i) => (
+                        <div key={i} className="neumo-pressed p-3 rounded-xl flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="flex flex-col items-center justify-center w-12 h-12 bg-white rounded-lg shadow-sm">
+                                    <span className="text-[8px] font-black text-gray-400 uppercase leading-none">{format(new Date(r.date), 'yyyy')}</span>
+                                    <span className="text-[8px] font-black text-gray-400 uppercase">{format(new Date(r.date), 'MMM')}</span>
+                                    <span className="text-lg font-black text-[#202731] leading-none">{format(new Date(r.date), 'dd')}</span>
+                                </div>
+                                <div>
+                                    <div className="text-xs font-black text-gray-700">{r.otType === 'leave' ? '補休' : '加班費'}</div>
+                                    <div className="text-[9px] font-bold text-gray-400">{parseFloat(r.otHours).toFixed(1)} Hours</div>
+                                </div>
+                            </div>
+                            <div className={cn("px-2 py-1 rounded text-[10px] font-black border", r.otType === 'leave' ? "bg-indigo-50 text-indigo-600 border-indigo-100" : "bg-green-50 text-green-600 border-green-100")}>
+                                {r.otType === 'leave' ? 'Comp' : 'Pay'}
                             </div>
                         </div>
                     ))}

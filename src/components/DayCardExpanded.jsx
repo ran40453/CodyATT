@@ -6,6 +6,7 @@ import { cn } from '../lib/utils'
 import { loadSettings, calculateOTHours, calculateDuration, calculateDailySalary, calculateCompLeaveUnits, fetchExchangeRate, standardizeCountry } from '../lib/storage' // Added calculateDuration
 
 function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hideHeader = false }) {
+    const [settings, setSettings] = useState(null) // Moved to top
     const [endTime, setEndTime] = useState(record?.endTime || '17:30')
     const [travelCountry, setTravelCountry] = useState(record?.travelCountry || '')
     const [isHoliday, setIsHoliday] = useState(record?.isHoliday || false)
@@ -31,7 +32,7 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
 
     const [isDragging, setIsDragging] = useState(false)
     const [isSaved, setIsSaved] = useState(false)
-    const [settings, setSettings] = useState(null)
+    // const [settings, setSettings] = useState(null) // Moved up
 
     const dragStartY = useRef(0)
     const startMinutes = useRef(0)
