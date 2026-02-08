@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { format, startOfMonth, endOfMonth, eachMonthOfInterval, isSameMonth, subDays, isWithinInterval, subMonths, eachDayOfInterval, parseISO, isSameDay, addDays, getDay } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachMonthOfInterval, isSameMonth, subDays, isWithinInterval, subMonths, eachDayOfInterval, parseISO, isSameDay, addDays, getDay, differenceInCalendarDays } from 'date-fns'
 import { TrendingUp, Clock, Calendar, Globe, ArrowUpRight, Coffee, Trophy, BarChart3, Gift, X, Edit2, Trash2, Check, Plane, Briefcase, MapPin } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -650,15 +650,12 @@ function TravelListModal({ isOpen, onClose, data }) {
             // Check consecutive days (difference is 1 day or sameday if duplicate)
             // Actually eachDayOfInterval includes start and end. 
             // We just check if current date is prev + 1 day.
-            const currentDateObj = new Date(current.date);
-            const prevDateObj = new Date(prev.date);
-            const diffTime = Math.abs(currentDateObj - prevDateObj);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const currentDateObj = parse(current.date);
+            const prevDateObj = parse(prev.date);
 
-            // Allow same day definition? No, data is per day.
-            // isSameDay check
-            const isConsecutive = isSameDay(currentDateObj, addDays(prevDateObj, 1));
-            const isSameCountry = current.travelCountry === currentRange.country;
+            // Robust check using differenceInCalendarDays (ignoring time)
+            const isConsecutive = differenceInCalendarDays(currentDateObj, prevDateObj) === 1;
+            const isSameCountry = standardizeCountry(current.travelCountry) === standardizeCountry(currentRange.country);
 
             if (isConsecutive && isSameCountry) {
                 currentRange.end = current;

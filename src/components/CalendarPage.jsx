@@ -38,13 +38,18 @@ function CalendarPage({ data, onUpdate, isPrivacy }) {
         console.log('CalendarPage Data Updated:', data.length, 'records');
     }, [data]);
 
-    // Disable Body Scroll on Mount
+    // Allow body scroll, but we can prevent it when a day is focused if desired.
+    // For now, removing the global hidden overflow to fix desktop clipping.
     useEffect(() => {
-        document.body.style.overflow = 'hidden';
+        if (focusedDay) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
         return () => {
             document.body.style.overflow = '';
         };
-    }, []);
+    }, [focusedDay]);
 
     const handleUpdateRecord = (updatedRecord) => {
         onUpdate(updatedRecord)
