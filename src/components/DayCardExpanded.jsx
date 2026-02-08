@@ -120,14 +120,22 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
         const isRestDay = (d === 0 || d === 6 || finalHoliday) && !finalWorkDay;
 
         if (!finalLeave) {
-            if (isRestDay) {
+            // Priority: isWorkDay overrides everything to be a 'Weekday'.
+            // Then check isRestDay (Sat/Sun/Holiday).
+            if (finalWorkDay) {
+                // Treated as Normal Weekday
+                // If endTime <= standardEndTime, OT is 0.
+                const stdEnd = settings?.rules?.standardEndTime || "17:30";
+                otHours = calculateOTHours(finalEndTime, stdEnd);
+            } else if (isRestDay) {
                 // Full day OT: (End - Start) - Break
                 const start = settings?.rules?.standardStartTime || "08:00";
                 const breakTime = settings?.rules?.lunchBreak || 1.5;
                 otHours = calculateDuration(start, finalEndTime, breakTime);
             } else {
-                // Weekday OT: End - Standard End
-                otHours = calculateOTHours(finalEndTime, settings?.rules?.standardEndTime);
+                // Normal Weekday (Mon-Fri non-holiday)
+                const stdEnd = settings?.rules?.standardEndTime || "17:30";
+                otHours = calculateOTHours(finalEndTime, stdEnd);
             }
         }
 

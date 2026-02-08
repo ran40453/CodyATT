@@ -451,6 +451,16 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                 data={data.filter(r => r.isLeave)}
                 mask={mask}
             />
+            <TravelListModal
+                isOpen={isTravelListOpen}
+                onClose={() => setIsTravelListOpen(false)}
+                data={data.filter(r => r.travelCountry)}
+            />
+            <OTListModal
+                isOpen={isOTListOpen}
+                onClose={() => setIsOTListOpen(false)}
+                data={data.filter(r => parseFloat(r.otHours) > 0)}
+            />
         </div>
     )
 }

@@ -31,14 +31,23 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy }) {
 
     const storedOT = parseFloat(record?.otHours);
 
+    const isWorkDay = record?.isWorkDay || false;
+
     let calculatedOT = 0;
     if (settings && !isLeave) {
-        const isRestDay = isSunday || isSaturday || isHoliday;
-        if (isRestDay) {
+        // Priority: isWorkDay overrides everything -> Treat as Weekday
+        // Then: isRestDay (Sun, Sat, Holiday) checks
+        const isRestDay = (isSunday || isSaturday || isHoliday) && !isWorkDay;
+
+        if (isWorkDay) {
+            // Weekday Logic (WorkDay checked on Sat/Sun/Holiday)
+            calculatedOT = calculateOTHours(endTime, settings.rules?.standardEndTime);
+        } else if (isRestDay) {
             const start = settings.rules?.standardStartTime || "08:30";
             const breakTime = settings.rules?.lunchBreak || 1.5;
             calculatedOT = calculateDuration(start, endTime, breakTime);
         } else {
+            // Normal Weekday
             calculatedOT = calculateOTHours(endTime, settings.rules?.standardEndTime);
         }
     }

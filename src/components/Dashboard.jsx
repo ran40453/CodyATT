@@ -285,77 +285,64 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
 
                 {/* Right Column: Financials */}
                 <div className="space-y-6">
-                    {/* 1. Monthly Estimated Salary */}
+                    {/* Combined Salary Distribution Card */}
                     <motion.div
                         initial={{ opacity: 0, y: 15 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="neumo-card p-6 relative overflow-hidden group h-full flex flex-col justify-between"
+                        className="neumo-card p-6 flex flex-col justify-between h-full group"
                     >
-                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                            <Wallet size={120} />
-                        </div>
-                        <div className="relative z-10 space-y-6">
+                        <div className="flex justify-between items-start mb-6">
                             <div className="flex items-center gap-2 text-gray-400">
                                 <div className="p-2 rounded-xl neumo-pressed text-purple-500">
                                     <TrendingUp size={20} />
                                 </div>
-                                <h2 className="text-xs font-black uppercase tracking-widest">本月薪資預估 (Estimated)</h2>
+                                <h2 className="text-xs font-black uppercase tracking-widest">本月薪資分布</h2>
                             </div>
-                            <div className="flex flex-col">
+                            <div className="p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+                                <Wallet size={60} />
+                            </div>
+                        </div>
+
+                        {/* Big Number */}
+                        <div className="flex flex-col mb-8">
+                            <div className="flex items-baseline gap-2">
                                 <span className="text-5xl lg:text-6xl font-black text-[#202731] tracking-tighter">
                                     {mask('$' + Math.round(monthMetrics.estimatedTotal).toLocaleString())}
                                 </span>
-                                <span className="text-sm font-bold text-gray-400 mt-1">TWD / Month</span>
+                                <span className="text-sm font-bold text-gray-400">TWD</span>
                             </div>
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Estimated Total</span>
                         </div>
-                    </motion.div>
 
-                    {/* 3. Income Structure */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 15 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="neumo-card p-6 flex flex-col"
-                    >
-                        <div className="flex items-center justify-between gap-2 mb-4">
-                            <div className="flex items-center gap-2">
-                                <div className="p-2 rounded-xl neumo-pressed text-amber-500">
-                                    <Briefcase size={18} />
-                                </div>
-                                <h3 className="text-sm font-black text-[#202731] uppercase tracking-widest">本月收入結構</h3>
+                        {/* Chart Section */}
+                        <div className="space-y-4">
+                            <div className="h-[60px] relative w-full">
+                                <Bar data={barData} options={barOptions} plugins={[textPlugin]} />
                             </div>
-                            <span className="text-xs font-black text-gray-400">{mask('$' + Math.round(monthMetrics.estimatedTotal).toLocaleString())}</span>
-                        </div>
 
-                        {/* Single Horizontal Bar */}
-                        <div className="h-[60px] relative">
-                            <Bar data={barData} options={barOptions} plugins={[textPlugin]} />
-                        </div>
-
-                        {/* Legend */}
-                        <div className="flex justify-between items-center mt-3 px-1">
-                            <div className="flex gap-4">
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.6)]" />
-                                    <span className="text-[9px] font-bold text-gray-400 uppercase">底薪</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(255,69,0,0.6)]" />
-                                    <span className="text-[9px] font-bold text-gray-400 uppercase">加班</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-                                    <span className="text-[9px] font-bold text-gray-400 uppercase">津貼</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
-                                    <span className="text-[9px] font-bold text-gray-400 uppercase">獎金</span>
-                                </div>
+                            {/* Detailed Legend */}
+                            <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-100">
+                                <LegendItem color="bg-sky-400" label="底薪" value={mask('$' + Math.round(monthMetrics.baseMonthly).toLocaleString())} />
+                                <LegendItem color="bg-orange-500" label="加班" value={mask('$' + Math.round(monthMetrics.otPay).toLocaleString())} />
+                                <LegendItem color="bg-emerald-500" label="津貼" value={mask('$' + Math.round(monthMetrics.travelAllowance).toLocaleString())} />
+                                <LegendItem color="bg-amber-500" label="獎金" value={mask('$' + Math.round(monthMetrics.bonus).toLocaleString())} />
                             </div>
                         </div>
                     </motion.div>
                 </div>
             </div>
+        </div>
+    )
+}
+
+function LegendItem({ color, label, value }) {
+    return (
+        <div className="min-w-[80px] p-2 rounded-xl neumo-pressed flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+                <div className={cn("w-2 h-2 rounded-full", color.replace('bg-', 'bg-').replace('text-', 'bg-'))} />
+                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{label}</span>
+            </div>
+            <span className="text-xs font-black text-gray-600 pl-3.5">{value}</span>
         </div>
     )
 }

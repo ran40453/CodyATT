@@ -194,10 +194,11 @@ function CalendarOverlay({ day, record, geometry, onUpdate, onClose, isPrivacy, 
     // Using absolute positioning to let it float over the grid without affecting flow
     const blockStyle = {
         gridColumn: `${targetStartCol + 1} / span ${overlayWidth}`,
-        gridRow: `${targetStartRow + 1} / span ${overlayHeight}`,
+        gridRowStart: targetStartRow + 1, // Start at the correct row, but NO SPAN (allow auto height)
         position: 'absolute',
         width: '100%',
-        height: '100%',
+        minHeight: isMobile ? '320px' : '280px', // Fallback minimum height (approx 3-4 rows)
+        height: 'auto',
         zIndex: 50
     };
 
