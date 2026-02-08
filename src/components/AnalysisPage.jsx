@@ -22,6 +22,14 @@ import { loadSettings, calculateDailySalary, fetchExchangeRate, calculateCompLea
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, BarController, LineController, Title, Tooltip, Legend, Filler)
 
+const parse = (d) => {
+    if (!d) return new Date(0);
+    if (d instanceof Date) return d;
+    const parsed = parseISO(d);
+    if (!isNaN(parsed.getTime())) return parsed;
+    return new Date(d);
+}
+
 function AnalysisPage({ data, onUpdate, isPrivacy }) {
     const [settings, setSettings] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -62,14 +70,6 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
     const currentMonthInterval = { start: startOfMonth(now), end: endOfMonth(now) }
     const chartMonths = eachMonthOfInterval({ start: startOfMonth(subMonths(now, 11)), end: endOfMonth(now) })
 
-    // Data Parsing
-    const parse = (d) => {
-        if (!d) return new Date(0);
-        if (d instanceof Date) return d;
-        const parsed = parseISO(d);
-        if (!isNaN(parsed.getTime())) return parsed;
-        return new Date(d);
-    }
 
     const rollingYearRecords = data.filter(r => {
         const d = parse(r.date);
@@ -689,14 +689,14 @@ function TravelListModal({ isOpen, onClose, data }) {
                             <div>
                                 <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{getCountryName(range.country)}</div>
                                 <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
-                                    <span>{format(new Date(range.start.date), 'yyyy/MM/dd')}</span>
+                                    <span>{format(parse(range.start.date), 'yyyy/MM/dd')}</span>
                                     <span className="text-gray-400">&rarr;</span>
-                                    <span>{format(new Date(range.end.date), 'yyyy/MM/dd')}</span>
+                                    <span>{format(parse(range.end.date), 'yyyy/MM/dd')}</span>
                                 </div>
                             </div>
                             <div className="text-right">
                                 <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">
-                                    {Math.ceil((new Date(range.end.date) - new Date(range.start.date)) / (1000 * 60 * 60 * 24)) + 1} Days
+                                    {Math.ceil((parse(range.end.date) - parse(range.start.date)) / (1000 * 60 * 60 * 24)) + 1} Days
                                 </span>
                             </div>
                         </div>
