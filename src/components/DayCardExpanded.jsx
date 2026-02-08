@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { format, getDay } from 'date-fns' // Added getDay
+import { format, getDay, isAfter } from 'date-fns' // Added getDay, isAfter
 import { motion } from 'framer-motion'
 import { MapPin, Clock, Check, Palmtree, Moon, DollarSign, Coffee, X } from 'lucide-react'
 import { cn } from '../lib/utils'
@@ -210,6 +210,18 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
 
     const handleSave = (e) => {
         if (e) e.stopPropagation();
+
+        // Future Date Check
+        if (isAfter(day, new Date())) {
+            // Toast or visual error?
+            // Since we don't have a toast system ready in this file, we can set an error state or just alert.
+            // User: "notify this day has not arrived".
+            // I'll add a simple alert for now or a temporary error message in UI.
+            // A temporary error state is better.
+            const confirmed = window.confirm("此日期尚未發生。確定要儲存嗎？ (Date is in the future)");
+            if (!confirmed) return;
+        }
+
         syncUpdate();
         setIsSaved(true);
         setTimeout(() => {
@@ -219,7 +231,7 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
     }
 
     return (
-        <div style={style} className={cn("neumo-card p-4 flex flex-col gap-4 overflow-hidden relative z-50 bg-[#E0E5EC] shadow-2xl", className)} onClick={e => e.stopPropagation()}>
+        <div style={style} className={cn("neumo-card p-4 flex flex-col gap-4 relative z-50 bg-[#E0E5EC] shadow-2xl", className)} onClick={e => e.stopPropagation()}>
             {/* Header Section with Date (if needed) or just Close button */}
             {/* The design implies this card merges with the cell. We might render the content directly. */}
             {!hideHeader && (

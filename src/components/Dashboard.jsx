@@ -220,135 +220,142 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                 </button>
             </header>
 
-            {/* 1. Monthly Estimated Salary */}
-            <motion.div
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="neumo-card p-6 relative overflow-hidden group"
-            >
-                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                    <Wallet size={120} />
-                </div>
-                <div className="relative z-10 space-y-4">
-                    <div className="flex items-center gap-2 text-gray-400">
-                        <div className="p-2 rounded-xl neumo-pressed text-purple-500">
-                            <TrendingUp size={20} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column: Work Stats */}
+                <div className="space-y-6">
+                    {/* OT Stats */}
+                    <motion.div
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="neumo-card p-6 flex flex-col items-center justify-center space-y-4 relative overflow-hidden"
+                    >
+                        <div className="absolute top-2 left-3 flex items-center gap-2">
+                            <div className="p-2 rounded-xl neumo-pressed text-blue-500">
+                                <Clock size={20} />
+                            </div>
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">加班統計</span>
                         </div>
-                        <h2 className="text-xs font-black uppercase tracking-widest">本月薪資預估 (Estimated)</h2>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                        <span className="text-4xl md:text-5xl font-black text-[#202731] tracking-tighter">
-                            {mask('$' + Math.round(monthMetrics.estimatedTotal).toLocaleString())}
-                        </span>
-                        <span className="text-xs font-bold text-gray-400">TWD</span>
-                    </div>
-                    <div className="flex gap-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                        <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-sky-400" /> 底薪</span>
-                        <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-orange-500" /> 加班: {mask('$' + Math.round(monthMetrics.otPay).toLocaleString())}</span>
-                        <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> 津貼: {mask('$' + Math.round(monthMetrics.travelAllowance).toLocaleString())}</span>
-                    </div>
-                </div>
-            </motion.div>
 
-            {/* 2. Work-Life Balance Board (Updated with Year/Month stats) */}
-            <div className="grid grid-cols-2 gap-4">
-                <motion.div
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="neumo-card p-5 space-y-3"
-                >
-                    <div className="flex justify-between items-start">
-                        <div className="p-2 rounded-xl neumo-pressed text-blue-500 inline-flex">
-                            <Clock size={18} />
+                        <div className="flex flex-col items-center mt-4">
+                            <span className="text-5xl font-black text-[#202731] tracking-tighter">
+                                {yearMetrics.totalOT.toFixed(1)}
+                            </span>
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
+                                Year Total (Hours)
+                            </span>
                         </div>
-                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">加班統計</span>
-                    </div>
-                    <div className="flex justify-between items-end">
-                        <div>
-                            <span className="text-xl font-black text-[#202731]">{yearMetrics.totalOT.toFixed(0)}</span>
-                            <span className="text-[9px] font-bold text-gray-400 ml-1">Yr</span>
-                            <p className="text-[8px] text-gray-400 font-bold uppercase">累計</p>
+                        <div className="w-full h-px bg-gray-200/50 my-2" />
+                        <div className="flex items-center gap-2 text-sm font-bold text-gray-500">
+                            <span className="px-2 py-1 rounded bg-blue-50 text-blue-600 text-xs">This Month</span>
+                            <span className="text-xl text-blue-600 font-black">{monthMetrics.totalOT.toFixed(1)}</span>
+                            <span className="text-[10px] uppercase">Hours</span>
                         </div>
-                        <div className="text-right">
-                            <span className="text-xl font-black text-blue-500">{monthMetrics.totalOT.toFixed(1)}</span>
-                            <span className="text-[9px] font-bold text-gray-400 ml-1">M</span>
-                            <p className="text-[8px] text-gray-400 font-bold uppercase">本月</p>
-                        </div>
-                    </div>
-                </motion.div>
+                    </motion.div>
 
-                <motion.div
-                    initial={{ opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="neumo-card p-5 space-y-3"
-                >
-                    <div className="flex justify-between items-start">
-                        <div className="p-2 rounded-xl neumo-pressed text-indigo-500 inline-flex">
-                            <Coffee size={18} />
+                    {/* Comp Stats */}
+                    <motion.div
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="neumo-card p-6 flex flex-col items-center justify-center space-y-4 relative overflow-hidden"
+                    >
+                        <div className="absolute top-2 left-3 flex items-center gap-2">
+                            <div className="p-2 rounded-xl neumo-pressed text-indigo-500">
+                                <Coffee size={20} />
+                            </div>
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">補休統計</span>
                         </div>
-                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">補休統計</span>
-                    </div>
-                    <div className="flex justify-between items-end">
-                        <div>
-                            <span className="text-xl font-black text-[#202731]">{yearMetrics.totalComp}</span>
-                            <span className="text-[9px] font-bold text-gray-400 ml-1">Yr</span>
-                            <p className="text-[8px] text-gray-400 font-bold uppercase">累計</p>
+
+                        <div className="flex flex-col items-center mt-4">
+                            <span className="text-5xl font-black text-[#202731] tracking-tighter">
+                                {yearMetrics.totalComp}
+                            </span>
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
+                                Year Total (Units)
+                            </span>
                         </div>
-                        <div className="text-right">
-                            <span className="text-xl font-black text-indigo-500">{monthMetrics.totalComp}</span>
-                            <span className="text-[9px] font-bold text-gray-400 ml-1">M</span>
-                            <p className="text-[8px] text-gray-400 font-bold uppercase">本月 (U)</p>
+                        <div className="w-full h-px bg-gray-200/50 my-2" />
+                        <div className="flex items-center gap-2 text-sm font-bold text-gray-500">
+                            <span className="px-2 py-1 rounded bg-indigo-50 text-indigo-600 text-xs">This Month</span>
+                            <span className="text-xl text-indigo-600 font-black">{monthMetrics.totalComp}</span>
+                            <span className="text-[10px] uppercase">Units</span>
                         </div>
-                    </div>
-                </motion.div>
+                    </motion.div>
+                </div>
+
+                {/* Right Column: Financials */}
+                <div className="space-y-6">
+                    {/* 1. Monthly Estimated Salary */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="neumo-card p-6 relative overflow-hidden group h-full flex flex-col justify-between"
+                    >
+                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <Wallet size={120} />
+                        </div>
+                        <div className="relative z-10 space-y-6">
+                            <div className="flex items-center gap-2 text-gray-400">
+                                <div className="p-2 rounded-xl neumo-pressed text-purple-500">
+                                    <TrendingUp size={20} />
+                                </div>
+                                <h2 className="text-xs font-black uppercase tracking-widest">本月薪資預估 (Estimated)</h2>
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-5xl lg:text-6xl font-black text-[#202731] tracking-tighter">
+                                    {mask('$' + Math.round(monthMetrics.estimatedTotal).toLocaleString())}
+                                </span>
+                                <span className="text-sm font-bold text-gray-400 mt-1">TWD / Month</span>
+                            </div>
+                        </div>
+                    </motion.div>
+
+                    {/* 3. Income Structure */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="neumo-card p-6 flex flex-col"
+                    >
+                        <div className="flex items-center justify-between gap-2 mb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 rounded-xl neumo-pressed text-amber-500">
+                                    <Briefcase size={18} />
+                                </div>
+                                <h3 className="text-sm font-black text-[#202731] uppercase tracking-widest">本月收入結構</h3>
+                            </div>
+                            <span className="text-xs font-black text-gray-400">{mask('$' + Math.round(monthMetrics.estimatedTotal).toLocaleString())}</span>
+                        </div>
+
+                        {/* Single Horizontal Bar */}
+                        <div className="h-[60px] relative">
+                            <Bar data={barData} options={barOptions} plugins={[textPlugin]} />
+                        </div>
+
+                        {/* Legend */}
+                        <div className="flex justify-between items-center mt-3 px-1">
+                            <div className="flex gap-4">
+                                <div className="flex items-center gap-1.5">
+                                    <div className="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.6)]" />
+                                    <span className="text-[9px] font-bold text-gray-400 uppercase">底薪</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(255,69,0,0.6)]" />
+                                    <span className="text-[9px] font-bold text-gray-400 uppercase">加班</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+                                    <span className="text-[9px] font-bold text-gray-400 uppercase">津貼</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
+                                    <span className="text-[9px] font-bold text-gray-400 uppercase">獎金</span>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
             </div>
-
-            {/* 3. Income Structure (Horizontal Bar Chart) */}
-            <motion.div
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="neumo-card p-6 flex flex-col"
-            >
-                <div className="flex items-center justify-between gap-2 mb-4">
-                    <div className="flex items-center gap-2">
-                        <div className="p-2 rounded-xl neumo-pressed text-amber-500">
-                            <Briefcase size={18} />
-                        </div>
-                        <h3 className="text-sm font-black text-[#202731] uppercase tracking-widest">本月收入結構</h3>
-                    </div>
-                    <span className="text-xs font-black text-gray-400">{mask('$' + Math.round(monthMetrics.estimatedTotal).toLocaleString())}</span>
-                </div>
-
-                {/* Single Horizontal Bar */}
-                <div className="h-[60px] relative">
-                    <Bar data={barData} options={barOptions} plugins={[textPlugin]} />
-                </div>
-
-                {/* Legend */}
-                <div className="flex justify-between items-center mt-3 px-1">
-                    <div className="flex gap-4">
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.6)]" />
-                            <span className="text-[9px] font-bold text-gray-400 uppercase">底薪</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(255,69,0,0.6)]" />
-                            <span className="text-[9px] font-bold text-gray-400 uppercase">加班</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-                            <span className="text-[9px] font-bold text-gray-400 uppercase">津貼</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
-                            <span className="text-[9px] font-bold text-gray-400 uppercase">獎金</span>
-                        </div>
-                    </div>
-                </div>
-            </motion.div>
         </div>
     )
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { format, startOfMonth, endOfMonth, eachMonthOfInterval, isSameMonth, subDays, isWithinInterval, subMonths, eachDayOfInterval, parseISO, isSameDay, addDays, getDay } from 'date-fns'
-import { TrendingUp, Clock, Calendar, Globe, ArrowUpRight, Coffee, Trophy, BarChart3, Gift, X, Edit2, Trash2, Check, Plane, Briefcase } from 'lucide-react'
+import { TrendingUp, Clock, Calendar, Globe, ArrowUpRight, Coffee, Trophy, BarChart3, Gift, X, Edit2, Trash2, Check, Plane, Briefcase, MapPin } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     Chart as ChartJS,
@@ -362,12 +362,28 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                         className="space-y-6"
                     >
                         {/* Travel Stats & History */}
-                        <div className="grid grid-cols-3 gap-2">
-                            <div onClick={() => setIsLeaveListOpen(true)} className="cursor-pointer">
+                        <div className="grid grid-cols-3 gap-3">
+                            <div onClick={() => setIsLeaveListOpen(true)} className="cursor-pointer group relative">
+                                <div className="absolute inset-0 bg-rose-400/0 group-hover:bg-rose-400/5 rounded-2xl transition-colors" />
                                 <MiniStatCard label="請假" value={data.filter(r => r.isLeave).length} unit="Recs" color="text-rose-500" />
+                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-rose-300">
+                                    <ArrowUpRight size={12} />
+                                </div>
                             </div>
-                            <MiniStatCard label="出差" value={stats.yearMetrics.tripCount} unit="Days" color="text-emerald-500" />
-                            <MiniStatCard label="加班" value={stats.yearMetrics.totalOT.toFixed(0)} unit="H" color="text-indigo-500" />
+                            <div onClick={() => setIsTravelListOpen(true)} className="cursor-pointer group relative">
+                                <div className="absolute inset-0 bg-emerald-400/0 group-hover:bg-emerald-400/5 rounded-2xl transition-colors" />
+                                <MiniStatCard label="出差" value={stats.yearMetrics.tripCount} unit="Days" color="text-emerald-500" />
+                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-emerald-300">
+                                    <ArrowUpRight size={12} />
+                                </div>
+                            </div>
+                            <div onClick={() => setIsOTListOpen(true)} className="cursor-pointer group relative">
+                                <div className="absolute inset-0 bg-indigo-400/0 group-hover:bg-indigo-400/5 rounded-2xl transition-colors" />
+                                <MiniStatCard label="加班" value={stats.yearMetrics.totalOT.toFixed(0)} unit="H" color="text-indigo-500" />
+                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-indigo-300">
+                                    <ArrowUpRight size={12} />
+                                </div>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
