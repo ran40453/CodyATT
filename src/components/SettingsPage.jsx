@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Save, RefreshCw, DollarSign, Calculator, Briefcase, Calendar as CalendarIcon, Activity, Plus, Trash2, Globe } from 'lucide-react'
-import { loadSettings, saveSettings, syncSettingsToGist, testConnection, fetchExchangeRate, createGist } from '../lib/storage'
+import { loadSettings, saveSettings, syncSettingsToGist, testConnection, fetchExchangeRate, createGist, fetchSettingsFromGist, fetchRecordsFromGist } from '../lib/storage'
 import { cn } from '../lib/utils'
 import { format } from 'date-fns'
 
@@ -36,6 +36,16 @@ function SettingsPage({ isPrivacy }) {
     if (!settings) return null
 
     const handleSave = async () => {
+        // Safety check: If we have a Gist ID but NO salary history and we are using default base salary,
+        // it's very likely we are on a new browser and haven't pulled yet.
+        const isLikelyEmpty = (!settings.salaryHistory || settings.salaryHistory.length === 0) &&
+            settings.salary.baseMonthly === 50000;
+
+        if (settings.gistId && isLikelyEmpty) {
+            const proceed = confirm('偵測到本機設定為初始狀態，直接同步可能蓋掉雲端已有的設定。建議先點選「從雲端恢復 (PULL)」。確定要直接覆蓋雲端嗎？');
+            if (!proceed) return;
+        }
+
         setIsSaving(true)
         const updated = { ...settings, liveRate: liveRate || settings.allowance.exchangeRate }
         saveSettings(updated)
@@ -86,6 +96,31 @@ function SettingsPage({ isPrivacy }) {
             alert('Gist 建立成功！資料已同步。');
         } else {
             alert(`建立失敗: ${res.error}`);
+        }
+        setIsSaving(false);
+    }
+
+    const handleRecover = async () => {
+        if (!settings.githubToken || !settings.gistId) {
+            alert('請先輸入 GitHub Token 與 Gist ID');
+            return;
+        }
+        if (!confirm('將從雲端讀取設定與紀錄，這將會蓋掉本機目前的未同步資料，確定要繼續？')) return;
+
+        setIsSaving(true);
+        try {
+            const remoteSettings = await fetchSettingsFromGist(settings.githubToken, settings.gistId);
+            const remoteRecords = await fetchRecordsFromGist(settings.githubToken, settings.gistId);
+
+            if (remoteSettings && remoteRecords) {
+                setSettings(remoteSettings);
+                alert('恢復成功！請手動重新整理頁面以套用所有變更。');
+                window.location.reload();
+            } else {
+                alert('從雲端取得資料失敗，請檢查 Token 與 Gist ID 是否正確。');
+            }
+        } catch (e) {
+            alert(`恢復發生錯誤: ${e.message}`);
         }
         setIsSaving(false);
     }
@@ -153,19 +188,27 @@ function SettingsPage({ isPrivacy }) {
                                 </button>
                             </div>
                         </div>
-                        <button
-                            onClick={async (e) => {
-                                e.stopPropagation();
-                                setIsTesting(true);
-                                const res = await testConnection(settings.githubToken, settings.gistId);
-                                setTestResult(res);
-                                setIsTesting(false);
-                            }}
-                            disabled={isTesting}
-                            className={cn("neumo-button w-full py-3 text-[10px] font-black uppercase tracking-widest", isTesting ? "opacity-50" : "text-neumo-brand")}
-                        >
-                            {isTesting ? 'TESTING...' : '測試 Gist 連線能力'}
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={async (e) => {
+                                    e.stopPropagation();
+                                    setIsTesting(true);
+                                    const res = await testConnection(settings.githubToken, settings.gistId);
+                                    setTestResult(res);
+                                    setIsTesting(false);
+                                }}
+                                disabled={isTesting}
+                                className={cn("neumo-button flex-1 py-3 text-[10px] font-black uppercase tracking-widest", isTesting ? "opacity-50" : "text-neumo-brand")}
+                            >
+                                {isTesting ? 'TESTING...' : '測試 Gist 連線'}
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleRecover(); }}
+                                className="neumo-button flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-rose-500"
+                            >
+                                從雲端恢復 (PULL)
+                            </button>
+                        </div>
                         {testResult && (
                             <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className={cn("p-3 rounded-2xl text-[9px] font-bold", testResult.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700")}>
                                 <div className="flex items-center gap-2 mb-1">

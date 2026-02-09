@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { Palmtree, Moon, DollarSign, Coffee } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { loadSettings, calculateOTHours, calculateDuration, calculateDailySalary, fetchExchangeRate, standardizeCountry } from '../lib/storage'
+import { isTaiwanHoliday, getHolidayName } from '../lib/holidays'
 
 function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy }) {
     const [settings, setSettings] = useState(null)
@@ -70,7 +71,7 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy }) {
             className={cn(
                 "neumo-card transition-all flex flex-col p-1.5 md:p-3 relative",
                 isToday(day) && "ring-2 ring-neumo-brand/40",
-                isHoliday && "bg-orange-50/20",
+                isHoliday && "bg-rose-50/20",
                 isLeave && "opacity-50",
                 isSunday && "bg-[#e0f2fe]/40 text-sky-900 border border-sky-100/50",
                 !isSunday && isAfter(startOfDay(day), startOfDay(new Date())) && "bg-gray-200/50 grayscale-[0.5]",
@@ -83,11 +84,17 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy }) {
                 <div className="flex flex-col gap-0.5 md:gap-1">
                     <span className={cn(
                         "text-sm md:text-xl font-black leading-none",
-                        isToday(day) ? "text-neumo-brand" : "text-[#202731]",
-                        isSunday && "opacity-60"
+                        isToday(day) ? "text-neumo-brand" : (isHoliday ? "text-rose-500" : "text-[#202731]"),
+                        isSunday && !isHoliday && "opacity-60"
                     )}>
                         {format(day, 'dd')}
                     </span>
+
+                    {isHoliday && (
+                        <span className="text-[7px] md:text-[9px] font-bold text-rose-500/80 truncate max-w-[60px]">
+                            {getHolidayName(day)}
+                        </span>
+                    )}
 
                     {/* OT indicator */}
                     {otHours > 0 && (
@@ -122,11 +129,20 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy }) {
                 </div>
 
                 {/* Right Side: Money (Desktop mainly) */}
-                <div className="flex flex-col items-end">
+                <div className="flex flex-col items-end justify-between h-full">
                     {dailySalary > 0 && !isLeave && (
                         <span className="text-[8px] md:text-[10px] font-bold text-gray-400 tabular-nums">
                             {mask('$' + Math.round(dailySalary).toLocaleString())}
                         </span>
+                    )}
+
+                    {/* Holiday Name Label (Desktop only) */}
+                    {isHoliday && getHolidayName(day) && (
+                        <div className="hidden md:block mt-auto">
+                            <span className="text-[8px] font-black text-rose-500/60 uppercase tracking-tighter whitespace-nowrap bg-rose-50 px-1 rounded">
+                                {getHolidayName(day)}
+                            </span>
+                        </div>
                     )}
                 </div>
             </div>

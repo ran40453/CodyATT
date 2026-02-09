@@ -1,4 +1,5 @@
 import { format, getDay } from 'date-fns';
+import { isTaiwanHoliday } from './holidays';
 
 const DATA_KEY = 'ot-calculation-data';
 const SETTINGS_KEY = 'ot-calculation-settings';
@@ -189,7 +190,8 @@ export const standardizeRecords = (records) => {
 
         // 3. Map property names (Historical or snake_case variants)
         const travelCountry = nr.travelCountry || nr.travel_country || '';
-        const isHoliday = !!(nr.isHoliday || nr.is_holiday);
+        // If isHoliday is not explicitly false, check if it's a Taiwan holiday
+        const isHoliday = nr.isHoliday !== undefined ? !!nr.isHoliday : isTaiwanHoliday(new Date(nr.date));
         const isLeave = !!(nr.isLeave || nr.is_leave);
         const isRestDay = !!(nr.isRestDay || nr.is_rest_day);
         const endTime = nr.endTime || nr.end_time || '';
@@ -258,15 +260,11 @@ export const calculateDailySalary = (record, settings) => {
 
     let otPay = 0;
     if (otHours > 0 && otType === 'pay' && !isNaN(hourlyRate)) {
-        const recordDate = new Date(record.date);
-        const dayOfWeek = isNaN(recordDate.getTime()) ? -1 : getDay(recordDate);
-
-        // Determine if it's a rest day (Saturday/Sunday or Holiday)
-        // BUT if isWorkDay is true, treat as normal weekday
-        const isRestDay = (dayOfWeek === 0 || dayOfWeek === 6 || record.isRestDay || record.isHoliday) && !record.isWorkDay;
+        const isHoliday = record.isHoliday !== undefined ? !!record.isHoliday : isTaiwanHoliday(recordDate);
+        const isRestDay = (dayOfWeek === 0 || dayOfWeek === 6 || record.isRestDay || isHoliday) && !record.isWorkDay;
 
         if (isRestDay) {
-            if (record.isHoliday && !record.isWorkDay) {
+            if (isHoliday && !record.isWorkDay) {
                 // Holiday Logic (2.0x) - Kept separate if Holiday has specific rules differently from Sat/Sun
                 // User said "Saturday... 1.34/1.67/2.67", which matches the generic Rest Day logic below.
                 // But code had specific Holiday block. Let's assume isWorkDay overrides even Holiday status?
@@ -314,7 +312,8 @@ export const calculateDailySalary = (record, settings) => {
     // If isWorkDay is true on a Saturday, technically they are working, so maybe baseDayPay should exist?
     // But they are already getting Paid Monthly.
     // Usually "Makeup Day" means it's treated like a Monday.
-    const isSpecialDay = (record.isHoliday || dayOfWeek === 0 || dayOfWeek === 6) && !record.isWorkDay;
+    const effectiveIsHoliday = record.isHoliday !== undefined ? !!record.isHoliday : isTaiwanHoliday(recordDate);
+    const isSpecialDay = (effectiveIsHoliday || dayOfWeek === 0 || dayOfWeek === 6) && !record.isWorkDay;
     const baseDayPay = isSpecialDay ? 0 : daySalary;
 
     let travelAllowance = 0;
@@ -468,12 +467,12 @@ export const addOrUpdateRecord = async (input) => {
 /**
  * Fetch data from GitHub Gist
  */
-export const fetchRecordsFromGist = async () => {
+export const fetchRecordsFromGist = async (tokenOverride, gistIdOverride) => {
     // 1. Check for unsynced local changes (Dirty Flag)
     // If we have local changes that failed to sync, DO NOT fetch from Gist (which would be old)
     // Instead, try to push our local data to Gist
     const isDirty = localStorage.getItem('ot-data-dirty') === 'true';
-    if (isDirty) {
+    if (isDirty && !tokenOverride) {
         console.warn('Gist Sync: Local changes found (Dirty). preventing overwrite and attempting push.');
         const localData = loadData();
         if (localData.length > 0) {
@@ -483,8 +482,8 @@ export const fetchRecordsFromGist = async () => {
     }
 
     const settings = loadSettings();
-    const token = settings?.githubToken;
-    const gistId = settings?.gistId;
+    const token = tokenOverride || settings?.githubToken;
+    const gistId = gistIdOverride || settings?.gistId;
     if (!gistId) return loadData();
 
     // Capture the time BEFORE we start the fetch
@@ -575,13 +574,16 @@ export const syncRecordsToGist = async (records) => {
 /**
  * Fetch settings from Gist
  */
-export const fetchSettingsFromGist = async () => {
+export const fetchSettingsFromGist = async (tokenOverride, gistIdOverride) => {
     const settings = loadSettings();
-    const gistId = settings.gistId;
+    const token = tokenOverride || settings.githubToken;
+    const gistId = gistIdOverride || settings.gistId;
     if (!gistId) return settings;
 
     try {
-        const response = await fetch(GET_GIST_URL(gistId));
+        const headers = {};
+        if (token) headers['Authorization'] = `token ${token}`;
+        const response = await fetch(GET_GIST_URL(gistId), { headers });
         const gist = await response.json();
         const settingsFile = gist.files['settings.json'] || gist.files['ot_settings.json'] || gist.files['otcal_settings.json'];
 
@@ -589,7 +591,7 @@ export const fetchSettingsFromGist = async () => {
             const remoteSettings = JSON.parse(settingsFile.content);
             const localSettings = loadSettings();
             // Merge remote settings with local token (token should probably stay local or be carefully synced)
-            const merged = { ...remoteSettings, githubToken: localSettings.githubToken };
+            const merged = { ...remoteSettings, githubToken: token || localSettings.githubToken };
             saveSettings(merged);
             return merged;
         }

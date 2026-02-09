@@ -316,7 +316,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                         className="space-y-6"
                     >
                         {/* Financial Stats */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div onClick={() => setIsSalaryDetailOpen(true)} className="cursor-pointer">
                                 <StatCard
                                     label="當年年薪 (Rolling 365)"
@@ -324,14 +324,17 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                                     icon={Briefcase}
                                     color="text-neumo-brand"
                                     sub="點擊查看明細"
+                                    compositionData={{
+                                        labels: ['底薪', '加班費', '津貼', '獎金'],
+                                        datasets: [{
+                                            data: [stats.breakdown.base, stats.breakdown.ot, stats.breakdown.travel, stats.breakdown.bonus],
+                                            backgroundColor: ['#38bdf8', '#ff4500', '#10b981', '#f59e0b'],
+                                            borderWidth: 0,
+                                            cutout: '70%'
+                                        }]
+                                    }}
                                 />
                             </div>
-                            <StatCard
-                                label="月平均薪資"
-                                value={mask(`$${Math.round(stats.rollingMonthlySalary).toLocaleString()}`)}
-                                icon={TrendingUp}
-                                color="text-blue-500"
-                            />
                             <div onClick={() => setIsBonusDetailOpen(true)} className="cursor-pointer">
                                 <StatCard
                                     label="累計獎金與津貼"
@@ -339,6 +342,15 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                                     icon={Gift}
                                     color="text-amber-500"
                                     sub={`獎金: ${mask('$' + Math.round(stats.yearMetrics.totalBonus).toLocaleString())}\n津貼: ${mask('$' + Math.round(stats.yearMetrics.totalTravel).toLocaleString())}`}
+                                    compositionData={{
+                                        labels: ['獎金', '津貼'],
+                                        datasets: [{
+                                            data: [stats.yearMetrics.totalBonus, stats.yearMetrics.totalTravel],
+                                            backgroundColor: ['#f59e0b', '#10b981'],
+                                            borderWidth: 0,
+                                            cutout: '70%'
+                                        }]
+                                    }}
                                 />
                             </div>
                         </div>
@@ -543,17 +555,30 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
     )
 }
 
-function StatCard({ label, value, sub, unit, icon: Icon, color }) {
+function StatCard({ label, value, sub, unit, icon: Icon, color, compositionData }) {
     return (
-        <div className="neumo-card p-5 space-y-3 h-full">
-            <div className="flex justify-between items-start">
-                <div className={cn("p-2 rounded-xl neumo-pressed inline-flex", color)}><Icon size={18} /></div>
+        <div className="neumo-card p-5 flex flex-row items-center gap-4 h-full">
+            <div className="flex-1 space-y-3">
+                <div className="flex justify-between items-start">
+                    <div className={cn("p-2 rounded-xl neumo-pressed inline-flex", color)}><Icon size={18} /></div>
+                </div>
+                <div>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{label}</p>
+                    <h4 className="text-xl font-black leading-none mb-1">{value}<span className="text-xs ml-0.5">{unit || ''}</span></h4>
+                    {sub && <p className="text-[10px] font-bold text-gray-500 italic mt-1 whitespace-pre-line">{sub}</p>}
+                </div>
             </div>
-            <div>
-                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{label}</p>
-                <h4 className="text-xl font-black leading-none mb-1">{value}<span className="text-xs ml-0.5">{unit || ''}</span></h4>
-                {sub && <p className="text-[10px] font-bold text-gray-500 italic mt-1">{sub}</p>}
-            </div>
+            {compositionData && (
+                <div className="w-20 h-20 shrink-0">
+                    <Doughnut
+                        data={compositionData}
+                        options={{
+                            plugins: { legend: { display: false }, tooltip: { enabled: true } },
+                            maintainAspectRatio: false
+                        }}
+                    />
+                </div>
+            )}
         </div>
     )
 }
@@ -719,6 +744,101 @@ function LeaveListModal({ isOpen, onClose, data }) {
     )
 }
 
+function OTListModal({ isOpen, onClose, data, settings, liveRate }) {
+    const [viewMode, setViewMode] = useState('pay'); // 'pay' or 'internal'
+    if (!isOpen) return null;
+
+    const filtered = data.filter(r => {
+        if (viewMode === 'pay') return r.otType === 'pay' || !r.otType;
+        if (viewMode === 'internal') return r.otType === 'internal';
+        return true;
+    }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const totalHours = filtered.reduce((sum, r) => sum + (parseFloat(r.otHours) || 0), 0);
+    const totalPayOrUnits = viewMode === 'pay'
+        ? filtered.reduce((sum, r) => sum + (calculateDailySalary(r, { ...settings, liveRate }).otPay || 0), 0)
+        : filtered.reduce((sum, r) => sum + calculateCompLeaveUnits(r), 0);
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose} className="absolute inset-0 bg-gray-500/20 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative w-full max-w-sm neumo-card p-6 max-h-[80vh] flex flex-col">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className={cn("text-lg font-black uppercase flex items-center gap-2", viewMode === 'pay' ? "text-indigo-500" : "text-purple-600")}>
+                        <Clock size={20} /> {viewMode === 'pay' ? '加班紀錄 (計薪)' : '加班紀錄 (補休)'}
+                    </h3>
+                    <button onClick={onClose}><X size={18} /></button>
+                </div>
+
+                {/* Mode Toggle */}
+                <div className="flex gap-2 p-1 neumo-pressed rounded-xl mb-4">
+                    <button
+                        onClick={() => setViewMode('pay')}
+                        className={cn(
+                            "flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                            viewMode === 'pay' ? "bg-indigo-500 text-white shadow-md" : "text-gray-400"
+                        )}
+                    >
+                        加班費
+                    </button>
+                    <button
+                        onClick={() => setViewMode('internal')}
+                        className={cn(
+                            "flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                            viewMode === 'internal' ? "bg-purple-600 text-white shadow-md" : "text-gray-400"
+                        )}
+                    >
+                        部門補休
+                    </button>
+                </div>
+
+                <div className="flex justify-between items-end mb-4 px-1">
+                    <div className="flex flex-col">
+                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Total Hours</span>
+                        <span className="text-xl font-black text-[#202731]">{totalHours.toFixed(1)}h</span>
+                    </div>
+                    <div className="text-right flex flex-col">
+                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{viewMode === 'pay' ? 'Total Pay' : 'Total Units'}</span>
+                        <span className={cn("text-xl font-black", viewMode === 'pay' ? "text-green-600" : "text-purple-600")}>
+                            {viewMode === 'pay' ? `$${Math.round(totalPayOrUnits).toLocaleString()}` : `${totalPayOrUnits}U`}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                    {filtered.length === 0 && <p className="text-center text-gray-400 text-xs py-10">尚無相關紀錄</p>}
+                    {filtered.map((r, i) => (
+                        <div key={i} className="neumo-pressed p-3 rounded-xl flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="flex flex-col items-center justify-center w-10 h-10 bg-white rounded-lg shadow-sm">
+                                    <span className="text-[7px] font-black text-gray-400 uppercase leading-none">{format(new Date(r.date), 'MMM')}</span>
+                                    <span className="text-lg font-black text-[#202731] leading-none">{format(new Date(r.date), 'dd')}</span>
+                                </div>
+                                <div>
+                                    <div className="text-xs font-black text-gray-700">{parseFloat(r.otHours).toFixed(1)} Hours</div>
+                                    <div className="text-[8px] font-bold text-gray-400">
+                                        {r.endTime ? `End: ${r.endTime}` : 'Manual Entry'}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className={cn(
+                                "px-2 py-1 rounded text-[9px] font-black border",
+                                viewMode === 'pay'
+                                    ? "bg-green-50 text-green-600 border-green-100"
+                                    : "bg-purple-50 text-purple-600 border-purple-100"
+                            )}>
+                                {viewMode === 'pay'
+                                    ? `$${Math.round(calculateDailySalary(r, { ...settings, liveRate }).otPay || 0)}`
+                                    : `${calculateCompLeaveUnits(r)}U`}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </motion.div>
+        </div>
+    );
+}
+
 function TravelListModal({ isOpen, onClose, data, settings, liveRate }) {
     if (!isOpen) return null;
 
@@ -809,58 +929,6 @@ function TravelListModal({ isOpen, onClose, data, settings, liveRate }) {
     )
 }
 
-function OTListModal({ isOpen, onClose, data, settings, liveRate }) {
-    if (!isOpen) return null;
-    const sorted = [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    // Helper to estimate amount if needed, but we don't have settings here easily. 
-    // We can just show hours and type.
-
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose} className="absolute inset-0 bg-gray-500/20 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative w-full max-w-sm neumo-card p-6 max-h-[80vh] flex flex-col">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-black uppercase text-indigo-500 flex items-center gap-2"><Clock size={20} /> 加班紀錄</h3>
-                    <button onClick={onClose}><X size={18} /></button>
-                </div>
-                <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-                    {sorted.length === 0 && <p className="text-center text-gray-400 text-xs">尚無加班紀錄</p>}
-                    {sorted.map((r, i) => {
-                        const otPay = settings ? calculateDailySalary(r, { ...settings, liveRate }).otPay : 0;
-                        return (
-                            <div key={i} className="neumo-pressed p-3 rounded-xl flex justify-between items-center">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex flex-col items-center justify-center w-12 h-12 bg-white rounded-lg shadow-sm">
-                                        <span className="text-[8px] font-black text-gray-400 uppercase leading-none">{format(parse(r.date), 'yyyy')}</span>
-                                        <span className="text-[8px] font-black text-gray-400 uppercase">{format(parse(r.date), 'MMM')}</span>
-                                        <span className="text-lg font-black text-[#202731] leading-none">{format(parse(r.date), 'dd')}</span>
-                                    </div>
-                                    <div>
-                                        <div className="text-xs font-black text-gray-700">{parseFloat(r.otHours).toFixed(1)} Hours</div>
-                                        <div className="text-[9px] font-bold text-gray-400">
-                                            {r.otType === 'leave' ? '正式補休' : r.otType === 'internal' ? '內部補休' : '加班'}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <div className={cn(
-                                        "px-2 py-1 rounded text-[10px] font-black border",
-                                        r.otType === 'leave' ? "bg-indigo-50 text-indigo-600 border-indigo-100" :
-                                            r.otType === 'internal' ? "bg-purple-50 text-purple-600 border-purple-100" :
-                                                "bg-green-50 text-green-600 border-green-100"
-                                    )}>
-                                        {r.otType === 'leave' ? 'Official' : r.otType === 'internal' ? 'Internal' : `$${Math.round(otPay).toLocaleString()}`}
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </motion.div>
-        </div>
-    )
-}
 
 function LeaveBreakdownCard({ label, items }) {
     return (

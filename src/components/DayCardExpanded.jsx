@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { MapPin, Clock, Check, Palmtree, Moon, DollarSign, Coffee, X } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { loadSettings, calculateOTHours, calculateDuration, calculateDailySalary, calculateCompLeaveUnits, fetchExchangeRate, standardizeCountry } from '../lib/storage' // Added calculateDuration
+import { isTaiwanHoliday, getHolidayName } from '../lib/holidays'
 
 function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hideHeader = false }) {
     const [settings, setSettings] = useState(null) // Moved to top
@@ -260,7 +261,14 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
             {/* The design implies this card merges with the cell. We might render the content directly. */}
             {!hideHeader && (
                 <div className="flex justify-between items-start">
-                    <h3 className="text-xl font-black text-neumo-brand">{format(day, 'MMM dd')}</h3>
+                    <div className="flex flex-col">
+                        <h3 className={cn("text-xl font-black", isHoliday ? "text-rose-500" : "text-neumo-brand")}>
+                            {format(day, 'MMM dd')}
+                        </h3>
+                        {isHoliday && (
+                            <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest">{getHolidayName(day) || '國定假日'}</span>
+                        )}
+                    </div>
                     <button onClick={onClose} className="neumo-button p-2 text-gray-400 hover:text-red-400">
                         <X size={18} />
                     </button>

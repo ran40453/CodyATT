@@ -92,7 +92,17 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
         const totalLeave = records.filter(r => r.isLeave).length // In days
 
         // Financials
-        const baseMonthly = settings?.salary?.baseMonthly !== undefined ? Number(settings.salary.baseMonthly) : 50000;
+        let baseMonthly = settings?.salary?.baseMonthly !== undefined ? Number(settings.salary.baseMonthly) : 50000;
+
+        // Try to get salary from history for the current month
+        if (settings.salaryHistory && Array.isArray(settings.salaryHistory)) {
+            const sortedHistory = [...settings.salaryHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const monthStart = startOfMonth(today);
+            const applicable = sortedHistory.find(h => new Date(h.date) <= monthStart);
+            if (applicable && applicable.amount) {
+                baseMonthly = Number(applicable.amount);
+            }
+        }
 
         let otPay = 0;
         let travelAllowance = 0;
@@ -132,6 +142,22 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
 
     const monthMetrics = calcMetrics(currentMonthRecords);
     const yearMetrics = calcMetrics(rollingYearRecords);
+
+    // Calculate Lifetime Cumulative Dept Comp Balance
+    const allDeptCompEarned = data.reduce((sum, r) => {
+        if (r.otType === 'internal') return sum + calculateCompLeaveUnits(r);
+        return sum;
+    }, 0);
+
+    const allDeptCompUsed = data.reduce((sum, r) => {
+        if (r.isLeave && r.leaveType === '部門補休') {
+            const duration = parseFloat(r.leaveDuration) || 0;
+            return sum + (duration * 2);
+        }
+        return sum;
+    }, 0);
+
+    const cumulativeDeptCompBalance = allDeptCompEarned - allDeptCompUsed;
 
     // Bar Chart Data (Horizontal Stacked)
     const barData = {
@@ -327,13 +353,13 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                         </div>
 
                         <div className="flex flex-col items-center">
-                            <span className={cn("text-4xl font-black tracking-tighter", yearMetrics.deptCompBalance < 0 ? "text-rose-500" : "#202731")}>
-                                {yearMetrics.deptCompBalance}
+                            <span className={cn("text-4xl font-black tracking-tighter", cumulativeDeptCompBalance < 0 ? "text-rose-500" : "#202731")}>
+                                {cumulativeDeptCompBalance}
                             </span>
                             <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">Units (Earned - Used)</span>
                         </div>
                         <div className="absolute bottom-3 flex items-center gap-1 text-[10px] font-bold text-indigo-600">
-                            <span className="font-black">Used: {yearMetrics.deptCompUsed}U</span>
+                            <span className="font-black">Earned: {allDeptCompEarned}U / Used: {allDeptCompUsed}U</span>
                         </div>
                     </motion.div>
                 </div>

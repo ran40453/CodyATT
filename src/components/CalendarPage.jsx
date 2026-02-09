@@ -3,6 +3,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMo
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { loadData, addOrUpdateRecord, fetchRecordsFromGist } from '../lib/storage'
+import { isTaiwanHoliday } from '../lib/holidays'
 import DayCard from './DayCard'
 import DayCardExpanded from './DayCardExpanded'
 
@@ -24,13 +25,26 @@ function CalendarPage({ data, onUpdate, isPrivacy }) {
 
     const getRecordForDay = (day) => {
         const dayStr = format(day, 'yyyy-MM-dd')
-        return data.find(r => {
+        const record = data.find(r => {
             if (!r.date) return false
-            // FIX: Use new Date() to ensure we parse ISO strings into local time before formatting
-            // This prevents timezone shifts (e.g. UTC vs Local) from causing off-by-one errors
             const dStr = format(new Date(r.date), 'yyyy-MM-dd')
             return dStr === dayStr
         })
+
+        // If no record exists, or it doesn't explicitly have isHoliday, check auto-detection
+        if (record) {
+            return {
+                ...record,
+                isHoliday: record.isHoliday !== undefined ? !!record.isHoliday : isTaiwanHoliday(day)
+            }
+        }
+
+        // Return a virtual record for auto-detected holidays
+        if (isTaiwanHoliday(day)) {
+            return { date: dayStr, isHoliday: true, _isAutoHoliday: true }
+        }
+
+        return null;
     }
 
     // Debugging: Log data length updates
