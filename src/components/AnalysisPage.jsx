@@ -14,13 +14,14 @@ import {
     Title,
     Tooltip,
     Legend,
-    Filler
+    Filler,
+    ArcElement
 } from 'chart.js'
-import { Bar, Line, Chart } from 'react-chartjs-2'
+import { Bar, Line, Chart, Doughnut } from 'react-chartjs-2'
 import { cn } from '../lib/utils'
 import { loadSettings, calculateDailySalary, fetchExchangeRate, calculateCompLeaveUnits, calculateOTHours, standardizeCountry, saveData, syncRecordsToGist } from '../lib/storage'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, BarController, LineController, Title, Tooltip, Legend, Filler)
+ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, BarController, LineController, Title, Tooltip, Legend, Filler, ArcElement)
 
 const parse = (d) => {
     if (!d) return new Date(0);
@@ -84,7 +85,14 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                 return sum + (results?.extra || 0);
             }, 0)
             const totalOT = records.reduce((sum, r) => sum + (parseFloat(r.otHours) || (r.endTime ? calculateOTHours(r.endTime, settings?.rules?.standardEndTime) : 0)), 0)
-            const totalComp = records.reduce((sum, r) => sum + calculateCompLeaveUnits(r), 0)
+            const totalDeptComp = records.reduce((sum, r) => {
+                if (r.otType === 'internal') return sum + calculateCompLeaveUnits(r);
+                return sum;
+            }, 0);
+            const totalCompanyComp = records.reduce((sum, r) => {
+                if (r.otType === 'leave') return sum + calculateCompLeaveUnits(r);
+                return sum;
+            }, 0);
             const totalBonus = records.reduce((sum, r) => sum + (parseFloat(r.bonus) || 0), 0)
             const totalTravel = records.reduce((sum, r) => {
                 const results = calculateDailySalary(r, { ...settings, liveRate });
@@ -97,7 +105,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
             // Trip count (days with country)
             const tripCount = records.filter(r => r.travelCountry && r.travelCountry.trim() !== '').length
 
-            return { extraTotal, totalOT, totalComp, totalBonus, totalTravel, totalOTPay, tripCount }
+            return { extraTotal, totalOT, totalDeptComp, totalCompanyComp, totalBonus, totalTravel, totalOTPay, tripCount }
         }
 
         const yearMetrics = getMetrics(rollingYearRecords)
@@ -167,7 +175,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
 
     // Travel Chart Data
     const otByMonth = chartMonths.map(m => getMonthlyStat(m, r => parseFloat(r.otHours) || (r.endTime ? calculateOTHours(r.endTime, settings?.rules?.standardEndTime) : 0)));
-    const compByMonth = chartMonths.map(m => getMonthlyStat(m, r => r.otType === 'leave' ? calculateCompLeaveUnits(r) : 0)); // Wait, Comp By Month in Units or Hours?
+    const compByMonth = chartMonths.map(m => getMonthlyStat(m, r => (r.otType === 'leave' || r.otType === 'internal') ? calculateCompLeaveUnits(r) : 0));
     // Using calculateCompLeaveUnits returns units. The chart usually compares HOURS vs UNITS or Hours vs Hours.
     // Dashboard compares OT Hours vs Comp Units.
     // Let's use Units for Comp.
@@ -308,7 +316,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                         className="space-y-6"
                     >
                         {/* Financial Stats */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div onClick={() => setIsSalaryDetailOpen(true)} className="cursor-pointer">
                                 <StatCard
                                     label="當年年薪 (Rolling 365)"
@@ -324,15 +332,15 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                                 icon={TrendingUp}
                                 color="text-blue-500"
                             />
-                        </div>
-                        <div onClick={() => setIsBonusDetailOpen(true)} className="cursor-pointer">
-                            <StatCard
-                                label="累計獎金與津貼"
-                                value={mask(`$${Math.round(stats.yearMetrics.totalBonus + stats.yearMetrics.totalTravel).toLocaleString()}`)}
-                                icon={Gift}
-                                color="text-amber-500"
-                                sub={`獎金: ${mask('$' + Math.round(stats.yearMetrics.totalBonus).toLocaleString())} / 津貼: ${mask('$' + Math.round(stats.yearMetrics.totalTravel).toLocaleString())}`}
-                            />
+                            <div onClick={() => setIsBonusDetailOpen(true)} className="cursor-pointer">
+                                <StatCard
+                                    label="累計獎金與津貼"
+                                    value={mask(`$${Math.round(stats.yearMetrics.totalBonus + stats.yearMetrics.totalTravel).toLocaleString()}`)}
+                                    icon={Gift}
+                                    color="text-amber-500"
+                                    sub={`獎金: ${mask('$' + Math.round(stats.yearMetrics.totalBonus).toLocaleString())}\n津貼: ${mask('$' + Math.round(stats.yearMetrics.totalTravel).toLocaleString())}`}
+                                />
+                            </div>
                         </div>
 
                         {/* Income Trend Chart */}
@@ -391,26 +399,43 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                             <div className="space-y-4">
                                 <div onClick={() => setIsLeaveListOpen(true)} className="cursor-pointer group relative h-full">
                                     <div className="absolute inset-0 bg-rose-400/0 group-hover:bg-rose-400/5 rounded-2xl transition-colors" />
-                                    <div className="neumo-card p-6 h-full flex flex-col">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                <Coffee size={14} className="text-rose-500" /> 請假統計
-                                            </h3>
-                                            <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-rose-300" />
-                                        </div>
+                                    <div className="neumo-card p-6 h-full flex flex-row items-center gap-4">
                                         <div className="flex-1">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <Coffee size={14} className="text-rose-500" /> 請假統計
+                                                </h3>
+                                                <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-rose-300" />
+                                            </div>
                                             <div className="flex items-baseline gap-1 mb-4">
                                                 <span className="text-4xl font-black text-rose-500">{data.filter(r => r.isLeave).length}</span>
                                                 <span className="text-[10px] font-black text-gray-400 uppercase">Records</span>
                                             </div>
-                                            <div className="space-y-2">
-                                                {leaveTypeStats().slice(0, 2).map(c => (
+                                            <div className="space-y-1">
+                                                {leaveTypeStats().slice(0, 3).map(c => (
                                                     <div key={c.name} className="flex justify-between text-[8px] font-black uppercase">
-                                                        <span className="text-gray-400">{c.name}</span>
+                                                        <span className="text-gray-400 truncate max-w-[60px]">{c.name}</span>
                                                         <span className="text-rose-400">{c.count.toFixed(1)}D</span>
                                                     </div>
                                                 ))}
                                             </div>
+                                        </div>
+                                        <div className="w-24 h-24 shrink-0">
+                                            <Doughnut
+                                                data={{
+                                                    labels: leaveTypeStats().map(s => s.name),
+                                                    datasets: [{
+                                                        data: leaveTypeStats().map(s => s.count),
+                                                        backgroundColor: ['#f43f5e', '#fb7185', '#fda4af', '#fecdd3', '#fff1f2'],
+                                                        borderWidth: 0,
+                                                        cutout: '70%'
+                                                    }]
+                                                }}
+                                                options={{
+                                                    plugins: { legend: { display: false }, tooltip: { enabled: true } },
+                                                    maintainAspectRatio: false
+                                                }}
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -420,26 +445,43 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                             <div className="space-y-4">
                                 <div onClick={() => setIsTravelListOpen(true)} className="cursor-pointer group relative h-full">
                                     <div className="absolute inset-0 bg-emerald-400/0 group-hover:bg-emerald-400/5 rounded-2xl transition-colors" />
-                                    <div className="neumo-card p-6 h-full flex flex-col">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                <Plane size={14} className="text-emerald-500" /> 出差統計
-                                            </h3>
-                                            <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-300" />
-                                        </div>
+                                    <div className="neumo-card p-6 h-full flex flex-row items-center gap-4">
                                         <div className="flex-1">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <Plane size={14} className="text-emerald-500" /> 出差統計
+                                                </h3>
+                                                <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-300" />
+                                            </div>
                                             <div className="flex items-baseline gap-1 mb-4">
                                                 <span className="text-4xl font-black text-emerald-500">{stats.yearMetrics.tripCount}</span>
                                                 <span className="text-[10px] font-black text-gray-400 uppercase">Days</span>
                                             </div>
-                                            <div className="space-y-2">
-                                                {countryStats().slice(0, 2).map(c => (
+                                            <div className="space-y-1">
+                                                {countryStats().slice(0, 3).map(c => (
                                                     <div key={c.name} className="flex justify-between text-[8px] font-black uppercase">
                                                         <span className="text-gray-400">{c.name}</span>
                                                         <span className="text-emerald-400">{c.count}D</span>
                                                     </div>
                                                 ))}
                                             </div>
+                                        </div>
+                                        <div className="w-24 h-24 shrink-0">
+                                            <Doughnut
+                                                data={{
+                                                    labels: countryStats().map(s => s.name),
+                                                    datasets: [{
+                                                        data: countryStats().map(s => s.count),
+                                                        backgroundColor: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#ecfdf5'],
+                                                        borderWidth: 0,
+                                                        cutout: '70%'
+                                                    }]
+                                                }}
+                                                options={{
+                                                    plugins: { legend: { display: false }, tooltip: { enabled: true } },
+                                                    maintainAspectRatio: false
+                                                }}
+                                            />
                                         </div>
                                     </div>
                                 </div>

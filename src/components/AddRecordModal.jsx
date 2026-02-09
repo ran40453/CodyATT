@@ -356,7 +356,16 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                                 >
                                                     加班費
                                                 </button>
-                                                {/* Official Comp removed as requested */}
+                                                <button
+                                                    disabled={otHours < 0.5}
+                                                    onClick={() => setOtType('leave')}
+                                                    className={cn(
+                                                        "flex-1 rounded-xl text-[10px] font-black transition-all",
+                                                        otType === 'leave' ? "bg-indigo-600 text-white shadow-lg" : "text-gray-400"
+                                                    )}
+                                                >
+                                                    公司補休
+                                                </button>
                                                 <button
                                                     disabled={otHours < 0.5}
                                                     onClick={() => setOtType('internal')}
@@ -365,7 +374,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                                         otType === 'internal' ? "bg-purple-600 text-white shadow-lg" : "text-gray-400"
                                                     )}
                                                 >
-                                                    內部補休
+                                                    部門補休
                                                 </button>
                                             </div>
                                         </div>

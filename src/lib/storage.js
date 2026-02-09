@@ -37,7 +37,8 @@ const defaultSettings = {
         '喪假': { ratio: 1.0, label: '喪假' },
         '有薪產假': { ratio: 1.0, label: '有薪產假' },
         '無薪產假': { ratio: 0.0, label: '無薪產假' },
-        '補休': { ratio: 1.0, label: '補休' }, // Paid (already earned), taking it doesn't deduct salary.
+        '公司補休': { ratio: 1.0, label: '公司補休' },
+        '部門補休': { ratio: 1.0, label: '部門補休' },
         '產檢假': { ratio: 1.0, label: '產檢假' },
         '陪產檢及陪產假': { ratio: 1.0, label: '陪產檢及陪產假' },
         '駐地休假': { ratio: 1.0, label: '駐地休假' },
@@ -755,7 +756,8 @@ export const loadSettings = () => {
             ...parsed,
             allowance: { ...defaultSettings.allowance, ...(parsed.allowance || {}) },
             salary: { ...defaultSettings.salary, ...(parsed.salary || {}) },
-            rules: { ...defaultSettings.rules, ...(parsed.rules || {}) }
+            rules: { ...defaultSettings.rules, ...(parsed.rules || {}) },
+            leaveRules: { ...defaultSettings.leaveRules, ...(parsed.leaveRules || {}) }
         };
     } catch (e) {
         console.error('Storage: Failed to load settings', e);

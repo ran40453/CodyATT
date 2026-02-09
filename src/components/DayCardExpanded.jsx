@@ -227,7 +227,7 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
 
     const toggleOtType = (e) => {
         e.stopPropagation();
-        const types = ['pay', 'internal'];
+        const types = ['pay', 'leave', 'internal'];
         const nextIndex = (types.indexOf(otType) + 1) % types.length;
         setOtType(types[nextIndex]);
     }
@@ -446,7 +446,7 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
 
                             <div className="text-right space-y-1">
                                 <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
-                                    預估 {otType === 'pay' ? '薪資' : otType === 'leave' ? '正式補休' : '內部補休'}
+                                    預估 {otType === 'pay' ? '薪資' : otType === 'leave' ? '公司補休' : '部門補休'}
                                 </p>
                                 <div className="flex items-baseline justify-end gap-1">
                                     <span className={cn(

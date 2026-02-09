@@ -73,7 +73,22 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
             return sum + (isNaN(hours) ? 0 : hours);
         }, 0)
 
-        const totalComp = records.reduce((sum, r) => sum + calculateCompLeaveUnits(r), 0)
+        // Dept Comp Earned (Internal OT)
+        const deptCompEarned = records.reduce((sum, r) => {
+            if (r.otType === 'internal') return sum + calculateCompLeaveUnits(r);
+            return sum;
+        }, 0);
+
+        // Dept Comp Used (部門補休)
+        const deptCompUsed = records.reduce((sum, r) => {
+            if (r.isLeave && r.leaveType === '部門補休') {
+                const duration = parseFloat(r.leaveDuration) || 0;
+                return sum + (duration * 2); // 1 hour = 2 units
+            }
+            return sum;
+        }, 0);
+
+        const deptCompBalance = deptCompEarned - deptCompUsed;
         const totalLeave = records.filter(r => r.isLeave).length // In days
 
         // Financials
@@ -105,7 +120,9 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
             bonus,
             estimatedTotal,
             totalOT,
-            totalComp,
+            deptCompBalance,
+            deptCompEarned,
+            deptCompUsed,
             totalLeave,
             monthPercent,
             dayOfMonth,
@@ -306,17 +323,17 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                             <div className="p-1.5 rounded-lg neumo-pressed text-indigo-500">
                                 <Coffee size={14} />
                             </div>
-                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">補休單位</span>
+                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">部門補休剩餘</span>
                         </div>
 
                         <div className="flex flex-col items-center">
-                            <span className="text-4xl font-black text-[#202731] tracking-tighter">
-                                {yearMetrics.totalComp}
+                            <span className={cn("text-4xl font-black tracking-tighter", yearMetrics.deptCompBalance < 0 ? "text-rose-500" : "#202731")}>
+                                {yearMetrics.deptCompBalance}
                             </span>
-                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">Year Total</span>
+                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">Units (Earned - Used)</span>
                         </div>
                         <div className="absolute bottom-3 flex items-center gap-1 text-[10px] font-bold text-indigo-600">
-                            <span className="font-black">M: {monthMetrics.totalComp}U</span>
+                            <span className="font-black">Used: {yearMetrics.deptCompUsed}U</span>
                         </div>
                     </motion.div>
                 </div>
