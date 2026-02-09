@@ -228,14 +228,16 @@ export const standardizeRecords = (records) => {
 export const calculateDailySalary = (record, settings) => {
     const emptyMetrics = { total: 0, extra: 0, otPay: 0, travelAllowance: 0, baseDayPay: 0, bonus: 0 };
     if (!settings || !record) return emptyMetrics;
-    if (record.isLeave && record.recordType !== 'bonus') return emptyMetrics; // Allow bonus on leave days if it was manually entered
+    if (record.isLeave && record.recordType !== 'bonus') return emptyMetrics;
+
+    const recordDate = new Date(record.date);
+    const dayOfWeek = isNaN(recordDate.getTime()) ? -1 : getDay(recordDate);
 
     // 1. Get Base Salary for that date (History support)
     let baseMonthly = parseFloat(settings.salary?.baseMonthly) || 0;
     if (settings.salaryHistory && Array.isArray(settings.salaryHistory)) {
         try {
             const sortedHistory = [...settings.salaryHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
-            const recordDate = new Date(record.date);
             if (!isNaN(recordDate.getTime())) {
                 const applicable = sortedHistory.find(h => new Date(h.date) <= recordDate);
                 if (applicable && !isNaN(parseFloat(applicable.amount))) {
@@ -265,11 +267,6 @@ export const calculateDailySalary = (record, settings) => {
 
         if (isRestDay) {
             if (isHoliday && !record.isWorkDay) {
-                // Holiday Logic (2.0x) - Kept separate if Holiday has specific rules differently from Sat/Sun
-                // User said "Saturday... 1.34/1.67/2.67", which matches the generic Rest Day logic below.
-                // But code had specific Holiday block. Let's assume isWorkDay overrides even Holiday status?
-                // "If checked... treat as weekday". Yes.
-                // So if isWorkDay is true, we skip this entire block and go to 'else'.
                 if (otHours <= 8) {
                     otPay = otHours * hourlyRate * 2.0;
                 } else {
@@ -303,15 +300,6 @@ export const calculateDailySalary = (record, settings) => {
         }
     }
 
-    const recordDate = new Date(record.date);
-    const dayOfWeek = isNaN(recordDate.getTime()) ? -1 : getDay(recordDate);
-    // Adjusted isSpecialDay for base pay calc? 
-    // Usually base pay is monthly, so daily salary is just reference. 
-    // If it's a holiday/weekend, baseDayPay might be 0 additional?
-    // Current logic: isSpecialDay = holiday or sat/sun.
-    // If isWorkDay is true on a Saturday, technically they are working, so maybe baseDayPay should exist?
-    // But they are already getting Paid Monthly.
-    // Usually "Makeup Day" means it's treated like a Monday.
     const effectiveIsHoliday = record.isHoliday !== undefined ? !!record.isHoliday : isTaiwanHoliday(recordDate);
     const isSpecialDay = (effectiveIsHoliday || dayOfWeek === 0 || dayOfWeek === 6) && !record.isWorkDay;
     const baseDayPay = isSpecialDay ? 0 : daySalary;
