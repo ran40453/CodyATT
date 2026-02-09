@@ -27,6 +27,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
     const [isFullDay, setIsFullDay] = useState(true)
     const [leaveStartTime, setLeaveStartTime] = useState(settings?.rules?.standardStartTime || '08:00')
     const [leaveEndTime, setLeaveEndTime] = useState(settings?.rules?.standardEndTime || '17:30')
+    const [isLeaveTypePickerOpen, setIsLeaveTypePickerOpen] = useState(false);
 
     const bonusCategories = settings?.bonusCategories || ['季獎金', '年終獎金', '其他獎金', '補助金', '退費', '分紅']
 
@@ -415,24 +416,46 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                         animate={{ height: 'auto', opacity: 1 }}
                                         className="space-y-4 pt-2 overflow-hidden"
                                     >
-                                        <div className="space-y-2">
+                                        <div className="space-y-2 relative">
                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">假別 (Type)</label>
-                                            <div className="grid grid-cols-4 gap-2">
-                                                {Object.keys(settings?.leaveRules || {}).map(type => (
-                                                    <button
-                                                        key={type}
-                                                        onClick={() => setLeaveType(type)}
-                                                        className={cn(
-                                                            "py-2 px-1 text-[10px] font-bold rounded-xl transition-all border border-transparent",
-                                                            leaveType === type
-                                                                ? "bg-rose-50 text-rose-600 border-rose-200 shadow-sm"
-                                                                : "neumo-raised text-gray-400 hover:text-gray-600"
-                                                        )}
+                                            <button
+                                                onClick={() => setIsLeaveTypePickerOpen(!isLeaveTypePickerOpen)}
+                                                className="w-full h-12 neumo-raised rounded-2xl flex items-center justify-between px-4 text-xs font-black text-gray-600 transition-all hover:scale-[0.99] active:scale-95"
+                                            >
+                                                <span>{leaveType}</span>
+                                                <div className={cn("transition-transform duration-200", isLeaveTypePickerOpen ? "rotate-180" : "rotate-0")}>
+                                                    <Check size={14} className="text-neumo-brand" />
+                                                </div>
+                                            </button>
+
+                                            <AnimatePresence>
+                                                {isLeaveTypePickerOpen && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                                        className="absolute left-0 right-0 top-full mt-2 z-[60] bg-[#E0E5EC]/95 backdrop-blur-md neumo-card p-2 grid grid-cols-2 gap-2 shadow-2xl"
                                                     >
-                                                        {type}
-                                                    </button>
-                                                ))}
-                                            </div>
+                                                        {Object.keys(settings?.leaveRules || {}).map(type => (
+                                                            <button
+                                                                key={type}
+                                                                onClick={() => {
+                                                                    setLeaveType(type);
+                                                                    setIsLeaveTypePickerOpen(false);
+                                                                }}
+                                                                className={cn(
+                                                                    "py-3 px-1 text-[10px] font-black rounded-xl transition-all border border-transparent text-center",
+                                                                    leaveType === type
+                                                                        ? "bg-rose-50 text-rose-600 border-rose-200 shadow-sm"
+                                                                        : "neumo-raised text-gray-400 hover:text-gray-600"
+                                                                )}
+                                                            >
+                                                                {type}
+                                                            </button>
+                                                        ))}
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
                                         </div>
 
                                         <div className="flex items-center justify-between neumo-pressed p-3 rounded-2xl">
