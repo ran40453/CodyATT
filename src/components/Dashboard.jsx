@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, subDays } from 'date-fns'
-import { TrendingUp, Globe, Wallet, Clock, Coffee, Moon, Gift, Eye, EyeOff, Briefcase, ChevronRight } from 'lucide-react'
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, subDays, getDaysInMonth, eachDayOfInterval, isSameDay } from 'date-fns'
+import { TrendingUp, Globe, Wallet, Clock, Coffee, Moon, Gift, Eye, EyeOff, Briefcase, ChevronRight, Calendar } from 'lucide-react'
 import { motion } from 'framer-motion'
 import {
     Chart as ChartJS,
@@ -94,6 +94,10 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
 
         const estimatedTotal = (baseMonthly + otPay + travelAllowance + bonus) - leaveDeduction;
 
+        const daysInMonth = getDaysInMonth(today);
+        const dayOfMonth = today.getDate();
+        const monthPercent = Math.round((dayOfMonth / daysInMonth) * 100);
+
         return {
             baseMonthly,
             otPay,
@@ -102,7 +106,10 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
             estimatedTotal,
             totalOT,
             totalComp,
-            totalLeave
+            totalLeave,
+            monthPercent,
+            dayOfMonth,
+            daysInMonth
         }
     }
 
@@ -203,8 +210,21 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
         }
     }
 
+    // Attendance Grid Data
+    const currentMonthDays = eachDayOfInterval(currentMonthInterval);
+    const attendanceBoxes = currentMonthDays.map(day => {
+        const dayStr = format(day, 'yyyy-MM-dd');
+        const record = data.find(r => format(parse(r.date), 'yyyy-MM-dd') === dayStr);
+        let type = 'none';
+        if (record) type = record.isLeave ? 'leave' : 'attendance';
+        return { day, type };
+    });
+    const attendedCount = attendanceBoxes.filter(b => b.type === 'attendance').length;
+    const totalDaysCount = attendanceBoxes.length;
+    const attendedPercent = totalDaysCount > 0 ? Math.round((attendedCount / totalDaysCount) * 100) : 0;
+
     return (
-        <div className="space-y-8 pb-32">
+        <div className="space-y-6 pb-32">
             <header className="flex justify-between items-start">
                 <div className="space-y-1">
                     <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
@@ -220,112 +240,130 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                 </button>
             </header>
 
+            {/* Attendance Grid at Top */}
+            <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="neumo-card p-4"
+            >
+                <div className="flex justify-between items-end mb-4">
+                    <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">本月出勤概況</h3>
+                    <div className="text-[10px] font-bold text-gray-500">
+                        <span className="text-neumo-brand">{attendedCount}</span>
+                        <span className="text-gray-300 mx-1">/</span>
+                        <span>{totalDaysCount}</span>
+                        <span className="ml-2 text-xs font-black text-gray-300">({attendedPercent}%)</span>
+                    </div>
+                </div>
+                <div className="flex gap-1 overflow-x-auto pb-2 custom-scrollbar">
+                    {attendanceBoxes.map((box, i) => (
+                        <div key={i} className="flex flex-col items-center gap-1 min-w-[20px]">
+                            <div className={cn(
+                                "w-6 h-6 rounded-md",
+                                box.type === 'attendance' ? "bg-green-500" : box.type === 'leave' ? "bg-rose-500" : "bg-gray-100"
+                            )} />
+                            <span className="text-[8px] font-bold text-gray-300">{format(box.day, 'd')}</span>
+                        </div>
+                    ))}
+                </div>
+            </motion.div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Left Column: Work Stats */}
-                <div className="space-y-6">
-                    {/* OT Stats */}
+                <div className="grid grid-cols-2 gap-4">
+                    {/* OT Stats - Square */}
                     <motion.div
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="neumo-card p-6 flex flex-col items-center justify-center space-y-4 relative overflow-hidden"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="neumo-card p-4 flex flex-col items-center justify-center aspect-square relative overflow-hidden"
                     >
-                        <div className="absolute top-2 left-3 flex items-center gap-2">
-                            <div className="p-2 rounded-xl neumo-pressed text-blue-500">
-                                <Clock size={20} />
+                        <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                            <div className="p-1.5 rounded-lg neumo-pressed text-blue-500">
+                                <Clock size={14} />
                             </div>
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">加班統計</span>
+                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">加班時數</span>
                         </div>
 
-                        <div className="flex flex-col items-center mt-4">
-                            <span className="text-5xl font-black text-[#202731] tracking-tighter">
+                        <div className="flex flex-col items-center">
+                            <span className="text-4xl font-black text-[#202731] tracking-tighter">
                                 {yearMetrics.totalOT.toFixed(1)}
                             </span>
-                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
-                                Year Total (Hours)
-                            </span>
+                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">Year Total</span>
                         </div>
-                        <div className="w-full h-px bg-gray-200/50 my-2" />
-                        <div className="flex items-center gap-2 text-sm font-bold text-gray-500">
-                            <span className="px-2 py-1 rounded bg-blue-50 text-blue-600 text-xs">This Month</span>
-                            <span className="text-xl text-blue-600 font-black">{monthMetrics.totalOT.toFixed(1)}</span>
-                            <span className="text-[10px] uppercase">Hours</span>
+                        <div className="absolute bottom-3 flex items-center gap-1 text-[10px] font-bold text-blue-600">
+                            <span className="font-black">M: {monthMetrics.totalOT.toFixed(1)}H</span>
                         </div>
                     </motion.div>
 
-                    {/* Comp Stats */}
+                    {/* Comp Stats - Square */}
                     <motion.div
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.1 }}
-                        className="neumo-card p-6 flex flex-col items-center justify-center space-y-4 relative overflow-hidden"
+                        className="neumo-card p-4 flex flex-col items-center justify-center aspect-square relative overflow-hidden"
                     >
-                        <div className="absolute top-2 left-3 flex items-center gap-2">
-                            <div className="p-2 rounded-xl neumo-pressed text-indigo-500">
-                                <Coffee size={20} />
+                        <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                            <div className="p-1.5 rounded-lg neumo-pressed text-indigo-500">
+                                <Coffee size={14} />
                             </div>
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">補休統計</span>
+                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">補休單位</span>
                         </div>
 
-                        <div className="flex flex-col items-center mt-4">
-                            <span className="text-5xl font-black text-[#202731] tracking-tighter">
+                        <div className="flex flex-col items-center">
+                            <span className="text-4xl font-black text-[#202731] tracking-tighter">
                                 {yearMetrics.totalComp}
                             </span>
-                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
-                                Year Total (Units)
-                            </span>
+                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">Year Total</span>
                         </div>
-                        <div className="w-full h-px bg-gray-200/50 my-2" />
-                        <div className="flex items-center gap-2 text-sm font-bold text-gray-500">
-                            <span className="px-2 py-1 rounded bg-indigo-50 text-indigo-600 text-xs">This Month</span>
-                            <span className="text-xl text-indigo-600 font-black">{monthMetrics.totalComp}</span>
-                            <span className="text-[10px] uppercase">Units</span>
+                        <div className="absolute bottom-3 flex items-center gap-1 text-[10px] font-bold text-indigo-600">
+                            <span className="font-black">M: {monthMetrics.totalComp}U</span>
                         </div>
                     </motion.div>
                 </div>
 
                 {/* Right Column: Financials */}
                 <div className="space-y-6">
-                    {/* Combined Salary Distribution Card */}
                     <motion.div
                         initial={{ opacity: 0, y: 15 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="neumo-card p-6 flex flex-col justify-between h-full group"
                     >
-                        <div className="flex justify-between items-start mb-6">
+                        <div className="flex justify-between items-start mb-4">
                             <div className="flex items-center gap-2 text-gray-400">
                                 <div className="p-2 rounded-xl neumo-pressed text-purple-500">
                                     <TrendingUp size={20} />
                                 </div>
                                 <h2 className="text-xs font-black uppercase tracking-widest">本月薪資分布</h2>
                             </div>
-                            <div className="p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-                                <Wallet size={60} />
-                            </div>
+                        </div>
+
+                        {/* legends at top, horizontal, no boxes */}
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 mb-4">
+                            <LegendItem color="bg-sky-400" label="底薪" />
+                            <LegendItem color="bg-orange-500" label="加班" />
+                            <LegendItem color="bg-emerald-500" label="津貼" />
+                            <LegendItem color="bg-amber-500" label="獎金" />
                         </div>
 
                         {/* Big Number */}
-                        <div className="flex flex-col mb-8">
+                        <div className="flex flex-col mb-4">
                             <div className="flex items-baseline gap-2">
                                 <span className="text-5xl lg:text-6xl font-black text-[#202731] tracking-tighter">
                                     {mask('$' + Math.round(monthMetrics.estimatedTotal).toLocaleString())}
                                 </span>
-                                <span className="text-sm font-bold text-gray-400">TWD</span>
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-bold text-gray-400 leading-none">TWD</span>
+                                    <span className="text-[10px] font-black text-neumo-brand mt-1 whitespace-nowrap">
+                                        {monthMetrics.dayOfMonth}/{monthMetrics.daysInMonth} = {monthMetrics.monthPercent}%
+                                    </span>
+                                </div>
                             </div>
-                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Estimated Total</span>
                         </div>
 
                         {/* Chart Section */}
                         <div className="space-y-4">
                             <div className="h-[60px] relative w-full">
                                 <Bar data={barData} options={barOptions} plugins={[textPlugin]} />
-                            </div>
-
-                            {/* Detailed Legend */}
-                            <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-100">
-                                <LegendItem color="bg-sky-400" label="底薪" value={mask('$' + Math.round(monthMetrics.baseMonthly).toLocaleString())} />
-                                <LegendItem color="bg-orange-500" label="加班" value={mask('$' + Math.round(monthMetrics.otPay).toLocaleString())} />
-                                <LegendItem color="bg-emerald-500" label="津貼" value={mask('$' + Math.round(monthMetrics.travelAllowance).toLocaleString())} />
-                                <LegendItem color="bg-amber-500" label="獎金" value={mask('$' + Math.round(monthMetrics.bonus).toLocaleString())} />
                             </div>
                         </div>
                     </motion.div>
@@ -335,14 +373,11 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
     )
 }
 
-function LegendItem({ color, label, value }) {
+function LegendItem({ color, label }) {
     return (
-        <div className="min-w-[80px] p-2 rounded-xl neumo-pressed flex flex-col gap-1">
-            <div className="flex items-center gap-1.5">
-                <div className={cn("w-2 h-2 rounded-full", color.replace('bg-', 'bg-').replace('text-', 'bg-'))} />
-                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{label}</span>
-            </div>
-            <span className="text-xs font-black text-gray-600 pl-3.5">{value}</span>
+        <div className="flex items-center gap-1.5">
+            <div className={cn("w-2 h-2 rounded-full", color)} />
+            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{label}</span>
         </div>
     )
 }

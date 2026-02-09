@@ -362,26 +362,38 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                         className="space-y-6"
                     >
                         {/* Travel Stats & History */}
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div onClick={() => setIsLeaveListOpen(true)} className="cursor-pointer group relative">
                                 <div className="absolute inset-0 bg-rose-400/0 group-hover:bg-rose-400/5 rounded-2xl transition-colors" />
-                                <MiniStatCard label="請假" value={data.filter(r => r.isLeave).length} unit="Recs" color="text-rose-500" />
+                                <MiniStatCard label="請假統計" value={data.filter(r => r.isLeave).length} unit="Records" color="text-rose-500" />
                                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-rose-300">
                                     <ArrowUpRight size={12} />
                                 </div>
                             </div>
-                            <div onClick={() => setIsTravelListOpen(true)} className="cursor-pointer group relative">
-                                <div className="absolute inset-0 bg-emerald-400/0 group-hover:bg-emerald-400/5 rounded-2xl transition-colors" />
-                                <MiniStatCard label="出差" value={stats.yearMetrics.tripCount} unit="Days" color="text-emerald-500" />
-                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-emerald-300">
-                                    <ArrowUpRight size={12} />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div onClick={() => setIsTravelListOpen(true)} className="cursor-pointer group relative">
+                                    <div className="absolute inset-0 bg-emerald-400/0 group-hover:bg-emerald-400/5 rounded-2xl transition-colors" />
+                                    <MiniStatCard
+                                        label="出差統計"
+                                        value={stats.yearMetrics.tripCount} unit="Days"
+                                        subValue={mask('$' + Math.round(stats.yearMetrics.totalTravel).toLocaleString())}
+                                        color="text-emerald-500"
+                                    />
+                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-emerald-300">
+                                        <ArrowUpRight size={12} />
+                                    </div>
                                 </div>
-                            </div>
-                            <div onClick={() => setIsOTListOpen(true)} className="cursor-pointer group relative">
-                                <div className="absolute inset-0 bg-indigo-400/0 group-hover:bg-indigo-400/5 rounded-2xl transition-colors" />
-                                <MiniStatCard label="加班" value={stats.yearMetrics.totalOT.toFixed(0)} unit="H" color="text-indigo-500" />
-                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-indigo-300">
-                                    <ArrowUpRight size={12} />
+                                <div onClick={() => setIsOTListOpen(true)} className="cursor-pointer group relative">
+                                    <div className="absolute inset-0 bg-indigo-400/0 group-hover:bg-indigo-400/5 rounded-2xl transition-colors" />
+                                    <MiniStatCard
+                                        label="加班統計"
+                                        value={stats.yearMetrics.totalOT.toFixed(1)} unit="Hours"
+                                        subValue={mask('$' + Math.round(stats.yearMetrics.totalOTPay).toLocaleString())}
+                                        color="text-indigo-500"
+                                    />
+                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-indigo-300">
+                                        <ArrowUpRight size={12} />
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -391,29 +403,6 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                             <LeaveBreakdownCard label="假別統計 (Days)" items={leaveTypeStats()} />
                         </div>
 
-                        {/* Attendance Grid */}
-                        <div className="neumo-card p-4">
-                            <div className="flex justify-between items-end mb-4">
-                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">本月出勤概況</h3>
-                                <div className="text-[10px] font-bold text-gray-500">
-                                    <span className="text-neumo-brand">{attendedCount}</span>
-                                    <span className="text-gray-300 mx-1">/</span>
-                                    <span>{totalDays}</span>
-                                    <span className="ml-2 text-xs font-black text-gray-300">({attendedPercent}%)</span>
-                                </div>
-                            </div>
-                            <div className="flex gap-1 overflow-x-auto pb-2 custom-scrollbar">
-                                {attendanceBoxes.map((box, i) => (
-                                    <div key={i} className="flex flex-col items-center gap-1 min-w-[20px]">
-                                        <div className={cn(
-                                            "w-6 h-6 rounded-md",
-                                            box.type === 'attendance' ? "bg-green-500" : box.type === 'leave' ? "bg-rose-500" : "bg-gray-100"
-                                        )} />
-                                        <span className="text-[8px] font-bold text-gray-300">{format(box.day, 'd')}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
 
                         {/* Work Load Chart */}
                         <div className="neumo-card h-[300px] p-4 flex flex-col">
@@ -455,6 +444,8 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                 isOpen={isTravelListOpen}
                 onClose={() => setIsTravelListOpen(false)}
                 data={data.filter(r => r.travelCountry)}
+                settings={settings}
+                liveRate={liveRate}
             />
             <OTListModal
                 isOpen={isOTListOpen}
@@ -482,12 +473,19 @@ function StatCard({ label, value, sub, unit, icon: Icon, color }) {
     )
 }
 
-function MiniStatCard({ label, value, unit, color }) {
+function MiniStatCard({ label, value, unit, subValue, color }) {
     return (
-        <div className="neumo-card p-3 flex flex-col items-center justify-center space-y-1 h-full">
+        <div className="neumo-card p-4 flex flex-col items-center justify-center space-y-1 h-full aspect-square md:aspect-auto">
             <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{label}</span>
-            <h4 className={cn("text-xl font-black leading-none", color)}>{value}</h4>
-            <span className="text-[8px] font-bold text-gray-300 lowercase">{unit}</span>
+            <div className="flex flex-col items-center">
+                <h4 className={cn("text-2xl font-black leading-none", color)}>{value}</h4>
+                <span className="text-[8px] font-bold text-gray-300 lowercase">{unit}</span>
+            </div>
+            {subValue && (
+                <div className="mt-1 pt-1 border-t border-gray-100 w-full text-center">
+                    <span className="text-[10px] font-black text-gray-600 italic">{subValue}</span>
+                </div>
+            )}
         </div>
     )
 }
@@ -636,32 +634,40 @@ function LeaveListModal({ isOpen, onClose, data }) {
     )
 }
 
-function TravelListModal({ isOpen, onClose, data }) {
+function TravelListModal({ isOpen, onClose, data, settings, liveRate }) {
     if (!isOpen) return null;
 
     // Sort asc to find ranges
     const sorted = [...data].sort((a, b) => new Date(a.date) - new Date(b.date));
     const ranges = [];
     if (sorted.length > 0) {
-        let currentRange = { start: sorted[0], end: sorted[0], country: sorted[0].travelCountry };
+        let currentRange = {
+            start: sorted[0],
+            end: sorted[0],
+            country: sorted[0].travelCountry,
+            records: [sorted[0]]
+        };
         for (let i = 1; i < sorted.length; i++) {
             const current = sorted[i];
             const prev = currentRange.end;
-            // Check consecutive days (difference is 1 day or sameday if duplicate)
-            // Actually eachDayOfInterval includes start and end. 
-            // We just check if current date is prev + 1 day.
+
             const currentDateObj = parse(current.date);
             const prevDateObj = parse(prev.date);
 
-            // Robust check using differenceInCalendarDays (ignoring time)
             const isConsecutive = differenceInCalendarDays(currentDateObj, prevDateObj) === 1;
             const isSameCountry = standardizeCountry(current.travelCountry) === standardizeCountry(currentRange.country);
 
             if (isConsecutive && isSameCountry) {
                 currentRange.end = current;
+                currentRange.records.push(current);
             } else {
                 ranges.push(currentRange);
-                currentRange = { start: current, end: current, country: current.travelCountry };
+                currentRange = {
+                    start: current,
+                    end: current,
+                    country: current.travelCountry,
+                    records: [current]
+                };
             }
         }
         ranges.push(currentRange);
@@ -684,23 +690,34 @@ function TravelListModal({ isOpen, onClose, data }) {
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
                     {ranges.length === 0 && <p className="text-center text-gray-400 text-xs">尚無出差紀錄</p>}
-                    {ranges.map((range, i) => (
-                        <div key={i} className="neumo-pressed p-4 rounded-xl flex justify-between items-center">
-                            <div>
-                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{getCountryName(range.country)}</div>
-                                <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
-                                    <span>{format(parse(range.start.date), 'yyyy/MM/dd')}</span>
-                                    <span className="text-gray-400">&rarr;</span>
-                                    <span>{format(parse(range.end.date), 'yyyy/MM/dd')}</span>
+                    {ranges.map((range, i) => {
+                        // Calculate total allowance for this range
+                        const totalAllowance = range.records.reduce((sum, r) => {
+                            const results = calculateDailySalary(r, { ...settings, liveRate });
+                            return sum + (results?.travelAllowance || 0);
+                        }, 0);
+
+                        return (
+                            <div key={i} className="neumo-pressed p-4 rounded-xl flex justify-between items-center">
+                                <div>
+                                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{getCountryName(range.country)}</div>
+                                    <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
+                                        <span>{format(parse(range.start.date), 'yyyy/MM/dd')}</span>
+                                        <span className="text-gray-400">&rarr;</span>
+                                        <span>{format(parse(range.end.date), 'yyyy/MM/dd')}</span>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-0.5">
+                                        {range.records.length} Days
+                                    </div>
+                                    <div className="text-xs font-black text-gray-700">
+                                        ${Math.round(totalAllowance).toLocaleString()}
+                                    </div>
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">
-                                    {Math.ceil((parse(range.end.date) - parse(range.start.date)) / (1000 * 60 * 60 * 24)) + 1} Days
-                                </span>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </motion.div>
         </div>
@@ -730,13 +747,15 @@ function OTListModal({ isOpen, onClose, data, settings, liveRate }) {
                             <div key={i} className="neumo-pressed p-3 rounded-xl flex justify-between items-center">
                                 <div className="flex items-center gap-3">
                                     <div className="flex flex-col items-center justify-center w-12 h-12 bg-white rounded-lg shadow-sm">
-                                        <span className="text-[8px] font-black text-gray-400 uppercase leading-none">{format(new Date(r.date), 'yyyy')}</span>
-                                        <span className="text-[8px] font-black text-gray-400 uppercase">{format(new Date(r.date), 'MMM')}</span>
-                                        <span className="text-lg font-black text-[#202731] leading-none">{format(new Date(r.date), 'dd')}</span>
+                                        <span className="text-[8px] font-black text-gray-400 uppercase leading-none">{format(parse(r.date), 'yyyy')}</span>
+                                        <span className="text-[8px] font-black text-gray-400 uppercase">{format(parse(r.date), 'MMM')}</span>
+                                        <span className="text-lg font-black text-[#202731] leading-none">{format(parse(r.date), 'dd')}</span>
                                     </div>
                                     <div>
-                                        <div className="text-xs font-black text-gray-700">{r.otType === 'leave' ? '補休' : '加班費'}</div>
-                                        <div className="text-[9px] font-bold text-gray-400">{parseFloat(r.otHours).toFixed(1)} Hours</div>
+                                        <div className="text-xs font-black text-gray-700">{parseFloat(r.otHours).toFixed(1)} Hours</div>
+                                        <div className="text-[9px] font-bold text-gray-400">
+                                            {r.otType === 'leave' ? '補休' : '加班'}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="text-right">
