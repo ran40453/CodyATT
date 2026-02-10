@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Plus, Calendar, Globe, Palmtree, Moon, Clock, CreditCard, Coffee, Gift, Check } from 'lucide-react'
+import { X, Plus, Calendar, Globe, Palmtree, Moon, Clock, CreditCard, Coffee, Gift, Check, DollarSign } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '../lib/utils'
 
@@ -28,6 +28,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
     const [leaveStartTime, setLeaveStartTime] = useState(settings?.rules?.standardStartTime || '08:00')
     const [leaveEndTime, setLeaveEndTime] = useState(settings?.rules?.standardEndTime || '17:30')
     const [isLeaveTypePickerOpen, setIsLeaveTypePickerOpen] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
 
     const bonusCategories = settings?.bonusCategories || ['季獎金', '年終獎金', '其他獎金', '補助金', '退費', '分紅']
 
@@ -345,36 +346,26 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
                                                 <CreditCard size={12} /> 加班類型
                                             </label>
-                                            <div className="flex gap-1 neumo-pressed p-1 rounded-2xl h-12">
+                                            <div className="flex gap-2 neumo-pressed p-1.5 rounded-2xl h-12">
                                                 <button
                                                     disabled={otHours < 0.5}
                                                     onClick={() => setOtType('pay')}
                                                     className={cn(
-                                                        "flex-1 rounded-xl text-[10px] font-black transition-all",
+                                                        "flex-1 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-1.5",
                                                         otType === 'pay' ? "bg-neumo-brand text-white shadow-lg" : "text-gray-400"
                                                     )}
                                                 >
-                                                    加班費
-                                                </button>
-                                                <button
-                                                    disabled={otHours < 0.5}
-                                                    onClick={() => setOtType('leave')}
-                                                    className={cn(
-                                                        "flex-1 rounded-xl text-[10px] font-black transition-all",
-                                                        otType === 'leave' ? "bg-indigo-600 text-white shadow-lg" : "text-gray-400"
-                                                    )}
-                                                >
-                                                    公司補休
+                                                    <DollarSign size={14} /> 計薪
                                                 </button>
                                                 <button
                                                     disabled={otHours < 0.5}
                                                     onClick={() => setOtType('internal')}
                                                     className={cn(
-                                                        "flex-1 rounded-xl text-[10px] font-black transition-all",
+                                                        "flex-1 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-1.5",
                                                         otType === 'internal' ? "bg-purple-600 text-white shadow-lg" : "text-gray-400"
                                                     )}
                                                 >
-                                                    部門補休
+                                                    <Coffee size={14} /> 部門補休
                                                 </button>
                                             </div>
                                         </div>

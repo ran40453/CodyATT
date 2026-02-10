@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, subMonths, isSameDay, startOfWeek, endOfWeek, setMonth, setYear, getDay } from 'date-fns'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, subMonths, isSameDay, startOfWeek, endOfWeek, setMonth, setYear, getDay, eachMonthOfInterval, isToday } from 'date-fns'
+import { ChevronLeft, ChevronRight, Calendar, Grid3X3 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { loadData, addOrUpdateRecord, fetchRecordsFromGist } from '../lib/storage'
 import { isTaiwanHoliday } from '../lib/holidays'
@@ -10,6 +10,7 @@ import DayCardExpanded from './DayCardExpanded'
 function CalendarPage({ data, onUpdate, isPrivacy }) {
     const [currentDate, setCurrentDate] = useState(new Date())
     const [focusedDay, setFocusedDay] = useState(null)
+    const [isYearView, setIsYearView] = useState(false)
 
     const monthStart = startOfMonth(currentDate)
     const monthEnd = endOfMonth(monthStart)
@@ -155,65 +156,146 @@ function CalendarPage({ data, onUpdate, isPrivacy }) {
                             {months.map(m => <option key={m} value={m}>{format(new Date(2024, m), 'MM')}</option>)}
                         </select>
                     </div>
+                    <button
+                        onClick={() => { setCurrentDate(new Date()); setIsYearView(false); }}
+                        className="neumo-button p-1.5 text-neumo-brand"
+                        title="跳至本月"
+                    >
+                        <Calendar size={16} />
+                    </button>
+                    <button
+                        onClick={() => setIsYearView(!isYearView)}
+                        className={`neumo-button p-1.5 hidden md:flex ${isYearView ? 'text-neumo-brand' : 'text-gray-400'}`}
+                        title="年曆模式"
+                    >
+                        <Grid3X3 size={16} />
+                    </button>
                 </div>
                 <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="neumo-button p-2">
                     <ChevronRight size={20} />
                 </button>
             </div>
 
-            {/* Calendar Grid */}
-            <div className="relative pb-12">
-                {/* Weekday Labels */}
-                <div className="grid grid-cols-7 gap-1 md:gap-3 mb-1">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                        <div key={day} className="text-center text-[7px] md:text-[9px] font-black text-gray-400 uppercase tracking-widest">
-                            {day}
+            {isYearView ? (
+                <YearView
+                    year={currentDate.getFullYear()}
+                    data={data}
+                    onSelectMonth={(m) => { setCurrentDate(setMonth(setYear(new Date(), currentDate.getFullYear()), m)); setIsYearView(false); }}
+                />
+            ) : (
+                <>
+
+                    {/* Calendar Grid */}
+                    <div className="relative pb-12">
+                        {/* Weekday Labels */}
+                        <div className="grid grid-cols-7 gap-1 md:gap-3 mb-1">
+                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                                <div key={day} className="text-center text-[7px] md:text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                                    {day}
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
 
-                {/* Main Grid */}
-                <div
-                    className="grid grid-cols-7 gap-1 md:gap-3 lg:min-h-[600px] relative" // Min height for desktop feel
-                    style={{
-                        gridAutoRows: 'minmax(80px, 1fr)' // Consistent row heights
-                    }}
-                >
-                    {days.map((day) => {
-                        return (
-                            <div
-                                key={format(day, 'yyyy-MM-dd')}
-                            // Removed 'invisible' class so original card stays visible underneath
-                            >
-                                <DayCard
-                                    day={day}
-                                    isCurrentMonth={isSameMonth(day, monthStart)}
-                                    record={getRecordForDay(day)}
-                                    onClick={() => setFocusedDay(isSameDay(day, focusedDay) ? null : day)}
-                                    isPrivacy={isPrivacy}
-                                />
-                            </div>
-                        )
-                    })}
+                        {/* Main Grid */}
+                        <div
+                            className="grid grid-cols-7 gap-1 md:gap-3 lg:min-h-[600px] relative" // Min height for desktop feel
+                            style={{
+                                gridAutoRows: 'minmax(80px, 1fr)' // Consistent row heights
+                            }}
+                        >
+                            {days.map((day) => {
+                                return (
+                                    <div
+                                        key={format(day, 'yyyy-MM-dd')}
+                                    // Removed 'invisible' class so original card stays visible underneath
+                                    >
+                                        <DayCard
+                                            day={day}
+                                            isCurrentMonth={isSameMonth(day, monthStart)}
+                                            record={getRecordForDay(day)}
+                                            onClick={() => setFocusedDay(isSameDay(day, focusedDay) ? null : day)}
+                                            isPrivacy={isPrivacy}
+                                        />
+                                    </div>
+                                )
+                            })}
 
-                    {/* Overlay Layer */}
-                    <AnimatePresence>
-                        {focusedDay && overlayGeo && (
-                            <CalendarOverlay
-                                day={focusedDay}
-                                record={getRecordForDay(focusedDay)}
-                                geometry={overlayGeo}
-                                onUpdate={handleUpdateRecord}
-                                onClose={() => setFocusedDay(null)}
-                                isPrivacy={isPrivacy}
-                                monthStart={monthStart}
-                            />
-                        )}
-                    </AnimatePresence>
-                </div>
-            </div>
+                            {/* Overlay Layer */}
+                            <AnimatePresence>
+                                {focusedDay && overlayGeo && (
+                                    <CalendarOverlay
+                                        day={focusedDay}
+                                        record={getRecordForDay(focusedDay)}
+                                        geometry={overlayGeo}
+                                        onUpdate={handleUpdateRecord}
+                                        onClose={() => setFocusedDay(null)}
+                                        isPrivacy={isPrivacy}
+                                        monthStart={monthStart}
+                                    />
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     )
+}
+
+function YearView({ year, data, onSelectMonth }) {
+    const yearMonths = Array.from({ length: 12 }, (_, i) => new Date(year, i, 1));
+
+    const getRecordForDate = (date) => {
+        const dayStr = format(date, 'yyyy-MM-dd');
+        return data.find(r => {
+            if (!r.date) return false;
+            try { return format(new Date(r.date), 'yyyy-MM-dd') === dayStr; } catch { return false; }
+        });
+    };
+
+    return (
+        <div className="grid grid-cols-4 gap-4 mt-4">
+            {yearMonths.map((monthDate, mi) => {
+                const mStart = startOfMonth(monthDate);
+                const mEnd = endOfMonth(monthDate);
+                const wStart = startOfWeek(mStart);
+                const wEnd = endOfWeek(mEnd);
+                const mDays = eachDayOfInterval({ start: wStart, end: wEnd });
+
+                return (
+                    <div
+                        key={mi}
+                        className="neumo-card p-3 cursor-pointer hover:shadow-lg transition-shadow"
+                        onClick={() => onSelectMonth(mi)}
+                    >
+                        <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest text-center mb-2">
+                            {format(monthDate, 'MMM')}
+                        </div>
+                        <div className="grid grid-cols-7 gap-[2px]">
+                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                                <div key={i} className="text-[6px] font-bold text-gray-300 text-center">{d}</div>
+                            ))}
+                            {mDays.map((day, di) => {
+                                const inMonth = isSameMonth(day, mStart);
+                                const record = inMonth ? getRecordForDate(day) : null;
+                                const todayMatch = isToday(day);
+                                let bg = 'bg-transparent';
+                                if (record && record.isLeave) bg = 'bg-rose-400';
+                                else if (record) bg = 'bg-green-400';
+                                else if (isTaiwanHoliday(day) && inMonth) bg = 'bg-orange-200';
+
+                                return (
+                                    <div key={di} className={`text-[7px] text-center rounded-sm leading-4 ${inMonth ? 'text-gray-600' : 'text-gray-200'} ${bg} ${todayMatch && inMonth ? 'ring-1 ring-blue-500 font-black' : ''}`}>
+                                        {format(day, 'd')}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
 }
 
 function CalendarOverlay({ day, record, geometry, onUpdate, onClose, isPrivacy, monthStart }) {

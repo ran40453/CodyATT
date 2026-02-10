@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, subDays, getDaysInMonth, eachDayOfInterval, isSameDay } from 'date-fns'
+import React, { useState, useEffect, useMemo } from 'react'
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, subDays, subMonths, getDaysInMonth, eachDayOfInterval, eachMonthOfInterval, isSameDay, isSameMonth } from 'date-fns'
 import { TrendingUp, Globe, Wallet, Clock, Coffee, Moon, Gift, Eye, EyeOff, Briefcase, ChevronRight, Calendar } from 'lucide-react'
 import { motion } from 'framer-motion'
 import {
@@ -7,16 +7,17 @@ import {
     CategoryScale,
     LinearScale,
     BarElement,
+    ArcElement,
     Title,
     Tooltip,
     Legend
 } from 'chart.js'
-import { Bar } from 'react-chartjs-2'
+import { Bar, Doughnut } from 'react-chartjs-2'
 import { loadSettings, fetchExchangeRate, standardizeCountry, calculateDailySalary, calculateCompLeaveUnits, calculateOTHours } from '../lib/storage'
 import { cn } from '../lib/utils'
 
-// Register ChartJS components for Bar chart
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
+// Register ChartJS components
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend)
 
 function Dashboard({ data, isPrivacy, setIsPrivacy }) {
     const [settings, setSettings] = useState(null)
@@ -159,6 +160,15 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
 
     const cumulativeDeptCompBalance = allDeptCompEarned - allDeptCompUsed;
 
+    // Monthly OT trend (last 6 months)
+    const otChartMonths = useMemo(() => eachMonthOfInterval({ start: startOfMonth(subMonths(today, 5)), end: startOfMonth(today) }), []);
+    const otByMonth = useMemo(() => otChartMonths.map(m => {
+        return data.filter(r => {
+            const d = parse(r.date);
+            return d instanceof Date && !isNaN(d) && isSameMonth(d, m);
+        }).reduce((sum, r) => sum + (parseFloat(r.otHours) || 0), 0);
+    }), [data, otChartMonths]);
+
     // Bar Chart Data (Horizontal Stacked)
     const barData = {
         labels: ['Stats'],
@@ -292,10 +302,10 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                 <div className="flex justify-between items-end mb-4">
                     <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">本月出勤概況</h3>
                     <div className="text-[10px] font-bold text-gray-500">
-                        <span className="text-neumo-brand">{attendedCount}</span>
+                        <span className="text-neumo-brand">{mask(String(attendedCount))}</span>
                         <span className="text-gray-300 mx-1">/</span>
-                        <span>{totalDaysCount}</span>
-                        <span className="ml-2 text-xs font-black text-gray-300">({attendedPercent}%)</span>
+                        <span>{mask(String(totalDaysCount))}</span>
+                        <span className="ml-2 text-xs font-black text-gray-300">({mask(attendedPercent + '%')})</span>
                     </div>
                 </div>
                 <div className="flex gap-1 overflow-x-auto pb-2 custom-scrollbar">
@@ -314,52 +324,79 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Left Column: Work Stats */}
                 <div className="grid grid-cols-2 gap-4">
-                    {/* OT Stats - Square */}
+                    {/* OT Stats - Square with mini chart */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="neumo-card p-4 flex flex-col items-center justify-center aspect-square relative overflow-hidden"
+                        className="neumo-card p-4 flex flex-col aspect-square relative overflow-hidden"
                     >
-                        <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 mb-1">
                             <div className="p-1.5 rounded-lg neumo-pressed text-blue-500">
                                 <Clock size={14} />
                             </div>
                             <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">加班時數</span>
                         </div>
 
-                        <div className="flex flex-col items-center">
-                            <span className="text-4xl font-black text-[#202731] tracking-tighter">
-                                {yearMetrics.totalOT.toFixed(1)}
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-2xl font-black text-[#202731] tracking-tighter">
+                                {mask(yearMetrics.totalOT.toFixed(1))}
                             </span>
-                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">Year Total</span>
+                            <span className="text-[8px] font-black text-gray-400">Y</span>
+                            <span className="text-sm font-black text-blue-500 ml-1">{mask(monthMetrics.totalOT.toFixed(1))}</span>
+                            <span className="text-[8px] font-black text-gray-400">M</span>
                         </div>
-                        <div className="absolute bottom-3 flex items-center gap-1 text-[10px] font-bold text-blue-600">
-                            <span className="font-black">M: {monthMetrics.totalOT.toFixed(1)}H</span>
+                        <div className="flex-1 min-h-0 mt-1">
+                            <Bar
+                                data={{
+                                    labels: otChartMonths.map(m => format(m, 'MMM')),
+                                    datasets: [{ data: otByMonth, backgroundColor: 'rgba(99, 102, 241, 0.5)', borderRadius: 3, barThickness: 8 }]
+                                }}
+                                options={{
+                                    responsive: true, maintainAspectRatio: false,
+                                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => mask(ctx.raw.toFixed(1) + 'H') } } },
+                                    scales: { x: { display: true, ticks: { font: { size: 7 } }, grid: { display: false } }, y: { display: false } }
+                                }}
+                            />
                         </div>
                     </motion.div>
 
-                    {/* Comp Stats - Square */}
+                    {/* Comp Stats - Square with doughnut */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.1 }}
-                        className="neumo-card p-4 flex flex-col items-center justify-center aspect-square relative overflow-hidden"
+                        className="neumo-card p-4 flex flex-col aspect-square relative overflow-hidden"
                     >
-                        <div className="absolute top-3 left-3 flex items-center gap-1.5">
-                            <div className="p-1.5 rounded-lg neumo-pressed text-indigo-500">
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <div className="p-1.5 rounded-lg neumo-pressed text-purple-500">
                                 <Coffee size={14} />
                             </div>
-                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">部門補休剩餘</span>
+                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">部門補休</span>
                         </div>
 
-                        <div className="flex flex-col items-center">
-                            <span className={cn("text-4xl font-black tracking-tighter", cumulativeDeptCompBalance < 0 ? "text-rose-500" : "#202731")}>
-                                {cumulativeDeptCompBalance}
+                        <div className="flex items-baseline gap-1">
+                            <span className={cn("text-2xl font-black tracking-tighter", cumulativeDeptCompBalance < 0 ? "text-rose-500" : "text-[#202731]")}>
+                                {mask(String(cumulativeDeptCompBalance))}
                             </span>
-                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">Units (Earned - Used)</span>
+                            <span className="text-[8px] font-black text-gray-400">剩餘</span>
                         </div>
-                        <div className="absolute bottom-3 flex items-center gap-1 text-[10px] font-bold text-indigo-600">
-                            <span className="font-black">Earned: {allDeptCompEarned}U / Used: {allDeptCompUsed}U</span>
+                        <div className="flex-1 min-h-0 flex items-center justify-center mt-1">
+                            <div className="w-20 h-20">
+                                <Doughnut
+                                    data={{
+                                        labels: ['已獲得', '已使用'],
+                                        datasets: [{ data: [allDeptCompEarned, allDeptCompUsed], backgroundColor: ['rgba(139, 92, 246, 0.6)', 'rgba(244, 63, 94, 0.6)'], borderWidth: 0, cutout: '65%' }]
+                                    }}
+                                    options={{
+                                        responsive: true, maintainAspectRatio: true,
+                                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => mask(ctx.label + ': ' + ctx.raw + '單') } } }
+                                    }}
+                                />
+                            </div>
+                        </div>
+                        <div className="flex justify-between text-[8px] font-black px-1">
+                            <span className="text-purple-500">得 {mask(String(allDeptCompEarned))}</span>
+                            <span className="text-rose-400">用 {mask(String(allDeptCompUsed))}</span>
                         </div>
                     </motion.div>
                 </div>
