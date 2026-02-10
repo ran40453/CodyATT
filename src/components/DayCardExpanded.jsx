@@ -228,7 +228,7 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
 
     const toggleOtType = (e) => {
         e.stopPropagation();
-        const types = ['pay', 'internal', 'leave'];
+        const types = ['pay', 'internal'];
         const nextIndex = (types.indexOf(otType) + 1) % types.length;
         setOtType(types[nextIndex]);
     }

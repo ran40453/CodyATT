@@ -14,8 +14,8 @@ export const isTaiwanHoliday = (date) => {
 
         const holidays = hd.isHoliday(d);
         if (holidays && Array.isArray(holidays)) {
-            // Include public holidays and common observances (like Constitution Day)
-            return holidays.some(h => h.type === 'public' || h.type === 'observance' || h.name.includes('行憲紀念日'));
+            // Only actual public holidays + 勞動節 (observance but real day off)
+            return holidays.some(h => h.type === 'public' || h.name === '勞動節');
         }
         return !!holidays;
     } catch (e) {
@@ -36,8 +36,8 @@ export const getHolidayName = (date) => {
 
         const holidays = hd.isHoliday(d);
         if (holidays && Array.isArray(holidays)) {
-            // Prefer public holidays, fallback to others
-            const h = holidays.find(h => h.type === 'public') || holidays[0];
+            // Only return names for actual public holidays + 勞動節
+            const h = holidays.find(h => h.type === 'public') || holidays.find(h => h.name === '勞動節');
             return h ? h.name : null;
         }
         return null;

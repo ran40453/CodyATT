@@ -715,7 +715,27 @@ export const loadData = () => {
         if (!data) return [];
         const parsed = JSON.parse(data);
         if (!Array.isArray(parsed)) return [];
-        return standardizeRecords(parsed);
+        let records = standardizeRecords(parsed);
+
+        // One-time migration: convert otType 'leave' → 'internal' (部門補休)
+        const migrationKey = 'ot-migration-leave-to-internal';
+        if (!localStorage.getItem(migrationKey)) {
+            let migrated = false;
+            records = records.map(r => {
+                if (r.otType === 'leave') {
+                    migrated = true;
+                    return { ...r, otType: 'internal' };
+                }
+                return r;
+            });
+            if (migrated) {
+                localStorage.setItem(DATA_KEY, JSON.stringify(records));
+                console.log('Migration: Converted otType "leave" records to "internal" (部門補休)');
+            }
+            localStorage.setItem(migrationKey, 'done');
+        }
+
+        return records;
     } catch (e) {
         console.error('Storage: Failed to load records', e);
         return [];
