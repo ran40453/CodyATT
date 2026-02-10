@@ -89,10 +89,6 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                 if (r.otType === 'internal') return sum + calculateCompLeaveUnits(r);
                 return sum;
             }, 0);
-            const totalCompanyComp = records.reduce((sum, r) => {
-                if (r.otType === 'leave') return sum + calculateCompLeaveUnits(r);
-                return sum;
-            }, 0);
             const totalBonus = records.reduce((sum, r) => sum + (parseFloat(r.bonus) || 0), 0)
             const totalTravel = records.reduce((sum, r) => {
                 const results = calculateDailySalary(r, { ...settings, liveRate });
@@ -105,7 +101,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
             // Trip count (days with country)
             const tripCount = records.filter(r => r.travelCountry && r.travelCountry.trim() !== '').length
 
-            return { extraTotal, totalOT, totalDeptComp, totalCompanyComp, totalBonus, totalTravel, totalOTPay, tripCount }
+            return { extraTotal, totalOT, totalDeptComp, totalBonus, totalTravel, totalOTPay, tripCount }
         }
 
         const yearMetrics = getMetrics(rollingYearRecords)
@@ -509,6 +505,10 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                                             <div className="mt-2 text-xs font-black text-gray-700">
                                                 {mask('$' + Math.round(stats.yearMetrics.totalOTPay).toLocaleString())}
                                             </div>
+                                            <div className="mt-2 flex items-baseline gap-1">
+                                                <span className="text-lg font-black text-purple-600">{stats.yearMetrics.totalDeptComp.toFixed(0)}</span>
+                                                <span className="text-[9px] font-black text-gray-400 uppercase">部門補休單</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -608,6 +608,14 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                         </div>
 
 
+                        {/* Work Load Chart */}
+                        <div className="neumo-card h-[300px] p-4 flex flex-col">
+                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">工作負荷趨勢 (OT vs Comp)</h3>
+                            <div className="flex-1 min-h-0 relative">
+                                <Chart type="bar" data={travelData} options={travelOptions} plugins={[valuePlugin]} />
+                            </div>
+                        </div>
+
                         {/* Yearly Total OT Comparison Chart (#9) */}
                         <div className="neumo-card h-[300px] p-4 flex flex-col">
                             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">每年總加班時數比較</h3>
@@ -647,14 +655,6 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                                     }}
                                     plugins={[valuePlugin]}
                                 />
-                            </div>
-                        </div>
-
-                        {/* Work Load Chart */}
-                        <div className="neumo-card h-[300px] p-4 flex flex-col">
-                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">工作負荷趨勢 (OT vs Comp)</h3>
-                            <div className="flex-1 min-h-0 relative">
-                                <Chart type="bar" data={travelData} options={travelOptions} plugins={[valuePlugin]} />
                             </div>
                         </div>
                     </motion.div>
