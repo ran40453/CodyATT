@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Save, RefreshCw, DollarSign, Calculator, Briefcase, Calendar as CalendarIcon, Activity, Plus, Trash2, Globe } from 'lucide-react'
+import { Save, RefreshCw, DollarSign, Calculator, Briefcase, Calendar as CalendarIcon, Activity, Plus, Trash2, Globe, Palmtree } from 'lucide-react'
 import { loadSettings, saveSettings, syncSettingsToGist, testConnection, fetchExchangeRate, createGist, fetchSettingsFromGist, fetchRecordsFromGist } from '../lib/storage'
 import { cn } from '../lib/utils'
 import { format } from 'date-fns'
@@ -11,7 +11,8 @@ function SettingsPage({ isPrivacy }) {
     const [testResult, setTestResult] = useState(null)
     const [isTesting, setIsTesting] = useState(false)
     const [liveRate, setLiveRate] = useState(null)
-    const [expandedSection, setExpandedSection] = useState('sync') // 'sync', 'salary', 'ot', 'allowance'
+    const [expandedSection, setExpandedSection] = useState('sync') // 'sync', 'salary', 'ot', 'allowance', 'annualLeave'
+    const [annualLeaveYear, setAnnualLeaveYear] = useState(new Date().getFullYear() + 1)
 
     const maskValue = (val) => isPrivacy ? '••••' : val;
 
@@ -81,6 +82,16 @@ function SettingsPage({ isPrivacy }) {
         setSettings(prev => ({
             ...prev,
             salaryHistory: prev.salaryHistory.map(h => h.id === id ? { ...h, [field]: value } : h)
+        }))
+    }
+
+    const updateAnnualLeave = (year, days) => {
+        setSettings(prev => ({
+            ...prev,
+            annualLeave: {
+                ...prev.annualLeave,
+                [year]: parseFloat(days)
+            }
         }))
     }
 
@@ -397,6 +408,71 @@ function SettingsPage({ isPrivacy }) {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </SettingsCard>
+
+                {/* 3.5 Annual Leave */}
+                <SettingsCard
+                    id="annualLeave"
+                    title="特休天數設定 (Annual Leave)"
+                    icon={Palmtree}
+                    color="text-teal-500"
+                    isExpanded={expandedSection === 'annualLeave'}
+                    onToggle={() => toggleSection('annualLeave')}
+                >
+                    <div className="space-y-4 p-1">
+                        <div className="flex justify-between items-center mb-2">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">每年特休總天數</p>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="number"
+                                    className="w-16 h-6 text-center text-xs font-black neumo-pressed rounded-lg bg-transparent focus:outline-none"
+                                    value={annualLeaveYear}
+                                    onChange={(e) => setAnnualLeaveYear(parseInt(e.target.value))}
+                                />
+                                <button
+                                    onClick={() => {
+                                        if (annualLeaveYear && !settings.annualLeave?.[annualLeaveYear]) {
+                                            updateAnnualLeave(annualLeaveYear, 7);
+                                            setAnnualLeaveYear(prev => prev + 1);
+                                        }
+                                    }}
+                                    className="neumo-button w-6 h-6 flex items-center justify-center text-teal-500"
+                                >
+                                    <Plus size={14} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            {Object.keys(settings.annualLeave || { [new Date().getFullYear()]: 7 }).sort((a, b) => b - a).map(y => {
+                                const val = settings.annualLeave?.[y] !== undefined ? settings.annualLeave[y] : 7;
+                                return (
+                                    <div key={y} className="flex items-center gap-3">
+                                        <span className="text-xs font-black text-gray-500 w-12">{y}</span>
+                                        <input
+                                            type="number"
+                                            value={val}
+                                            onChange={(e) => updateAnnualLeave(y, e.target.value)}
+                                            className="neumo-pressed flex-1 h-9 px-3 text-xs font-black text-[#202731] rounded-xl focus:outline-none"
+                                        />
+                                        <span className="text-[10px] font-bold text-gray-400">天</span>
+                                    </div>
+                                )
+                            })}
+                            {settings.annualLeave && Object.keys(settings.annualLeave).map(y => parseInt(y)).filter(y => ![new Date().getFullYear(), new Date().getFullYear() + 1, new Date().getFullYear() - 1].includes(y)).sort((a, b) => b - a).map(y => (
+                                <div key={y} className="flex items-center gap-3">
+                                    <span className="text-xs font-black text-gray-500 w-12">{y}</span>
+                                    <input
+                                        type="number"
+                                        value={settings.annualLeave[y]}
+                                        onChange={(e) => updateAnnualLeave(y, e.target.value)}
+                                        className="neumo-pressed flex-1 h-9 px-3 text-xs font-black text-[#202731] rounded-xl focus:outline-none"
+                                    />
+                                    <span className="text-[10px] font-bold text-gray-400">天</span>
+                                </div>
+                            ))}
+                        </div>
+                        <p className="text-[8px] text-gray-400 font-bold italic text-right pt-1">* 預設為 7 天</p>
                     </div>
                 </SettingsCard>
 

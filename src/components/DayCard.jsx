@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { format, isToday, getDay, isAfter, startOfDay } from 'date-fns'
 import { motion } from 'framer-motion'
-import { Palmtree, Moon, DollarSign, Coffee } from 'lucide-react'
+import { Palmtree, Moon, DollarSign, Coffee, MessageSquare } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { loadSettings, calculateOTHours, calculateDuration, calculateDailySalary, fetchExchangeRate, standardizeCountry } from '../lib/storage'
 import { isTaiwanHoliday, getHolidayName } from '../lib/holidays'
@@ -148,6 +148,9 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy }) {
                     {record?.Remark?.includes('部門內部補休') && (
                         <span className="text-[8px] md:text-[10px] font-black text-purple-500">內</span>
                     )}
+                    {(record?.remarks || (record?.Remark && !record?.Remark?.includes('部門內部補休'))) && (
+                        <MessageSquare size={14} className="text-gray-400 md:hidden" strokeWidth={1.5} />
+                    )}
                 </div>
 
                 {/* Right: Desktop only Holiday Name / Remark */}
@@ -157,10 +160,13 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy }) {
                             {getHolidayName(day)}
                         </span>
                     )}
-                    {record?.Remark && !record.Remark.includes('部門內部補休') && (
-                        <span className="text-[9px] font-black text-gray-400 max-w-[60px] truncate bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
-                            {record.Remark}
-                        </span>
+                    {(record?.remarks || (record?.Remark && !record.Remark.includes('部門內部補休'))) && (
+                        <div className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 max-w-[80px]">
+                            <MessageSquare size={10} className="text-gray-400 shrink-0" />
+                            <span className="text-[9px] font-black text-gray-500 truncate">
+                                {record?.remarks || record.Remark}
+                            </span>
+                        </div>
                     )}
                 </div>
             </div>

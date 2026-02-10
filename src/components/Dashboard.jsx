@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, subDays, subMonths, getDaysInMonth, eachDayOfInterval, eachMonthOfInterval, isSameDay, isSameMonth } from 'date-fns'
-import { TrendingUp, Globe, Wallet, Clock, Coffee, Moon, Gift, Eye, EyeOff, Briefcase, ChevronRight, Calendar } from 'lucide-react'
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, subDays, subMonths, getDaysInMonth, eachDayOfInterval, eachMonthOfInterval, isSameDay, isSameMonth, getYear } from 'date-fns'
+import { TrendingUp, Globe, Wallet, Clock, Coffee, Moon, Gift, Eye, EyeOff, Briefcase, ChevronRight, Calendar, Battery, Palmtree } from 'lucide-react'
+import BatteryIcon from './BatteryIcon'
 import { motion } from 'framer-motion'
 import {
     Chart as ChartJS,
@@ -168,6 +169,16 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
 
     const cumulativeDeptCompBalance = allDeptCompEarned - allDeptCompUsed;
 
+    // Annual Leave Calculation
+    const currentYear = getYear(today);
+    const annualGiven = (settings?.annualLeave && settings.annualLeave[currentYear]) || 7; // Default 7
+    const annualUsed = data.filter(r => {
+        const d = parse(r.date);
+        return d instanceof Date && !isNaN(d) && getYear(d) === currentYear && r.isLeave && r.leaveType === '特休';
+    }).reduce((sum, r) => sum + (parseFloat(r.leaveDuration) || 8) / 8, 0);
+    const remainingAnnual = Math.max(0, annualGiven - annualUsed);
+
+
     // Bar Chart Data (Horizontal Stacked)
     const barData = {
         labels: ['Stats'],
@@ -240,10 +251,6 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
             ctx.textBaseline = 'middle';
 
             // Draw labels below the bars
-            // Actually, user asked to show amount inside the leftmost bar.
-            // But usually bars are small.
-            // "Show amount inside the leftmost bar"
-
             const meta0 = chart.getDatasetMeta(0);
             if (meta0.data.length > 0) {
                 const bar0 = meta0.data[0];
@@ -292,140 +299,65 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                 </button>
             </header>
 
-            {/* Attendance Grid at Top */}
+            {/* Attendance Capsule Progress Bar */}
             <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="neumo-card p-4"
+                className="neumo-card p-4 flex flex-col justify-center" // Centered vertical
             >
-                <div className="flex justify-between items-end mb-4">
+                <div className="flex justify-between items-end mb-2">
                     <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">本月出勤概況</h3>
-                    <div className="text-[10px] font-bold text-gray-500">
-                        <span className="text-neumo-brand">{mask(String(attendedCount))}</span>
-                        <span className="text-gray-300 mx-1">/</span>
-                        <span>{mask(String(totalDaysCount))}</span>
-                        <span className="ml-2 text-xs font-black text-gray-300">({mask(attendedPercent + '%')})</span>
+                    <div className="text-[10px] font-bold text-gray-400">
+                        {mask(format(today, 'yyyy / MM'))}
                     </div>
                 </div>
-                <div className="flex gap-1 overflow-x-auto pb-2 custom-scrollbar">
-                    {attendanceBoxes.map((box, i) => (
-                        <div key={i} className="flex flex-col items-center gap-1 min-w-[20px]">
-                            <div className={cn(
-                                "w-6 h-6 rounded-md",
-                                box.type === 'attendance' ? "bg-green-500" : box.type === 'leave' ? "bg-rose-500" : "bg-gray-100"
-                            )} />
-                            <span className="text-[8px] font-bold text-gray-300">{format(box.day, 'd')}</span>
-                        </div>
-                    ))}
+                <div className="h-8 w-full bg-gray-100 rounded-full relative overflow-hidden flex items-center shadow-inner">
+                    <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${attendedPercent}%` }}
+                        transition={{ duration: 1.5, ease: "easeOut" }}
+                        className="absolute left-0 top-0 bottom-0 bg-neumo-brand opacity-80 rounded-full"
+                    />
+                    <div className="relative z-10 flex items-center justify-between w-full px-4">
+                        <span className={cn("text-[10px] font-black uppercase tracking-widest z-10 mix-blend-overlay text-gray-600")}>
+                            Passed: {mask(String(attendedCount))}/{mask(String(totalDaysCount))}
+                        </span>
+                        <span className="text-sm font-black z-10 text-neumo-brand mix-blend-screen drop-shadow-sm">
+                            {mask(String(attendedPercent))}%
+                        </span>
+                    </div>
                 </div>
             </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Left Column: Work Stats */}
-                <div className="grid grid-cols-2 gap-4">
-                    {/* OT Stats - Square with mini chart */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="neumo-card p-4 flex flex-col aspect-square relative overflow-hidden"
-                    >
-                        <div className="flex items-center gap-1.5 mb-1">
-                            <div className="p-1.5 rounded-lg neumo-pressed text-blue-500">
-                                <Clock size={14} />
+            {/* Dashboard Main Content */}
+            <div className="space-y-6">
+
+                {/* 1. Monthly Salary Distribution (Moved to Top) */}
+                <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="neumo-card p-6 flex flex-col justify-between"
+                >
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center gap-2 text-gray-400">
+                            <div className="p-2 rounded-xl neumo-pressed text-purple-500">
+                                <TrendingUp size={20} />
                             </div>
-                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">加班時數</span>
+                            <h2 className="text-xs font-black uppercase tracking-widest">本月薪資分布</h2>
                         </div>
-
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-black text-[#202731] tracking-tighter">
-                                {mask(yearMetrics.totalOT.toFixed(1))}
-                            </span>
-                            <span className="text-[8px] font-black text-gray-400">Y</span>
-                            <span className="text-sm font-black text-blue-500 ml-1">{mask(monthMetrics.totalOT.toFixed(1))}</span>
-                            <span className="text-[8px] font-black text-gray-400">M</span>
-                        </div>
-                        <div className="flex-1 min-h-0 mt-1">
-                            <Bar
-                                data={{
-                                    labels: otChartMonths.map(m => format(m, 'MMM')),
-                                    datasets: [{ data: otByMonth, backgroundColor: 'rgba(99, 102, 241, 0.5)', borderRadius: 3, barThickness: 8 }]
-                                }}
-                                options={{
-                                    responsive: true, maintainAspectRatio: false,
-                                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => mask(ctx.raw.toFixed(1) + 'H') } } },
-                                    scales: { x: { display: true, ticks: { font: { size: 7 } }, grid: { display: false } }, y: { display: false } }
-                                }}
-                            />
-                        </div>
-                    </motion.div>
-
-                    {/* Comp Stats - Square with doughnut */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.1 }}
-                        className="neumo-card p-4 flex flex-col aspect-square relative overflow-hidden"
-                    >
-                        <div className="flex items-center gap-1.5 mb-1">
-                            <div className="p-1.5 rounded-lg neumo-pressed text-purple-500">
-                                <Coffee size={14} />
-                            </div>
-                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">部門補休</span>
-                        </div>
-
-                        <div className="flex items-baseline gap-1">
-                            <span className={cn("text-2xl font-black tracking-tighter", cumulativeDeptCompBalance < 0 ? "text-rose-500" : "text-[#202731]")}>
-                                {mask(String(cumulativeDeptCompBalance))}
-                            </span>
-                            <span className="text-[8px] font-black text-gray-400">剩餘</span>
-                        </div>
-                        <div className="flex-1 min-h-0 flex items-center justify-center mt-1">
-                            <div className="w-20 h-20">
-                                <Doughnut
-                                    data={{
-                                        labels: ['已獲得', '已使用'],
-                                        datasets: [{ data: [allDeptCompEarned, allDeptCompUsed], backgroundColor: ['rgba(139, 92, 246, 0.6)', 'rgba(244, 63, 94, 0.6)'], borderWidth: 0, cutout: '65%' }]
-                                    }}
-                                    options={{
-                                        responsive: true, maintainAspectRatio: true,
-                                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => mask(ctx.label + ': ' + ctx.raw + '單') } } }
-                                    }}
-                                />
-                            </div>
-                        </div>
-                        <div className="flex justify-between text-[8px] font-black px-1">
-                            <span className="text-purple-500">得 {mask(String(allDeptCompEarned))}</span>
-                            <span className="text-rose-400">用 {mask(String(allDeptCompUsed))}</span>
-                        </div>
-                    </motion.div>
-                </div>
-
-                {/* Right Column: Financials */}
-                <div className="space-y-6">
-                    <motion.div
-                        initial={{ opacity: 0, y: 15 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="neumo-card p-6 flex flex-col justify-between h-full group"
-                    >
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="flex items-center gap-2 text-gray-400">
-                                <div className="p-2 rounded-xl neumo-pressed text-purple-500">
-                                    <TrendingUp size={20} />
-                                </div>
-                                <h2 className="text-xs font-black uppercase tracking-widest">本月薪資分布</h2>
-                            </div>
-                        </div>
-
-                        {/* legends at top, horizontal, no boxes */}
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 mb-4">
+                        {/* legends at top right */}
+                        <div className="flex flex-wrap gap-x-4 gap-y-1">
                             <LegendItem color="bg-sky-400" label="底薪" />
                             <LegendItem color="bg-orange-500" label="加班" />
                             <LegendItem color="bg-emerald-500" label="津貼" />
                             <LegendItem color="bg-amber-500" label="獎金" />
                         </div>
+                    </div>
 
+
+                    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
                         {/* Big Number */}
-                        <div className="flex flex-col mb-4">
+                        <div className="flex flex-col">
                             <div className="flex items-baseline gap-2">
                                 <span className="text-5xl lg:text-6xl font-black text-[#202731] tracking-tighter">
                                     {mask('$' + Math.round(monthMetrics.estimatedTotal).toLocaleString())}
@@ -440,11 +372,73 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                         </div>
 
                         {/* Chart Section */}
-                        <div className="space-y-4">
-                            <div className="h-[60px] relative w-full">
-                                <Bar data={barData} options={barOptions} plugins={[textPlugin]} />
-                            </div>
+                        <div className="flex-1 w-full h-[60px] relative">
+                            <Bar data={barData} options={barOptions} plugins={[textPlugin]} />
                         </div>
+                    </div>
+                </motion.div>
+
+                {/* 2. Key Metrics Grid (OT Number, Comp Battery, Leave Battery) */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* OT Stats - Only Number */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="neumo-card p-4 flex flex-col items-center justify-center gap-4 aspect-square"
+                    >
+                        <div className="flex flex-col items-center gap-1">
+                            <div className="p-2 rounded-lg neumo-pressed text-blue-500">
+                                <Clock size={24} />
+                            </div>
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mt-1">加班時數</span>
+                        </div>
+
+                        <div className="flex items-baseline gap-1 mt-2">
+                            <span className="text-5xl font-black text-[#202731] tracking-tighter">
+                                {mask(yearMetrics.totalOT.toFixed(1))}
+                            </span>
+                            <span className="text-xs font-bold text-gray-400">H</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 px-3 py-1 rounded-full bg-blue-50/50 border border-blue-100">
+                            <span className="text-[9px] font-black text-blue-400 uppercase">This Month</span>
+                            <span className="text-sm font-black text-blue-600">{mask(monthMetrics.totalOT.toFixed(1))}h</span>
+                        </div>
+                    </motion.div>
+
+                    {/* Comp Stats - Battery Style */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.1 }}
+                        className="neumo-card p-0 overflow-hidden aspect-square flex items-center justify-center"
+                    >
+                        <BatteryIcon
+                            value={Math.round(cumulativeDeptCompBalance)}
+                            total={40} // Visual scale
+                            unit=""
+                            label="部門補休"
+                            subLabel="剩餘單位"
+                            color="bg-purple-500"
+                            className="w-full h-full"
+                        />
+                    </motion.div>
+
+                    {/* Annual Leave Stats - Battery Style */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.2 }}
+                        className="neumo-card p-0 overflow-hidden aspect-square flex items-center justify-center"
+                    >
+                        <BatteryIcon
+                            value={Number(remainingAnnual).toFixed(1)}
+                            total={annualGiven}
+                            unit=""
+                            label="剩餘特休"
+                            subLabel="Days"
+                            color="bg-teal-500"
+                            className="w-full h-full"
+                        />
                     </motion.div>
                 </div>
             </div>

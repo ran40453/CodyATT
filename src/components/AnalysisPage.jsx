@@ -172,15 +172,16 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
     // Travel Chart Data
     const otByMonth = chartMonths.map(m => getMonthlyStat(m, r => parseFloat(r.otHours) || (r.endTime ? calculateOTHours(r.endTime, settings?.rules?.standardEndTime) : 0)));
     const compByMonth = chartMonths.map(m => getMonthlyStat(m, r => (r.otType === 'leave' || r.otType === 'internal') ? calculateCompLeaveUnits(r) : 0));
-    // Using calculateCompLeaveUnits returns units. The chart usually compares HOURS vs UNITS or Hours vs Hours.
-    // Dashboard compares OT Hours vs Comp Units.
-    // Let's use Units for Comp.
+    const leaveDaysByMonth = chartMonths.map(m => getMonthlyStat(m, r => r.isLeave ? (parseFloat(r.leaveDuration) || 8) / 8 : 0));
+    const travelDaysByMonth = chartMonths.map(m => getMonthlyStat(m, r => (r.travelCountry && r.travelCountry.trim() !== '') ? 1 : 0));
 
     const travelData = {
         labels: chartMonths.map(m => format(m, 'MMM')),
         datasets: [
-            { type: 'bar', label: '加班時數', data: otByMonth, backgroundColor: 'rgba(99, 102, 241, 0.4)', borderColor: 'rgb(99, 102, 241)', borderWidth: 1, borderRadius: 4, yAxisID: 'y', order: 2 },
-            { type: 'line', label: '補休單位', data: compByMonth, borderColor: 'rgb(79, 70, 229)', fill: false, tension: 0.4, yAxisID: 'y1', order: 1 }
+            { type: 'bar', label: '加班時數', data: otByMonth, backgroundColor: 'rgba(99, 102, 241, 0.4)', borderColor: 'rgb(99, 102, 241)', borderWidth: 1, borderRadius: 4, yAxisID: 'y', order: 3 },
+            { type: 'line', label: '補休單位', data: compByMonth, borderColor: 'rgb(79, 70, 229)', fill: false, tension: 0.4, yAxisID: 'y1', order: 4 },
+            { type: 'line', label: '請假天數', data: leaveDaysByMonth, borderColor: 'rgb(244, 63, 94)', backgroundColor: 'rgba(244, 63, 94, 0.1)', borderWidth: 2, pointRadius: 3, fill: false, tension: 0.3, yAxisID: 'y1', order: 1 },
+            { type: 'line', label: '出差天數', data: travelDaysByMonth, borderColor: 'rgb(16, 185, 129)', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderWidth: 2, pointRadius: 3, fill: false, tension: 0.3, yAxisID: 'y1', order: 2 }
         ]
     };
 
@@ -269,8 +270,8 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
         }, 0);
     });
 
-    const yearlyIncomeData = availableYears.map(year => {
-        let yearBase = 0;
+    const yearlyIncomeDetails = availableYears.map(year => {
+        let baseTotal = 0;
         for (let m = 0; m < 12; m++) {
             const monthDate = new Date(year, m, 1);
             if (monthDate > now) break;
@@ -281,17 +282,19 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                 const applicable = sortedHistory.find(h => new Date(h.date) <= monthEnd);
                 if (applicable) base = parseFloat(applicable.amount) || base;
             }
-            yearBase += base;
+            baseTotal += base;
         }
-        const yearExtra = data.reduce((sum, r) => {
+
+        const yearRecords = data.filter(r => {
             const d = parse(r.date);
-            if (d instanceof Date && !isNaN(d) && d.getFullYear() === year) {
-                const results = calculateDailySalary(r, { ...settings, liveRate });
-                return sum + (results?.extra || 0);
-            }
-            return sum;
-        }, 0);
-        return yearBase + yearExtra;
+            return d instanceof Date && !isNaN(d) && d.getFullYear() === year;
+        });
+
+        const otTotal = yearRecords.reduce((sum, r) => sum + (calculateDailySalary(r, { ...settings, liveRate }).otPay || 0), 0);
+        const travelTotal = yearRecords.reduce((sum, r) => sum + (calculateDailySalary(r, { ...settings, liveRate }).travelAllowance || 0), 0);
+        const bonusTotal = yearRecords.reduce((sum, r) => sum + (parseFloat(r.bonus) || 0), 0);
+
+        return { baseTotal, otTotal, travelTotal, bonusTotal };
     });
 
 
@@ -439,34 +442,48 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                                 <Bar
                                     data={{
                                         labels: availableYears.map(String),
-                                        datasets: [{
-                                            label: '總收入',
-                                            data: yearlyIncomeData,
-                                            backgroundColor: availableYears.map((_, i) => [
-                                                'rgba(253, 224, 71, 0.6)',
-                                                'rgba(56, 189, 248, 0.6)',
-                                                'rgba(99, 102, 241, 0.6)',
-                                                'rgba(245, 158, 11, 0.6)',
-                                                'rgba(16, 185, 129, 0.6)'
-                                            ][i % 5]),
-                                            borderColor: availableYears.map((_, i) => [
-                                                'rgb(253, 224, 71)',
-                                                'rgb(56, 189, 248)',
-                                                'rgb(99, 102, 241)',
-                                                'rgb(245, 158, 11)',
-                                                'rgb(16, 185, 129)'
-                                            ][i % 5]),
-                                            borderWidth: 1,
-                                            borderRadius: 6
-                                        }]
+                                        datasets: [
+                                            {
+                                                label: '底薪',
+                                                data: yearlyIncomeDetails.map(d => d.baseTotal),
+                                                backgroundColor: 'rgba(56, 189, 248, 0.6)',
+                                                borderColor: 'rgb(56, 189, 248)',
+                                                borderWidth: 1,
+                                                borderRadius: 4
+                                            },
+                                            {
+                                                label: '加班費',
+                                                data: yearlyIncomeDetails.map(d => d.otTotal),
+                                                backgroundColor: 'rgba(255, 69, 0, 0.6)',
+                                                borderColor: 'rgb(255, 69, 0)',
+                                                borderWidth: 1,
+                                                borderRadius: 4
+                                            },
+                                            {
+                                                label: '津貼',
+                                                data: yearlyIncomeDetails.map(d => d.travelTotal),
+                                                backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                                                borderColor: 'rgb(16, 185, 129)',
+                                                borderWidth: 1,
+                                                borderRadius: 4
+                                            },
+                                            {
+                                                label: '獎金',
+                                                data: yearlyIncomeDetails.map(d => d.bonusTotal),
+                                                backgroundColor: 'rgba(245, 158, 11, 0.6)',
+                                                borderColor: 'rgb(245, 158, 11)',
+                                                borderWidth: 1,
+                                                borderRadius: 4
+                                            }
+                                        ]
                                     }}
                                     options={{
                                         ...options,
                                         scales: {
-                                            x: { grid: { display: false }, ticks: { font: { size: 11, weight: 'bold' } } },
-                                            y: { display: true, position: 'left', grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 8 }, callback: v => '$' + (v / 1000).toFixed(0) + 'k' } }
+                                            x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: 'bold' } } },
+                                            y: { stacked: true, display: true, position: 'left', grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 8 }, callback: v => '$' + (v / 1000).toFixed(0) + 'k' } }
                                         },
-                                        plugins: { legend: { display: false }, tooltip: { enabled: true, callbacks: { label: ctx => '$' + Math.round(ctx.raw).toLocaleString() } } }
+                                        plugins: { legend: { display: false }, tooltip: { enabled: true, callbacks: { label: ctx => `${ctx.dataset.label}: $${Math.round(ctx.raw).toLocaleString()}` } } }
                                     }}
                                     plugins={[valuePlugin]}
                                 />
@@ -507,7 +524,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                                             </div>
                                             <div className="mt-2 flex items-baseline gap-1">
                                                 <span className="text-lg font-black text-purple-600">{stats.yearMetrics.totalDeptComp.toFixed(0)}</span>
-                                                <span className="text-[9px] font-black text-gray-400 uppercase">部門補休單</span>
+                                                <span className="text-[9px] font-black text-gray-400 uppercase">部門補休單 (1H=2Units)</span>
                                             </div>
                                         </div>
                                     </div>

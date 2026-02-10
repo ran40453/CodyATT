@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { format, getDay, isAfter } from 'date-fns' // Added getDay, isAfter
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, Clock, Check, Palmtree, Moon, DollarSign, Coffee, Trash2 } from 'lucide-react'
+import { MapPin, Clock, Check, Palmtree, Moon, DollarSign, Coffee, Trash2, MessageSquare, Calendar as CalendarIcon, FileText } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { loadSettings, calculateOTHours, calculateDuration, calculateDailySalary, calculateCompLeaveUnits, fetchExchangeRate, standardizeCountry } from '../lib/storage' // Added calculateDuration
 import { isTaiwanHoliday, getHolidayName } from '../lib/holidays'
@@ -21,6 +21,10 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
     const [leaveEndTime, setLeaveEndTime] = useState(record?.leaveEndTime || settings?.rules?.standardEndTime || "17:30");
     const [leaveType, setLeaveType] = useState(record?.leaveType || '特休');
     const [isLeaveTypePickerOpen, setIsLeaveTypePickerOpen] = useState(false);
+
+    // Remarks
+    const [remarks, setRemarks] = useState(record?.remarks || '');
+    const [activeTab, setActiveTab] = useState('schedule'); // 'schedule', 'remarks'
 
     // Auto-calculate duration (Partial Day)
     useEffect(() => {
@@ -66,8 +70,9 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
             setIsWorkDay(record.isWorkDay || false)
             setIsLeave(record.isLeave || false)
             setOtType(record.otType || 'pay')
+            setRemarks(record.remarks || '')
         }
-    }, [record?.date, record?.endTime, record?.travelCountry, record?.isHoliday, record?.isWorkDay, record?.isLeave, record?.otType])
+    }, [record?.date, record?.endTime, record?.travelCountry, record?.isHoliday, record?.isWorkDay, record?.isLeave, record?.otType, record?.remarks])
 
     const handleDragStart = (e, type = 'endTime') => {
         if (e.cancelable) e.preventDefault();
@@ -126,9 +131,10 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
 
         // Leave values from state (or overrides)
         const finalLeaveType = overrides.leaveType !== undefined ? overrides.leaveType : leaveType;
-        // If overriding isFullDay/Times, we might need to recalc duration, but simpler to rely on current state unless passed.
         // For simplicity, we grab current state if not passed.
         // We generally don't pass leave vars in overrides except maybe type.
+
+        const finalRemarks = overrides.remarks !== undefined ? overrides.remarks : remarks;
 
         let otHours = 0;
         const d = getDay(day);
@@ -167,7 +173,8 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
             leaveType: finalLeaveType,
             leaveDuration: finalLeave ? (isFullDay ? 8 : leaveDuration) : 0,
             leaveStartTime: finalLeave && !isFullDay ? leaveStartTime : null,
-            leaveEndTime: finalLeave && !isFullDay ? leaveEndTime : null
+            leaveEndTime: finalLeave && !isFullDay ? leaveEndTime : null,
+            remarks: finalRemarks
         })
     }
 
@@ -205,7 +212,8 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
         isHoliday !== (record?.isHoliday || false) ||
         isLeave !== (record?.isLeave || false) ||
         travelCountry !== (standardizeCountry(record?.travelCountry)) ||
-        otType !== (record?.otType || 'pay');
+        otType !== (record?.otType || 'pay') ||
+        remarks !== (record?.remarks || '');
 
     // If dirty (user edited), show live calc. If clean, show stored (history) unless stored is missing.
     const otHours = (isDirty || isNaN(storedOT) || storedOT === 0) ? (isNaN(calculatedOT) ? 0 : calculatedOT) : storedOT;
@@ -287,9 +295,11 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
                                 leaveDuration: 0,
                                 leaveStartTime: null,
                                 leaveEndTime: null,
-                                Remark: '',
+                                leaveEndTime: null,
+                                remarks: ''
                             });
-                            if (onClose) onClose();
+                            // Use a small timeout to prevent race conditions during unmount/update
+                            if (onClose) setTimeout(() => onClose(), 50);
                         }}
                         className="neumo-button p-2 text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                     >
@@ -301,213 +311,251 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
             {/* If header is hidden, we might still want a close action or just rely on backdrop click? */}
             {/* The CalendarOverlay handles closing via backdrop. */}
 
-            {/* Status Grid */}
-            <div className="grid grid-cols-4 gap-2">
+            {/* Toggle Tabs */}
+            <div className="flex p-1 bg-gray-200/50 rounded-xl mb-2">
                 <button
-                    onClick={() => {
-                        setIsWorkDay(!isWorkDay);
-                        if (!isWorkDay) setIsHoliday(false);
-                    }}
-                    className={cn("py-3 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase transition-all", isWorkDay ? "neumo-pressed text-blue-600" : "neumo-raised text-gray-400")}
+                    onClick={() => setActiveTab('schedule')}
+                    className={cn(
+                        "flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all flex items-center justify-center gap-1.5",
+                        activeTab === 'schedule' ? "bg-[#E0E5EC] text-neumo-brand shadow-sm" : "text-gray-400 hover:text-gray-500"
+                    )}
                 >
-                    <Check size={16} />
-                    <span>平日</span>
+                    <CalendarIcon size={12} /> Schedule
                 </button>
                 <button
-                    onClick={() => {
-                        setIsHoliday(!isHoliday);
-                        if (!isHoliday) setIsWorkDay(false);
-                    }}
-                    className={cn("py-3 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase transition-all", isHoliday ? "neumo-pressed text-orange-500" : "neumo-raised text-gray-400")}
+                    onClick={() => setActiveTab('remarks')}
+                    className={cn(
+                        "flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all flex items-center justify-center gap-1.5",
+                        activeTab === 'remarks' ? "bg-[#E0E5EC] text-indigo-500 shadow-sm" : "text-gray-400 hover:text-gray-500"
+                    )}
                 >
-                    <Palmtree size={16} />
-                    <span>假日</span>
-                </button>
-                <button
-                    onClick={() => setIsLeave(!isLeave)}
-                    className={cn("py-3 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase transition-all", isLeave ? "neumo-pressed text-indigo-500" : "neumo-raised text-gray-400")}
-                >
-                    <Moon size={16} />
-                    <span>請假</span>
-                </button>
-                <button
-                    onClick={() => { const seq = ['', 'VN', 'IN', 'CN']; setTravelCountry(seq[(seq.indexOf(travelCountry) + 1) % seq.length]); }}
-                    className={cn("py-3 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase transition-all", travelCountry ? "neumo-pressed text-green-600" : "neumo-raised text-gray-400")}
-                >
-                    <MapPin size={16} />
-                    <span>{travelCountry || '出差'}</span>
+                    <FileText size={12} /> Remarks
+                    {remarks && <div className="w-1.5 h-1.5 rounded-full bg-rose-500 ml-1" />}
                 </button>
             </div>
 
-            {/* Content Area: Leave vs OT */}
-            {isLeave ? (
-                <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
-                    <div className="space-y-2 relative">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">假別</label>
-                        <button
-                            onClick={() => setIsLeaveTypePickerOpen(!isLeaveTypePickerOpen)}
-                            className="w-full h-12 neumo-raised rounded-2xl flex items-center justify-between px-4 text-xs font-black text-gray-600 transition-all hover:scale-[0.99] active:scale-95"
-                        >
-                            <span>{leaveType}</span>
-                            <div className={cn("transition-transform duration-200", isLeaveTypePickerOpen ? "rotate-180" : "rotate-0")}>
-                                <Check size={14} className="text-neumo-brand" />
-                            </div>
-                        </button>
-
-                        <AnimatePresence>
-                            {isLeaveTypePickerOpen && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                                    className="absolute left-0 right-0 top-full mt-2 z-[60] bg-[#E0E5EC]/95 backdrop-blur-md neumo-card p-2 grid grid-cols-2 gap-2 shadow-2xl"
-                                >
-                                    {Object.keys(settings?.leaveRules || {}).filter(type => type !== '補休').map(type => (
-                                        <button
-                                            key={type}
-                                            onClick={() => {
-                                                setLeaveType(type);
-                                                syncUpdate({ leaveType: type });
-                                                setIsLeaveTypePickerOpen(false);
-                                            }}
-                                            className={cn(
-                                                "py-3 px-1 text-[10px] font-black rounded-xl transition-all border border-transparent text-center",
-                                                leaveType === type
-                                                    ? "bg-rose-50 text-rose-600 border-rose-200 shadow-sm"
-                                                    : "neumo-raised text-gray-400 hover:text-gray-600"
-                                            )}
-                                        >
-                                            {type}
-                                        </button>
-                                    ))}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-
-                    <div className="flex items-center justify-between neumo-pressed p-3 rounded-2xl">
-                        <span className="text-xs font-black text-gray-500">全天</span>
-                        <button
-                            onClick={() => setIsFullDay(!isFullDay)}
-                            className={cn(
-                                "w-10 h-6 rounded-full relative transition-colors duration-300",
-                                isFullDay ? "bg-rose-500" : "bg-gray-200"
-                            )}
-                        >
-                            <div className={cn(
-                                "absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300",
-                                isFullDay ? "translate-x-4" : "translate-x-0"
-                            )} />
-                        </button>
-                    </div>
-
-                    {!isFullDay && (
-                        <div className="space-y-2">
-                            <div className="flex justify-between items-end px-1">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">請假時間</label>
-                                <span className="text-[10px] font-black text-rose-500">{leaveDuration}H</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div
-                                    className="neumo-pressed flex-1 h-12 flex flex-col items-center justify-center cursor-ns-resize rounded-xl touch-action-none"
-                                    onMouseDown={(e) => handleDragStart(e, 'leaveStart')}
-                                    onTouchStart={(e) => handleDragStart(e, 'leaveStart')}
-                                    style={{ touchAction: 'none' }}
-                                >
-                                    <span className="text-[10px] font-black text-gray-400 leading-none mb-1">開始</span>
-                                    <span className="text-sm font-black text-gray-600">{leaveStartTime}</span>
-                                </div>
-                                <span className="text-gray-300 font-bold">-</span>
-                                <div
-                                    className="neumo-pressed flex-1 h-12 flex flex-col items-center justify-center cursor-ns-resize rounded-xl touch-action-none"
-                                    onMouseDown={(e) => handleDragStart(e, 'leaveEnd')}
-                                    onTouchStart={(e) => handleDragStart(e, 'leaveEnd')}
-                                    style={{ touchAction: 'none' }}
-                                >
-                                    <span className="text-[10px] font-black text-gray-400 leading-none mb-1">結束</span>
-                                    <span className="text-sm font-black text-gray-600">{leaveEndTime}</span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Leave Cost Estimate */}
-                    <div className="flex items-center justify-between px-2 pt-2 border-t border-gray-200/50">
-                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">扣薪預估</span>
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-xl font-black text-rose-500 tabular-nums">
-                                -${Math.round(salaryMetrics?.leaveDeduction || 0).toLocaleString()}
-                            </span>
-                            <span className="text-[9px] font-bold text-gray-400 uppercase">TWD</span>
-                        </div>
-                    </div>
-                </div>
-            ) : (
+            {activeTab === 'schedule' ? (
                 <>
-                    {/* Time Picker */}
-                    <div
-                        className="h-24 neumo-pressed rounded-3xl flex flex-col items-center justify-center relative cursor-ns-resize overflow-hidden shrink-0 touch-action-none"
-                        style={{ touchAction: 'none' }}
-                        onMouseDown={handleDragStart}
-                        onTouchStart={handleDragStart}
-                    >
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-black text-[#202731]">{endTime}</span>
-                            <Clock size={14} className="text-gray-300" />
-                        </div>
-                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">拖曳調整下班</p>
+
+                    {/* Status Grid */}
+                    <div className="grid grid-cols-4 gap-2">
+                        <button
+                            onClick={() => {
+                                setIsWorkDay(!isWorkDay);
+                                if (!isWorkDay) setIsHoliday(false);
+                            }}
+                            className={cn("py-3 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase transition-all", isWorkDay ? "neumo-pressed text-blue-600" : "neumo-raised text-gray-400")}
+                        >
+                            <Check size={16} />
+                            <span>平日</span>
+                        </button>
+                        <button
+                            onClick={() => {
+                                setIsHoliday(!isHoliday);
+                                if (!isHoliday) setIsWorkDay(false);
+                            }}
+                            className={cn("py-3 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase transition-all", isHoliday ? "neumo-pressed text-orange-500" : "neumo-raised text-gray-400")}
+                        >
+                            <Palmtree size={16} />
+                            <span>假日</span>
+                        </button>
+                        <button
+                            onClick={() => setIsLeave(!isLeave)}
+                            className={cn("py-3 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase transition-all", isLeave ? "neumo-pressed text-indigo-500" : "neumo-raised text-gray-400")}
+                        >
+                            <Moon size={16} />
+                            <span>請假</span>
+                        </button>
+                        <button
+                            onClick={() => { const seq = ['', 'VN', 'IN', 'CN']; setTravelCountry(seq[(seq.indexOf(travelCountry) + 1) % seq.length]); }}
+                            className={cn("py-3 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase transition-all", travelCountry ? "neumo-pressed text-green-600" : "neumo-raised text-gray-400")}
+                        >
+                            <MapPin size={16} />
+                            <span>{travelCountry || '出差'}</span>
+                        </button>
                     </div>
 
-                    {/* OT Details */}
-                    {otHours >= 0.5 ? (
-                        <div className="space-y-3 px-2">
-                            {/* Row 1: OT hours + type */}
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div>
-                                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">加班時數 / 類型</p>
-                                        <span className="text-3xl font-black text-neumo-brand leading-none">{otHours.toFixed(1)}h</span>
+                    {/* Content Area: Leave vs OT */}
+                    {isLeave ? (
+                        <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                            <div className="space-y-2 relative">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">假別</label>
+                                <button
+                                    onClick={() => setIsLeaveTypePickerOpen(!isLeaveTypePickerOpen)}
+                                    className="w-full h-12 neumo-raised rounded-2xl flex items-center justify-between px-4 text-xs font-black text-gray-600 transition-all hover:scale-[0.99] active:scale-95"
+                                >
+                                    <span>{leaveType}</span>
+                                    <div className={cn("transition-transform duration-200", isLeaveTypePickerOpen ? "rotate-180" : "rotate-0")}>
+                                        <Check size={14} className="text-neumo-brand" />
                                     </div>
-                                    <button
-                                        onClick={toggleOtType}
-                                        className={cn(
-                                            "w-8 h-8 rounded-full flex items-center justify-center transition-all",
-                                            otType === 'pay' ? "bg-green-500 text-white shadow-lg" :
-                                                otType === 'leave' ? "bg-indigo-500 text-white shadow-lg" :
-                                                    "bg-purple-600 text-white shadow-lg"
-                                        )}
-                                    >
-                                        {otType === 'pay' ? <DollarSign size={14} /> : <Coffee size={14} />}
-                                    </button>
-                                </div>
+                                </button>
+
+                                <AnimatePresence>
+                                    {isLeaveTypePickerOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                            className="absolute left-0 right-0 top-full mt-2 z-[60] bg-[#E0E5EC]/95 backdrop-blur-md neumo-card p-2 grid grid-cols-2 gap-2 shadow-2xl"
+                                        >
+                                            {Object.keys(settings?.leaveRules || {}).filter(type => type !== '補休').map(type => (
+                                                <button
+                                                    key={type}
+                                                    onClick={() => {
+                                                        setLeaveType(type);
+                                                        syncUpdate({ leaveType: type });
+                                                        setIsLeaveTypePickerOpen(false);
+                                                    }}
+                                                    className={cn(
+                                                        "py-3 px-1 text-[10px] font-black rounded-xl transition-all border border-transparent text-center",
+                                                        leaveType === type
+                                                            ? "bg-rose-50 text-rose-600 border-rose-200 shadow-sm"
+                                                            : "neumo-raised text-gray-400 hover:text-gray-600"
+                                                    )}
+                                                >
+                                                    {type}
+                                                </button>
+                                            ))}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
-                            {/* Row 2: Estimated salary/comp */}
-                            <div className="flex items-baseline justify-between px-1 pt-1 border-t border-gray-200/50">
-                                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
-                                    預估 {otType === 'pay' ? '薪資' : otType === 'leave' ? '公司補休' : '部門補休'}
-                                </p>
+
+                            <div className="flex items-center justify-between neumo-pressed p-3 rounded-2xl">
+                                <span className="text-xs font-black text-gray-500">全天</span>
+                                <button
+                                    onClick={() => setIsFullDay(!isFullDay)}
+                                    className={cn(
+                                        "w-10 h-6 rounded-full relative transition-colors duration-300",
+                                        isFullDay ? "bg-rose-500" : "bg-gray-200"
+                                    )}
+                                >
+                                    <div className={cn(
+                                        "absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300",
+                                        isFullDay ? "translate-x-4" : "translate-x-0"
+                                    )} />
+                                </button>
+                            </div>
+
+                            {!isFullDay && (
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-end px-1">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">請假時間</label>
+                                        <span className="text-[10px] font-black text-rose-500">{leaveDuration}H</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div
+                                            className="neumo-pressed flex-1 h-12 flex flex-col items-center justify-center cursor-ns-resize rounded-xl touch-action-none"
+                                            onMouseDown={(e) => handleDragStart(e, 'leaveStart')}
+                                            onTouchStart={(e) => handleDragStart(e, 'leaveStart')}
+                                            style={{ touchAction: 'none' }}
+                                        >
+                                            <span className="text-[10px] font-black text-gray-400 leading-none mb-1">開始</span>
+                                            <span className="text-sm font-black text-gray-600">{leaveStartTime}</span>
+                                        </div>
+                                        <span className="text-gray-300 font-bold">-</span>
+                                        <div
+                                            className="neumo-pressed flex-1 h-12 flex flex-col items-center justify-center cursor-ns-resize rounded-xl touch-action-none"
+                                            onMouseDown={(e) => handleDragStart(e, 'leaveEnd')}
+                                            onTouchStart={(e) => handleDragStart(e, 'leaveEnd')}
+                                            style={{ touchAction: 'none' }}
+                                        >
+                                            <span className="text-[10px] font-black text-gray-400 leading-none mb-1">結束</span>
+                                            <span className="text-sm font-black text-gray-600">{leaveEndTime}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Leave Cost Estimate */}
+                            <div className="flex items-center justify-between px-2 pt-2 border-t border-gray-200/50">
+                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">扣薪預估</span>
                                 <div className="flex items-baseline gap-1">
-                                    <span className={cn(
-                                        "text-2xl font-black tabular-nums",
-                                        otType === 'pay' ? "text-green-600" :
-                                            otType === 'leave' ? "text-indigo-600" :
-                                                "text-purple-600"
-                                    )}>
-                                        {otType === 'pay' ? `\$${Math.round(dailySalary).toLocaleString()}` : compUnits.toFixed(0)}
+                                    <span className="text-xl font-black text-rose-500 tabular-nums">
+                                        -${Math.round(salaryMetrics?.leaveDeduction || 0).toLocaleString()}
                                     </span>
-                                    <span className="text-[9px] font-bold text-gray-400 uppercase">
-                                        {otType === 'pay' ? 'TWD' : '單'}
-                                    </span>
+                                    <span className="text-[9px] font-bold text-gray-400 uppercase">TWD</span>
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <div className="neumo-pressed p-4 rounded-2xl flex justify-center items-center gap-2 opacity-40 grayscale h-[60px] shrink-0">
-                            <Clock size={14} className="text-gray-400" />
-                            <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">時數不足 0.5H 不計入加班</span>
-                        </div>
+                        <>
+                            {/* Time Picker */}
+                            <div
+                                className="h-24 neumo-pressed rounded-3xl flex flex-col items-center justify-center relative cursor-ns-resize overflow-hidden shrink-0 touch-action-none"
+                                style={{ touchAction: 'none' }}
+                                onMouseDown={handleDragStart}
+                                onTouchStart={handleDragStart}
+                            >
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-4xl font-black text-[#202731]">{endTime}</span>
+                                    <Clock size={14} className="text-gray-300" />
+                                </div>
+                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">拖曳調整下班</p>
+                            </div>
+
+                            {/* OT Details */}
+                            {otHours >= 0.5 ? (
+                                <div className="space-y-3 px-2">
+                                    {/* Row 1: OT hours + type */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div>
+                                                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">加班時數 / 類型</p>
+                                                <span className="text-3xl font-black text-neumo-brand leading-none">{otHours.toFixed(1)}h</span>
+                                            </div>
+                                            <button
+                                                onClick={toggleOtType}
+                                                className={cn(
+                                                    "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                                                    otType === 'pay' ? "bg-green-500 text-white shadow-lg" :
+                                                        otType === 'leave' ? "bg-indigo-500 text-white shadow-lg" :
+                                                            "bg-purple-600 text-white shadow-lg"
+                                                )}
+                                            >
+                                                {otType === 'pay' ? <DollarSign size={14} /> : <Coffee size={14} />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {/* Row 2: Estimated salary/comp */}
+                                    <div className="flex items-baseline justify-between px-1 pt-1 border-t border-gray-200/50">
+                                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
+                                            預估 {otType === 'pay' ? '薪資' : otType === 'leave' ? '公司補休' : '部門補休'}
+                                        </p>
+                                        <div className="flex items-baseline gap-1">
+                                            <span className={cn(
+                                                "text-2xl font-black tabular-nums",
+                                                otType === 'pay' ? "text-green-600" :
+                                                    otType === 'leave' ? "text-indigo-600" :
+                                                        "text-purple-600"
+                                            )}>
+                                                {otType === 'pay' ? `\$${Math.round(dailySalary).toLocaleString()}` : compUnits.toFixed(0)}
+                                            </span>
+                                            <span className="text-[9px] font-bold text-gray-400 uppercase">
+                                                {otType === 'pay' ? 'TWD' : '單'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="neumo-pressed p-4 rounded-2xl flex justify-center items-center gap-2 opacity-40 grayscale h-[60px] shrink-0">
+                                    <Clock size={14} className="text-gray-400" />
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">時數不足 0.5H 不計入加班</span>
+                                </div>
+                            )}
+                        </>
                     )}
                 </>
+            ) : (
+                <div className="flex-1 flex flex-col gap-2 min-h-[300px] animate-in fade-in slide-in-from-right-4 duration-200">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1 mt-2">備註事項 (Remarks)</label>
+                    <textarea
+                        value={remarks}
+                        onChange={(e) => setRemarks(e.target.value)}
+                        className="w-full flex-1 neumo-pressed rounded-2xl p-4 text-sm font-bold text-gray-700 focus:outline-none resize-none focus:ring-2 focus:ring-indigo-100 transition-all placeholder:text-gray-300 leading-relaxed"
+                        placeholder="在此輸入當日備註..."
+                    />
+                </div>
             )}
 
             <button
