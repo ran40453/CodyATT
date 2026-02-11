@@ -405,7 +405,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
                         )}
                         <span className="flex items-center justify-center gap-2 relative z-10">
                             {tab === 'financial' ? <Briefcase size={14} /> : <Plane size={14} />}
-                            {tab === 'financial' ? 'Financial' : 'Travel'}
+                            {tab === 'financial' ? 'Financial' : 'Attendance'}
                         </span>
                     </button>
                 ))}

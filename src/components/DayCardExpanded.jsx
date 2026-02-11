@@ -5,6 +5,7 @@ import { MapPin, Clock, Check, Palmtree, Moon, DollarSign, Coffee, Trash2, Messa
 import { cn } from '../lib/utils'
 import { loadSettings, calculateOTHours, calculateDuration, calculateDailySalary, calculateCompLeaveUnits, fetchExchangeRate, standardizeCountry } from '../lib/storage' // Added calculateDuration
 import { isTaiwanHoliday, getHolidayName } from '../lib/holidays'
+import { playTick } from '../lib/audio'
 
 function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hideHeader = false }) {
     const [settings, setSettings] = useState(null) // Moved to top
@@ -96,12 +97,21 @@ function DayCardExpanded({ day, record, onUpdate, onClose, style, className, hid
             const nextTime = `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`
 
             if (type === 'endTime') {
-                setEndTime(nextTime)
-                currentEndTimeRef.current = nextTime
+                if (nextTime !== endTime) {
+                    setEndTime(nextTime)
+                    currentEndTimeRef.current = nextTime
+                    playTick();
+                }
             } else if (type === 'leaveStart') {
-                setLeaveStartTime(nextTime)
+                if (nextTime !== leaveStartTime) {
+                    setLeaveStartTime(nextTime)
+                    playTick();
+                }
             } else if (type === 'leaveEnd') {
-                setLeaveEndTime(nextTime)
+                if (nextTime !== leaveEndTime) {
+                    setLeaveEndTime(nextTime)
+                    playTick();
+                }
             }
         }
 

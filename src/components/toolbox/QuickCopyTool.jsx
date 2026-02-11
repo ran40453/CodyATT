@@ -1,9 +1,31 @@
 import { playTick } from '../../lib/audio'
+import React, { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Briefcase, Calendar, Check, Copy, X } from 'lucide-react'
+import { cn } from '../../lib/utils'
 
 function QuickCopyTool({ isOpen, onClose }) {
-    // ... (state)
+    const [content, setContent] = useState('')
+    const [m03, setM03] = useState(false)
+    const [gtk, setGtk] = useState(false)
+    const [dateOffset, setDateOffset] = useState(0)
+    const [units, setUnits] = useState(8)
+    const [isCopied, setIsCopied] = useState(false)
 
-    // ... (logic)
+    // Derived State
+    const targetDate = new Date()
+    targetDate.setDate(targetDate.getDate() + dateOffset)
+    const dateStr = `${targetDate.getMonth() + 1}/${targetDate.getDate()}`
+
+    const fullText = `[${dateStr}] ${content} ` +
+        (m03 ? `(M03)${units} ` : `${units} `) +
+        (gtk ? `(GTK刷臉)` : ``)
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(fullText)
+        setIsCopied(true)
+        setTimeout(() => setIsCopied(false), 2000)
+    }
 
     // Drag handlers
     const handleDrag = (e, type) => {
@@ -11,6 +33,7 @@ function QuickCopyTool({ isOpen, onClose }) {
         // type: 'date' or 'unit'
         const startX = e.clientX || (e.touches && e.touches[0].clientX);
         const startValue = type === 'date' ? dateOffset : units;
+        let lastValue = startValue; // Track local value
 
         const handleMove = (moveEvent) => {
             const currentX = moveEvent.clientX || (moveEvent.touches && moveEvent.touches[0].clientX);
@@ -22,16 +45,18 @@ function QuickCopyTool({ isOpen, onClose }) {
             if (type === 'date') {
                 const step = Math.round(diff / 100);
                 const newValue = startValue + step;
-                if (newValue !== dateOffset) { // Check if value actually changed
+                if (newValue !== lastValue) {
                     setDateOffset(newValue);
+                    lastValue = newValue;
                     playTick(); // Sound on change
                 }
             } else {
                 const step = Math.round(diff / 80);
                 // Clamp 0-16
                 const newValue = Math.min(16, Math.max(0, startValue + (step * 2)));
-                if (newValue !== units) { // Check if value actually changed
+                if (newValue !== lastValue) {
                     setUnits(newValue);
+                    lastValue = newValue;
                     playTick(); // Sound on change
                 }
             }

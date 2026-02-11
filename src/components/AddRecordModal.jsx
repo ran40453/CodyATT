@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Plus, Calendar, Globe, Palmtree, Moon, Clock, CreditCard, Coffee, Gift, Check, DollarSign } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '../lib/utils'
+import { playTick } from '../lib/audio'
 
 function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
     const bonusCategories = settings?.bonusCategories || ['季獎金', '年終獎金', '其他獎金', '補助金', '退費', '分紅']
@@ -175,11 +176,20 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
             const nextTime = `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`
 
             if (type === 'endTime') {
-                setEndTime(nextTime)
+                if (nextTime !== endTime) {
+                    setEndTime(nextTime)
+                    playTick();
+                }
             } else if (type === 'leaveStart') {
-                setLeaveStartTime(nextTime)
+                if (nextTime !== leaveStartTime) {
+                    setLeaveStartTime(nextTime)
+                    playTick();
+                }
             } else if (type === 'leaveEnd') {
-                setLeaveEndTime(nextTime)
+                if (nextTime !== leaveEndTime) {
+                    setLeaveEndTime(nextTime)
+                    playTick();
+                }
             }
         }
 
