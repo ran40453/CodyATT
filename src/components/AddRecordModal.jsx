@@ -5,6 +5,8 @@ import { format } from 'date-fns'
 import { cn } from '../lib/utils'
 
 function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
+    const bonusCategories = settings?.bonusCategories || ['季獎金', '年終獎金', '其他獎金', '補助金', '退費', '分紅']
+
     const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
     const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'))
     const [mode, setMode] = useState('attendance') // attendance, bonus
@@ -16,7 +18,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
     const [isWorkDay, setIsWorkDay] = useState(false)
     const [isBatchMode, setIsBatchMode] = useState(false)
     const [bonus, setBonus] = useState('')
-    const [bonusCategory, setBonusCategory] = useState('')
+    const [bonusCategory, setBonusCategory] = useState(bonusCategories[0])
     const [bonusName, setBonusName] = useState('')
     const [showCustomCategory, setShowCustomCategory] = useState(false)
     const [customCategory, setCustomCategory] = useState('')
@@ -29,8 +31,6 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
     const [leaveEndTime, setLeaveEndTime] = useState(settings?.rules?.standardEndTime || '17:30')
     const [isLeaveTypePickerOpen, setIsLeaveTypePickerOpen] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
-
-    const bonusCategories = settings?.bonusCategories || ['季獎金', '年終獎金', '其他獎金', '補助金', '退費', '分紅']
 
     if (!isOpen) return null
 

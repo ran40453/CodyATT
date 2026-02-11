@@ -647,7 +647,7 @@ export const createGist = async (token) => {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                description: 'OT Calculation Backup (Private)',
+                description: 'CodyATT Backup (Private)',
                 public: false,
                 files: {
                     'records.json': {

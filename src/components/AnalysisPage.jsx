@@ -914,7 +914,7 @@ function BonusDetailModal({ isOpen, onClose, data, onUpdate, isPrivacy }) {
 
     const bonusRecords = data.flatMap(r => {
         const dateStr = format(new Date(r.date), 'yyyy-MM-dd');
-        if (Array.isArray(r.bonusEntries) && r.bonusEntries.length > 0) return r.bonusEntries.map(be => ({ ...be, parentDate: dateStr }));
+        if (Array.isArray(r.bonusEntries) && r.bonusEntries.length > 0) return r.bonusEntries.map(be => ({ ...be, category: be.category || '獎金', parentDate: dateStr }));
         if (parseFloat(r.bonus) > 0) return [{ id: `legacy-${dateStr}`, date: r.date, amount: r.bonus, category: r.bonusCategory || '獎金', name: r.bonusName || '', parentDate: dateStr }];
         return [];
     }).sort((a, b) => new Date(b.date) - new Date(a.date));
