@@ -428,15 +428,15 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                     >
                         <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 to-transparent pointer-events-none" />
 
-                        {/* Dept Comp Battery - Value SWAPPED to allDeptCompUsed */}
+                        {/* Dept Comp Battery - Corrected to Remaining / Total Earned */}
                         <div className="flex flex-col items-center gap-4 relative z-10">
                             <div className="flex items-center gap-2 mb-2">
                                 <Battery size={20} className="text-purple-500" />
                                 <span className="text-sm font-black text-gray-500 uppercase tracking-widest">部門補休</span>
                             </div>
                             <BatteryIcon
-                                value={Math.round(allDeptCompUsed)}
-                                total={40}
+                                value={Math.round(cumulativeDeptCompBalance)}
+                                total={Math.round(allDeptCompEarned)}
                                 unit=""
                                 size="large"
                                 showDetails={true}
@@ -453,14 +453,14 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                         {/* Divider (Desktop) */}
                         <div className="hidden md:block w-px h-32 bg-gray-200/50" />
 
-                        {/* Annual Leave Battery - Value SWAPPED to annualUsed */}
+                        {/* Annual Leave Battery - Corrected to Remaining / Total Given */}
                         <div className="flex flex-col items-center gap-4 relative z-10">
                             <div className="flex items-center gap-2 mb-2">
                                 <Palmtree size={20} className="text-teal-500" />
                                 <span className="text-sm font-black text-gray-500 uppercase tracking-widest">特休狀況</span>
                             </div>
                             <BatteryIcon
-                                value={Number(annualUsed).toFixed(1)}
+                                value={Number(remainingAnnual).toFixed(1)}
                                 total={annualGiven}
                                 unit=""
                                 size="large"
@@ -513,17 +513,15 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                         className="neumo-card p-4 flex flex-col h-40"
                     >
                         <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Tools</h3>
-                        <div className="flex-1 grid grid-cols-4 gap-3">
+                        <div className="flex-1 grid grid-cols-4 gap-3 overflow-hidden">
                             {/* Quick Copy Button */}
                             <button
                                 onClick={() => setIsQuickCopyOpen(true)}
-                                className="aspect-square neumo-button rounded-xl flex flex-col items-center justify-center gap-1.5 text-gray-400 hover:text-blue-500 transition-colors group"
+                                className="h-full rounded-xl flex flex-col items-center justify-center gap-1.5 text-gray-400 hover:text-blue-500 hover:neumo-pressed transition-all duration-200 group bg-gray-50/50 border border-gray-100"
                             >
-                                <Briefcase size={22} strokeWidth={2} className="group-hover:scale-110 transition-transform" />
-                                {/* <span className="text-[8px] font-black uppercase tracking-wider">Copy</span> */}
+                                <Briefcase size={20} strokeWidth={2} className="group-hover:scale-110 transition-transform text-gray-500 group-hover:text-blue-500" />
+                                <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 group-hover:text-blue-500">Copy</span>
                             </button>
-                            {/* Placeholder for future tools */}
-                            {/* <div className="aspect-square neumo-pressed rounded-xl border border-gray-100/50 opacity-50" /> */}
                         </div>
                     </motion.div>
                 </div>
