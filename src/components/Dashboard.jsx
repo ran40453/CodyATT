@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, subDays, subMonths, getDaysInMonth, eachDayOfInterval, eachMonthOfInterval, isSameDay, isSameMonth, getYear } from 'date-fns'
 import { TrendingUp, Globe, Wallet, Clock, Coffee, Moon, Gift, Eye, EyeOff, Briefcase, ChevronRight, Calendar, Battery, Palmtree, Check } from 'lucide-react'
 import BatteryIcon from './BatteryIcon'
+import QuickCopyTool from './toolbox/QuickCopyTool'
 import { motion } from 'framer-motion'
 import {
     Chart as ChartJS,
@@ -24,6 +25,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
     const [settings, setSettings] = useState(null)
     const [liveRate, setLiveRate] = useState(null)
     const [showSalary, setShowSalary] = useState(false) // Default hidden
+    const [isQuickCopyOpen, setIsQuickCopyOpen] = useState(false)
     const today = new Date()
 
     useEffect(() => {
@@ -314,6 +316,9 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
 
     return (
         <div className="space-y-6 pb-32">
+            <QuickCopyTool isOpen={isQuickCopyOpen} onClose={() => setIsQuickCopyOpen(false)} />
+
+            {/* ... (Header and Attendance Bar SAME) ... */}
             <header className="flex justify-between items-start">
                 <div className="space-y-1">
                     <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
@@ -423,14 +428,14 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                     >
                         <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 to-transparent pointer-events-none" />
 
-                        {/* Dept Comp Battery */}
+                        {/* Dept Comp Battery - Value SWAPPED to allDeptCompUsed */}
                         <div className="flex flex-col items-center gap-4 relative z-10">
                             <div className="flex items-center gap-2 mb-2">
                                 <Battery size={20} className="text-purple-500" />
                                 <span className="text-sm font-black text-gray-500 uppercase tracking-widest">部門補休</span>
                             </div>
                             <BatteryIcon
-                                value={Math.round(cumulativeDeptCompBalance)}
+                                value={Math.round(allDeptCompUsed)}
                                 total={40}
                                 unit=""
                                 size="large"
@@ -440,22 +445,22 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                                 color="bg-purple-500"
                             />
                             <div className="flex gap-4 text-[10px] font-bold text-gray-400">
-                                <span>剩餘: {Math.round(cumulativeDeptCompBalance)}</span>
                                 <span>已用: {Math.round(allDeptCompUsed)}</span>
+                                <span>剩餘: {Math.round(cumulativeDeptCompBalance)}</span>
                             </div>
                         </div>
 
                         {/* Divider (Desktop) */}
                         <div className="hidden md:block w-px h-32 bg-gray-200/50" />
 
-                        {/* Annual Leave Battery */}
+                        {/* Annual Leave Battery - Value SWAPPED to annualUsed */}
                         <div className="flex flex-col items-center gap-4 relative z-10">
                             <div className="flex items-center gap-2 mb-2">
                                 <Palmtree size={20} className="text-teal-500" />
                                 <span className="text-sm font-black text-gray-500 uppercase tracking-widest">特休狀況</span>
                             </div>
                             <BatteryIcon
-                                value={Number(remainingAnnual).toFixed(1)}
+                                value={Number(annualUsed).toFixed(1)}
                                 total={annualGiven}
                                 unit=""
                                 size="large"
@@ -465,8 +470,8 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                                 color="bg-teal-500"
                             />
                             <div className="flex gap-4 text-[10px] font-bold text-gray-400">
+                                <span>已用: {Number(annualUsed).toFixed(1)}</span>
                                 <span>剩餘: {Number(remainingAnnual).toFixed(1)}</span>
-                                <span>總計: {annualGiven}</span>
                             </div>
                         </div>
                     </motion.div>
@@ -500,160 +505,30 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                         <div className="h-full w-1 bg-gradient-to-b from-transparent via-blue-100 to-transparent rounded-full opacity-50" />
                     </motion.div>
 
-                    {/* Row 2 Right: Toolbox (Builder) */}
-                    <ToolboxBuilder />
+                    {/* Row 2 Right: Tools grid */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.2 }}
+                        className="neumo-card p-4 flex flex-col h-40"
+                    >
+                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Tools</h3>
+                        <div className="flex-1 grid grid-cols-4 gap-3">
+                            {/* Quick Copy Button */}
+                            <button
+                                onClick={() => setIsQuickCopyOpen(true)}
+                                className="aspect-square neumo-button rounded-xl flex flex-col items-center justify-center gap-1.5 text-gray-400 hover:text-blue-500 transition-colors group"
+                            >
+                                <Briefcase size={22} strokeWidth={2} className="group-hover:scale-110 transition-transform" />
+                                {/* <span className="text-[8px] font-black uppercase tracking-wider">Copy</span> */}
+                            </button>
+                            {/* Placeholder for future tools */}
+                            {/* <div className="aspect-square neumo-pressed rounded-xl border border-gray-100/50 opacity-50" /> */}
+                        </div>
+                    </motion.div>
                 </div>
             </div>
         </div>
-    )
-}
-
-function ToolboxBuilder() {
-    // State for builder
-    const [m03, setM03] = useState(false);
-    const [gtk, setGtk] = useState(false);
-    const [content, setContent] = useState('');
-    const [dateOffset, setDateOffset] = useState(-1); // Default yesterday
-    const [units, setUnits] = useState(8);
-    const [isCopied, setIsCopied] = useState(false);
-
-    // Helper for formatted date
-    const targetDate = useMemo(() => {
-        const d = new Date();
-        d.setDate(d.getDate() + dateOffset);
-        return d;
-    }, [dateOffset]);
-
-    const dateStr = format(targetDate, 'M/d');
-
-    // Generate full text
-    const fullText = useMemo(() => {
-        return `Nolan哥，${m03 ? 'M03 ' : ''}${content}${gtk ? ' （GTK刷臉）' : ''} ${dateStr} +${units}單位，謝謝！`;
-    }, [m03, gtk, content, dateStr, units]);
-
-    const handleCopy = () => {
-        navigator.clipboard.writeText(fullText);
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000);
-    };
-
-    // Drag handlers
-    const handleDrag = (e, type) => {
-        // Simple drag logic reusing concept from TimePicker
-        // type: 'date' or 'unit'
-        const startX = e.clientX || (e.touches && e.touches[0].clientX);
-        const startValue = type === 'date' ? dateOffset : units;
-
-        const handleMove = (moveEvent) => {
-            const currentX = moveEvent.clientX || (moveEvent.touches && moveEvent.touches[0].clientY);
-            const diff = currentX - startX;
-            // Sensitivity Reduced significantly: 
-            // Date: ~100px per day
-            // Unit: ~100px per 2 units
-
-            if (type === 'date') {
-                const step = Math.round(diff / 100);
-                setDateOffset(startValue + step);
-            } else {
-                const step = Math.round(diff / 80);
-                // Clamp 0-16
-                setUnits(Math.min(16, Math.max(0, startValue + (step * 2))));
-            }
-        };
-
-        const handleEnd = () => {
-            window.removeEventListener('mousemove', handleMove);
-            window.removeEventListener('mouseup', handleEnd);
-            window.removeEventListener('touchmove', handleMove);
-            window.removeEventListener('touchend', handleEnd);
-        };
-
-        window.addEventListener('mousemove', handleMove);
-        window.addEventListener('mouseup', handleEnd);
-        window.addEventListener('touchmove', handleMove);
-        window.addEventListener('touchend', handleEnd);
-    };
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-            className="neumo-card p-4 flex flex-col justify-between h-40 relative group"
-        >
-            <div className="flex justify-between items-start mb-2">
-                <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-1">
-                    <Briefcase size={14} /> Quick Copy
-                </h4>
-                {isCopied && <span className="text-[10px] font-black text-green-500 bg-green-50 px-2 py-0.5 rounded-full animate-pulse">COPIED!</span>}
-            </div>
-
-            {/* Builder UI */}
-            <div className="space-y-2 flex-1 flex flex-col justify-center">
-                {/* Row 1: Toggles & Input */}
-                <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap">Nolan哥，</span>
-                    <button
-                        onClick={() => setM03(!m03)}
-                        className={cn("px-2 py-1 rounded-lg text-[10px] font-black transition-all", m03 ? "neumo-pressed text-blue-600" : "neumo-raised text-gray-300")}
-                    >
-                        M03
-                    </button>
-                    <input
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        placeholder="工作內容..."
-                        className="neumo-inner-shadow flex-1 h-7 rounded-lg px-2 text-xs font-bold bg-transparent min-w-[60px]"
-                    />
-                    <button
-                        onClick={() => setGtk(!gtk)}
-                        className={cn("px-2 py-1 rounded-lg text-[10px] font-black transition-all", gtk ? "neumo-pressed text-purple-600" : "neumo-raised text-gray-300")}
-                    >
-                        GTK
-                    </button>
-                </div>
-
-                {/* Row 2: Draggables */}
-                <div className="flex items-center gap-2">
-                    {/* Date Dragger */}
-                    <div
-                        className="flex-1 h-8 neumo-pressed rounded-lg flex items-center justify-center cursor-ew-resize select-none touch-none hover:bg-gray-100/50 transition-colors"
-                        onMouseDown={(e) => handleDrag(e, 'date')}
-                        onTouchStart={(e) => handleDrag(e, 'date')}
-                    >
-                        <Calendar size={12} className="text-gray-400 mr-1.5" />
-                        <span className="text-xs font-black text-gray-600">{dateStr}</span>
-                    </div>
-
-                    <span className="text-xs font-bold text-gray-300">+</span>
-
-                    {/* Unit Dragger */}
-                    <div
-                        className="flex-1 h-8 neumo-pressed rounded-lg flex items-center justify-center cursor-ew-resize select-none touch-none hover:bg-gray-100/50 transition-colors"
-                        onMouseDown={(e) => handleDrag(e, 'unit')}
-                        onTouchStart={(e) => handleDrag(e, 'unit')}
-                    >
-                        <span className="text-xs font-black text-neumo-brand mr-1">{units}</span>
-                        <span className="text-[10px] font-bold text-gray-400">單位</span>
-                    </div>
-
-                    <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap">，謝謝！</span>
-                </div>
-            </div>
-
-            {/* Preview & Action */}
-            <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-2">
-                <div className="flex-1 text-[10px] text-gray-400 font-bold truncate italic">
-                    {fullText}
-                </div>
-                <button
-                    onClick={handleCopy}
-                    className="neumo-button w-8 h-8 flex items-center justify-center text-gray-500 hover:text-neumo-brand transition-colors"
-                >
-                    {isCopied ? <Check size={16} className="text-green-500" /> : <Briefcase size={16} />}
-                </button>
-            </div>
-        </motion.div>
     )
 }
 
