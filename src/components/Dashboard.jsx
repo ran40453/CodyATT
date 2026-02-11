@@ -3,7 +3,6 @@ import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, subDays, 
 import { TrendingUp, Globe, Wallet, Clock, Coffee, Moon, Gift, Eye, EyeOff, Briefcase, ChevronRight, Calendar, Battery, Palmtree, Check } from 'lucide-react'
 
 import QuickCopyTool from './toolbox/QuickCopyTool'
-import SoundTester from './toolbox/SoundTester'
 import { motion } from 'framer-motion'
 import {
     Chart as ChartJS,
@@ -27,7 +26,6 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
     const [liveRate, setLiveRate] = useState(null)
     const [showSalary, setShowSalary] = useState(false) // Default hidden
     const [isQuickCopyOpen, setIsQuickCopyOpen] = useState(false)
-    const [isSoundTestOpen, setIsSoundTestOpen] = useState(false)
     const today = new Date()
 
     useEffect(() => {
@@ -319,7 +317,6 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
     return (
         <div className="space-y-6 pb-32">
             <QuickCopyTool isOpen={isQuickCopyOpen} onClose={() => setIsQuickCopyOpen(false)} />
-            <SoundTester isOpen={isSoundTestOpen} onClose={() => setIsSoundTestOpen(false)} />
 
             {/* Header */}
             <header className="flex justify-between items-start">
@@ -327,12 +324,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                     <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
                         Dashboard <span className="text-sm font-bold bg-neumo-brand/10 text-neumo-brand px-2 py-1 rounded-lg">{format(today, 'MMMM')}</span>
                     </h1>
-                    <button
-                        onClick={() => setIsSoundTestOpen(true)}
-                        className="text-gray-500 text-xs font-bold tracking-widest uppercase italic hover:text-neumo-brand transition-colors flex items-center gap-1"
-                    >
-                        Powered by Cody <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block ml-1" title="Sound Lab Active"></span>
-                    </button>
+                    <p className="text-gray-500 text-xs font-bold tracking-widest uppercase italic">Powered by Cody</p>
                 </div>
                 <button
                     onClick={() => setIsPrivacy(!isPrivacy)}

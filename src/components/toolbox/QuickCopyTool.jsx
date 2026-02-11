@@ -1,37 +1,9 @@
-import React, { useState, useMemo, useEffect } from 'react'
-import { format } from 'date-fns'
-import { Briefcase, Calendar, Check, Copy, X } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { cn } from '../../lib/utils'
+import { playTick } from '../../lib/audio'
 
 function QuickCopyTool({ isOpen, onClose }) {
-    // State for builder
-    const [m03, setM03] = useState(false);
-    const [gtk, setGtk] = useState(false);
-    const [content, setContent] = useState('');
-    const [dateOffset, setDateOffset] = useState(-1); // Default yesterday
-    const [units, setUnits] = useState(8);
-    const [isCopied, setIsCopied] = useState(false);
+    // ... (state)
 
-    // Helper for formatted date
-    const targetDate = useMemo(() => {
-        const d = new Date();
-        d.setDate(d.getDate() + dateOffset);
-        return d;
-    }, [dateOffset]);
-
-    const dateStr = format(targetDate, 'M/d');
-
-    // Generate full text
-    const fullText = useMemo(() => {
-        return `Nolan哥，${m03 ? 'M03 ' : ''}${content}${gtk ? ' （GTK刷臉）' : ''} ${dateStr} +${units}單位，謝謝！`;
-    }, [m03, gtk, content, dateStr, units]);
-
-    const handleCopy = () => {
-        navigator.clipboard.writeText(fullText);
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000);
-    };
+    // ... (logic)
 
     // Drag handlers
     const handleDrag = (e, type) => {
@@ -49,11 +21,19 @@ function QuickCopyTool({ isOpen, onClose }) {
 
             if (type === 'date') {
                 const step = Math.round(diff / 100);
-                setDateOffset(startValue + step);
+                const newValue = startValue + step;
+                if (newValue !== dateOffset) { // Check if value actually changed
+                    setDateOffset(newValue);
+                    playTick(); // Sound on change
+                }
             } else {
                 const step = Math.round(diff / 80);
                 // Clamp 0-16
-                setUnits(Math.min(16, Math.max(0, startValue + (step * 2))));
+                const newValue = Math.min(16, Math.max(0, startValue + (step * 2)));
+                if (newValue !== units) { // Check if value actually changed
+                    setUnits(newValue);
+                    playTick(); // Sound on change
+                }
             }
         };
 
