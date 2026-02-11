@@ -324,7 +324,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                     <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
                         Dashboard <span className="text-sm font-bold bg-neumo-brand/10 text-neumo-brand px-2 py-1 rounded-lg">{format(today, 'MMMM')}</span>
                     </h1>
-                    <p className="text-gray-500 text-xs font-bold tracking-widest uppercase italic">Real-time Monthly Overview</p>
+                    <p className="text-gray-500 text-xs font-bold tracking-widest uppercase italic">Powered by Cody</p>
                 </div>
                 <button
                     onClick={() => setIsPrivacy(!isPrivacy)}
@@ -334,32 +334,21 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                 </button>
             </header>
 
-            {/* Attendance Block (Redesigned) */}
+            {/* Attendance Block (Redesigned: Grid of Squares) */}
             <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="neumo-card p-1" // Minimal padding for full-fill effect
+                className="neumo-card p-1 bg-purple-500 overflow-hidden relative" // Purple container for "White Text"
             >
-                <div className="relative h-20 w-full overflow-hidden rounded-2xl neumo-pressed group">
-                    {/* Background Track */}
-                    <div className="absolute inset-0 bg-gray-100" />
+                {/* Background Pattern */}
+                <div className="absolute inset-0 bg-purple-500 z-0" />
 
-                    {/* Liquid Fill */}
-                    <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${attendedPercent}%` }}
-                        transition={{ duration: 1.5, ease: "easeOut" }}
-                        className="absolute left-0 top-0 bottom-0 bg-neumo-brand shadow-[0_0_20px_rgba(56,189,248,0.4)]"
-                    />
-
-                    {/* Gloss Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
-
-                    {/* Content Overlay */}
-                    <div className="absolute inset-0 flex items-center justify-between px-6 z-10 transition-transform duration-300 group-hover:scale-[1.02]">
+                <div className="relative z-10 w-full h-24 flex flex-col justify-between p-4">
+                    {/* Header Text (White) */}
+                    <div className="flex justify-between items-start">
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-0.5 mix-blend-hard-light">本月出勤</span>
-                            <span className="text-xs font-black text-gray-600 mix-blend-multiply">
+                            <span className="text-[10px] font-black text-white/90 uppercase tracking-widest mb-0.5 mix-blend-screen shadow-black/10 text-shadow">本月出勤</span>
+                            <span className="text-xs font-black text-white mix-blend-screen">
                                 {mask(format(today, 'yyyy / MM'))}
                             </span>
                         </div>
@@ -367,10 +356,23 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                             <span className="text-3xl font-black text-white drop-shadow-md tracking-tighter">
                                 {mask(String(attendedPercent))}<span className="text-base align-top">%</span>
                             </span>
-                            <span className="text-[9px] font-black text-white/80 uppercase tracking-widest drop-shadow-sm">
-                                {mask(String(attendedCount))} / {mask(String(totalDaysCount))} Days
-                            </span>
                         </div>
+                    </div>
+
+                    {/* Bottom Grid of Squares (Light Gray Internal BG) */}
+                    {/* Requirement: "Cut into small borderless squares... arranged at the bottom" */}
+                    <div className="mt-2 flex-1 rounded-xl bg-gray-100/90 backdrop-blur-sm p-1.5 flex items-center justify-between gap-1 overflow-hidden shadow-inner">
+                        {attendanceBoxes.map((box, idx) => (
+                            <div
+                                key={idx}
+                                className={cn(
+                                    "flex-1 h-full rounded-[2px] transition-all duration-300",
+                                    box.day <= today
+                                        ? (box.type === 'attendance' ? "bg-purple-500 shadow-sm" : "bg-purple-200")
+                                        : "bg-gray-200"
+                                )}
+                            />
+                        ))}
                     </div>
                 </div>
             </motion.div>
@@ -467,50 +469,39 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                         />
                     </motion.div>
 
-                    {/* Row 2 Left: OT Stats (Classic Card) */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.2 }}
-                        className="neumo-card p-4 flex flex-row items-center justify-between gap-4 h-40"
-                    >
-                        <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2 text-blue-500 mb-1">
-                                <div className="p-2 rounded-lg neumo-pressed">
-                                    <Clock size={20} />
-                                </div>
-                                <span className="text-[10px] font-black uppercase tracking-widest">OT Hours</span>
-                            </div>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-5xl font-black text-[#202731] tracking-tighter">
-                                    {mask(yearMetrics.totalOT.toFixed(1))}
-                                </span>
-                                <span className="text-xs font-bold text-gray-400">H (Year)</span>
-                            </div>
-                            <div className="flex items-center gap-2 mt-1 px-3 py-1 rounded-full bg-blue-50/50 border border-blue-100 w-fit">
-                                <span className="text-[9px] font-black text-blue-400 uppercase">Month</span>
-                                <span className="text-sm font-black text-blue-600">{mask(monthMetrics.totalOT.toFixed(1))}h</span>
-                            </div>
-                        </div>
-                        <div className="h-full w-1 bg-gradient-to-b from-transparent via-blue-100 to-transparent rounded-full opacity-50" />
-                    </motion.div>
+                    {/* Row 2 Left: OT Stats (New Filled Style) */}
+                    <FilledStatsBlock
+                        label="OT Hours"
+                        icon={Clock}
+                        value={Number(yearMetrics.totalOT).toFixed(1)}
+                        total={0} // No limit for OT
+                        used={mask(monthMetrics.totalOT.toFixed(1))} // Hack reuse: 'used' as Month value
+                        unit="Hours (Year)"
+                        color="bg-blue-500"
+                        trackColor="bg-blue-100"
+                        textColor="text-blue-600"
+                        isPrivacy={isPrivacy}
+                        isOT={true} // Special flag for OT layout (handled by display prop hijacking)
+                    />
 
                     {/* Row 2 Right: Tools grid */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.2 }}
-                        className="neumo-card p-4 flex flex-col h-40"
+                        className="neumo-card p-4 flex flex-col h-32" // Match height
                     >
                         <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Tools</h3>
                         <div className="flex-1 grid grid-cols-4 gap-3 overflow-hidden">
-                            {/* Quick Copy Button */}
+                            {/* Quick Copy Button (New Style) */}
                             <button
                                 onClick={() => setIsQuickCopyOpen(true)}
-                                className="h-full rounded-xl flex flex-col items-center justify-center gap-1.5 text-gray-400 hover:text-blue-500 hover:neumo-pressed transition-all duration-200 group bg-gray-50/50 border border-gray-100"
+                                className="h-full rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all duration-200 group bg-orange-50 hover:bg-orange-100 border border-orange-100 hover:scale-105 active:scale-95"
                             >
-                                <Briefcase size={20} strokeWidth={2} className="group-hover:scale-110 transition-transform text-gray-500 group-hover:text-blue-500" />
-                                <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 group-hover:text-blue-500">Copy</span>
+                                <div className="p-1.5 bg-orange-200 rounded-lg text-orange-600 shadow-sm">
+                                    <Briefcase size={18} strokeWidth={2.5} />
+                                </div>
+                                <span className="text-[8px] font-black uppercase tracking-wider text-orange-400 group-hover:text-orange-600">Copy</span>
                             </button>
                         </div>
                     </motion.div>
@@ -557,13 +548,16 @@ function LegendBlock({ label, value, color, privacy, mask }) {
     )
 }
 
-function FilledStatsBlock({ label, icon: Icon, value, total, used, unit, color, trackColor, textColor, isPrivacy }) {
+function FilledStatsBlock({ label, icon: Icon, value, total, used, unit, color, trackColor, textColor, isPrivacy, isOT }) {
     const safeValue = parseFloat(value) || 0;
     const safeTotal = parseFloat(total) || 1;
-    const percent = Math.min(100, Math.max(0, (safeValue / safeTotal) * 100));
+    // For OT, percent is full (100) or special? Let's use 100 to fill the block, or relative?
+    // User asked OT to "match style". Filled block = Solid background.
+    // If isOT, percent = 100.
+    const percent = isOT ? 100 : Math.min(100, Math.max(0, (safeValue / safeTotal) * 100));
 
     // Masking logic
-    const displayValue = isPrivacy ? '••••' : safeValue;
+    const displayValue = isPrivacy ? '••••' : value; // Value passed as formatted string for OT? No, passed as number string
     const displayUsed = isPrivacy ? '••' : used;
     const displayTotal = isPrivacy ? '••' : total;
 
@@ -593,9 +587,16 @@ function FilledStatsBlock({ label, icon: Icon, value, total, used, unit, color, 
                                 {label}
                             </span>
                         </div>
-                        <div className={cn("text-[9px] font-black uppercase tracking-widest opacity-80", percent > 80 ? "text-white" : "text-gray-400")}>
-                            {percent.toFixed(0)}%
-                        </div>
+                        {!isOT && (
+                            <div className={cn("text-[9px] font-black uppercase tracking-widest opacity-80", percent > 80 ? "text-white" : "text-gray-400")}>
+                                {percent.toFixed(0)}%
+                            </div>
+                        )}
+                        {isOT && (
+                            <div className={cn("text-[9px] font-black uppercase tracking-widest opacity-80 text-white/90")}>
+                                YEAR
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex items-end justify-between">
@@ -605,12 +606,18 @@ function FilledStatsBlock({ label, icon: Icon, value, total, used, unit, color, 
                                 {displayValue}
                             </span>
                             <span className={cn("text-[9px] font-bold uppercase transition-colors duration-300", percent > 40 ? "text-white/80" : "text-gray-400")}>
-                                Remaining {unit}
+                                {unit}
                             </span>
                         </div>
-                        <div className={cn("text-[9px] font-black text-right transition-colors duration-300", percent > 20 ? "text-white/70" : "text-gray-400")}>
-                            Used: {displayUsed}<br />Total: {displayTotal}
-                        </div>
+                        {isOT ? (
+                            <div className={cn("text-[9px] font-black text-right transition-colors duration-300 text-white/70")}>
+                                Month: {displayUsed}h
+                            </div>
+                        ) : (
+                            <div className={cn("text-[9px] font-black text-right transition-colors duration-300", percent > 20 ? "text-white/70" : "text-gray-400")}>
+                                Used: {displayUsed}<br />Total: {displayTotal}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
