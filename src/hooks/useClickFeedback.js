@@ -5,11 +5,19 @@ export function useClickFeedback() {
     const audioCtxRef = useRef(null);
 
     useEffect(() => {
-        const handleClick = () => {
+        const handleClick = (e) => {
+            // Determine if clicking an interactive element
+            // Heuristic: Check if the target or any parent is a standard interactive element
+            const target = e.target;
+            const interactive = target.closest('button, a, input, select, textarea, [role="button"], .cursor-pointer');
+            const isInteractive = !!interactive;
+
             // Haptic Feedback (Mobile)
+            // Note: iOS Safari does not support navigator.vibrate. Works on Android.
             if (navigator.vibrate) {
                 try {
-                    navigator.vibrate(10); // Short, sharp pulse (increased from 5ms for better perceptibility)
+                    // Stronger vibration for interactive (15ms), lighter for bg (5ms)
+                    navigator.vibrate(isInteractive ? 15 : 5);
                 } catch (e) {
                     // Ignore errors if vibration not supported/allowed
                 }
@@ -32,8 +40,6 @@ export function useClickFeedback() {
                         ctx.resume();
                     }
 
-                    // Sound Design: "Thud" / "Wooden Kick"
-                    // Low frequency punch: 80Hz -> 40Hz
                     const t = ctx.currentTime;
                     const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
@@ -41,25 +47,39 @@ export function useClickFeedback() {
                     osc.connect(gain);
                     gain.connect(ctx.destination);
 
-                    osc.type = 'triangle'; // Triangle has a bit more "wood" character than sine
+                    if (isInteractive) {
+                        // === Interactive Sound: "Crystal Bell" ===
+                        // High frequency transparent tone (1200Hz -> 800Hz)
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(1200, t);
+                        osc.frequency.exponentialRampToValueAtTime(800, t + 0.1);
 
-                    // Frequency envelope (Pitch drop)
-                    osc.frequency.setValueAtTime(80, t);
-                    osc.frequency.exponentialRampToValueAtTime(40, t + 0.08);
+                        gain.gain.setValueAtTime(0.0, t);
+                        gain.gain.linearRampToValueAtTime(0.15, t + 0.005);
+                        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
 
-                    // Amplitude envelope (Short decay)
-                    gain.gain.setValueAtTime(0.0, t); // Start silence
-                    gain.gain.linearRampToValueAtTime(0.4, t + 0.005); // Attack (click)
-                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08); // Release
+                        osc.start(t);
+                        osc.stop(t + 0.35);
+                    } else {
+                        // === Background Sound: "Low Thud" ===
+                        // Low frequency punch (80Hz -> 40Hz)
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(80, t);
+                        osc.frequency.exponentialRampToValueAtTime(40, t + 0.08);
 
-                    osc.start(t);
-                    osc.stop(t + 0.1);
+                        gain.gain.setValueAtTime(0.0, t);
+                        gain.gain.linearRampToValueAtTime(0.15, t + 0.005); // Lower volume
+                        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
 
-                    // Cleanup usually handled by GC, but explicit disconnect is safer for many nodes
+                        osc.start(t);
+                        osc.stop(t + 0.15);
+                    }
+
+                    // Cleanup
                     setTimeout(() => {
                         osc.disconnect();
                         gain.disconnect();
-                    }, 150);
+                    }, 400);
                 }
             } catch (err) {
                 console.warn('Audio feedback failed:', err);
@@ -67,7 +87,6 @@ export function useClickFeedback() {
         };
 
         // Attach to window capture phase to ensure it runs before other handlers stop propagation
-        // (Though for feedback, usually helpful to run even if logic stops it, capture is safer)
         window.addEventListener('click', handleClick, true);
 
         // Cleanup
