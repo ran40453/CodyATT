@@ -187,19 +187,19 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
             {
                 label: '底薪',
                 data: [monthMetrics.baseMonthly],
-                backgroundColor: 'rgba(56, 189, 248, 0.8)', // Sky 400
-                borderColor: 'rgba(56, 189, 248, 1)',
-                borderWidth: 1,
+                backgroundColor: 'rgba(56, 189, 248, 1)', // Sky 400
+                borderColor: '#E0E5EC', // Match background to create "cut" effect
+                borderWidth: 3,
                 barThickness: 40,
                 borderRadius: 20, // Capsule style
-                borderSkipped: false,
+                borderSkipped: false, // Ensure all corners rounded
             },
             {
                 label: '加班',
                 data: [monthMetrics.otPay],
-                backgroundColor: 'rgba(255, 69, 0, 0.8)', // Orange Red
-                borderColor: 'rgba(255, 69, 0, 1)',
-                borderWidth: 1,
+                backgroundColor: 'rgba(255, 69, 0, 1)', // Orange Red
+                borderColor: '#E0E5EC',
+                borderWidth: 3,
                 barThickness: 40,
                 borderRadius: 20,
                 borderSkipped: false,
@@ -207,9 +207,9 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
             {
                 label: '津貼',
                 data: [monthMetrics.travelAllowance],
-                backgroundColor: 'rgba(16, 185, 129, 0.8)', // Emerald 500
-                borderColor: 'rgba(16, 185, 129, 1)',
-                borderWidth: 1,
+                backgroundColor: 'rgba(16, 185, 129, 1)', // Emerald 500
+                borderColor: '#E0E5EC',
+                borderWidth: 3,
                 barThickness: 40,
                 borderRadius: 20,
                 borderSkipped: false,
@@ -217,9 +217,9 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
             {
                 label: '獎金',
                 data: [monthMetrics.bonus],
-                backgroundColor: 'rgba(245, 158, 11, 0.8)', // Amber 500
-                borderColor: 'rgba(245, 158, 11, 1)',
-                borderWidth: 1,
+                backgroundColor: 'rgba(245, 158, 11, 1)', // Amber 500
+                borderColor: '#E0E5EC',
+                borderWidth: 3,
                 barThickness: 40,
                 borderRadius: 20,
                 borderSkipped: false,
