@@ -191,6 +191,8 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                 borderColor: 'rgba(56, 189, 248, 1)',
                 borderWidth: 1,
                 barThickness: 40,
+                borderRadius: 20, // Capsule style
+                borderSkipped: false,
             },
             {
                 label: '加班',
@@ -199,6 +201,8 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                 borderColor: 'rgba(255, 69, 0, 1)',
                 borderWidth: 1,
                 barThickness: 40,
+                borderRadius: 20,
+                borderSkipped: false,
             },
             {
                 label: '津貼',
@@ -207,6 +211,8 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                 borderColor: 'rgba(16, 185, 129, 1)',
                 borderWidth: 1,
                 barThickness: 40,
+                borderRadius: 20,
+                borderSkipped: false,
             },
             {
                 label: '獎金',
@@ -215,6 +221,8 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                 borderColor: 'rgba(245, 158, 11, 1)',
                 borderWidth: 1,
                 barThickness: 40,
+                borderRadius: 20,
+                borderSkipped: false,
             },
         ],
     };
@@ -223,11 +231,16 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
         indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
+        animation: {
+            duration: 1500,
+            easing: 'easeOutQuart', // Smooth expansion matching motion
+        },
         plugins: {
             legend: { display: false },
             tooltip: {
                 callbacks: {
                     label: (context) => {
+                        if (isPrivacy || !showSalary) return `${context.dataset.label}: ••••`;
                         return `${context.dataset.label}: ${mask('$' + Math.round(context.raw).toLocaleString())}`;
                     }
                 }
@@ -244,6 +257,9 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
     const textPlugin = {
         id: 'textPlugin',
         afterDatasetsDraw(chart) {
+            // Privacy Check: If global privacy or local salary hidden, do not draw text
+            if (isPrivacy || !showSalary) return;
+
             const { ctx, data } = chart;
             ctx.save();
             ctx.font = 'bold 10px sans-serif';
@@ -261,7 +277,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                     const width = bar0.width;
                     if (width > 40) {
                         ctx.fillStyle = '#ffffff'; // White text on colored bar
-                        ctx.fillText(mask('$' + Math.round(value).toLocaleString()), bar0.x - (width / 2), bar0.y);
+                        ctx.fillText('$' + Math.round(value).toLocaleString(), bar0.x - (width / 2), bar0.y);
                     }
                 }
             }
@@ -518,14 +534,17 @@ function ToolboxBuilder() {
         const handleMove = (moveEvent) => {
             const currentX = moveEvent.clientX || (moveEvent.touches && moveEvent.touches[0].clientY);
             const diff = currentX - startX;
-            // Sensitivity
-            const step = Math.round(diff / 20); // 20px per step
+            // Sensitivity Reduced significantly: 
+            // Date: ~100px per day
+            // Unit: ~100px per 2 units
 
             if (type === 'date') {
+                const step = Math.round(diff / 100);
                 setDateOffset(startValue + step);
             } else {
-                // Unit step is 2
-                setUnits(Math.max(0, startValue + (step * 2)));
+                const step = Math.round(diff / 80);
+                // Clamp 0-16
+                setUnits(Math.min(16, Math.max(0, startValue + (step * 2))));
             }
         };
 
