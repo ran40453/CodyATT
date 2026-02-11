@@ -1,4 +1,4 @@
-import { format, startOfMonth, endOfMonth, eachMonthOfInterval, isSameMonth, subDays, isWithinInterval, subMonths, eachDayOfInterval, parseISO, isSameDay, addDays, getDay, differenceInCalendarDays, startOfYear, endOfYear, min, max } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachMonthOfInterval, isSameMonth, subDays, isWithinInterval, subMonths, eachDayOfInterval, parseISO, isSameDay, addDays, getDay, differenceInCalendarDays, startOfYear, endOfYear } from 'date-fns'
 import { TrendingUp, Clock, Calendar, Globe, ArrowUpRight, Coffee, Trophy, BarChart3, Gift, X, Edit2, Trash2, Check, Plane, Briefcase, MapPin, ListFilter } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
