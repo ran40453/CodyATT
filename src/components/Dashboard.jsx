@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, subDays, subMonths, getDaysInMonth, eachDayOfInterval, eachMonthOfInterval, isSameDay, isSameMonth, getYear } from 'date-fns'
 import { TrendingUp, Globe, Wallet, Clock, Coffee, Moon, Gift, Eye, EyeOff, Briefcase, ChevronRight, Calendar, Battery, Palmtree, Check } from 'lucide-react'
-import BatteryIcon from './BatteryIcon'
+
 import QuickCopyTool from './toolbox/QuickCopyTool'
 import { motion } from 'framer-motion'
 import {
@@ -318,7 +318,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
         <div className="space-y-6 pb-32">
             <QuickCopyTool isOpen={isQuickCopyOpen} onClose={() => setIsQuickCopyOpen(false)} />
 
-            {/* ... (Header and Attendance Bar SAME) ... */}
+            {/* Header */}
             <header className="flex justify-between items-start">
                 <div className="space-y-1">
                     <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
@@ -334,32 +334,43 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                 </button>
             </header>
 
-            {/* Attendance Capsule Progress Bar */}
+            {/* Attendance Block (Redesigned) */}
             <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="neumo-card p-4 flex flex-col justify-center" // Centered vertical
+                className="neumo-card p-1" // Minimal padding for full-fill effect
             >
-                <div className="flex justify-between items-end mb-2">
-                    <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">本月出勤概況</h3>
-                    <div className="text-[10px] font-bold text-gray-400">
-                        {mask(format(today, 'yyyy / MM'))}
-                    </div>
-                </div>
-                <div className="h-8 w-full bg-gray-100 rounded-full relative overflow-hidden flex items-center shadow-inner">
+                <div className="relative h-20 w-full overflow-hidden rounded-2xl neumo-pressed group">
+                    {/* Background Track */}
+                    <div className="absolute inset-0 bg-gray-100" />
+
+                    {/* Liquid Fill */}
                     <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${attendedPercent}%` }}
                         transition={{ duration: 1.5, ease: "easeOut" }}
-                        className="absolute left-0 top-0 bottom-0 bg-neumo-brand opacity-80 rounded-full"
+                        className="absolute left-0 top-0 bottom-0 bg-neumo-brand shadow-[0_0_20px_rgba(56,189,248,0.4)]"
                     />
-                    <div className="relative z-10 flex items-center justify-between w-full px-4">
-                        <span className={cn("text-[10px] font-black uppercase tracking-widest z-10 mix-blend-overlay text-gray-600")}>
-                            Passed: {mask(String(attendedCount))}/{mask(String(totalDaysCount))}
-                        </span>
-                        <span className="text-sm font-black z-10 text-neumo-brand mix-blend-screen drop-shadow-sm">
-                            {mask(String(attendedPercent))}%
-                        </span>
+
+                    {/* Gloss Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
+
+                    {/* Content Overlay */}
+                    <div className="absolute inset-0 flex items-center justify-between px-6 z-10 transition-transform duration-300 group-hover:scale-[1.02]">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-0.5 mix-blend-hard-light">本月出勤</span>
+                            <span className="text-xs font-black text-gray-600 mix-blend-multiply">
+                                {mask(format(today, 'yyyy / MM'))}
+                            </span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                            <span className="text-3xl font-black text-white drop-shadow-md tracking-tighter">
+                                {mask(String(attendedPercent))}<span className="text-base align-top">%</span>
+                            </span>
+                            <span className="text-[9px] font-black text-white/80 uppercase tracking-widest drop-shadow-sm">
+                                {mask(String(attendedCount))} / {mask(String(totalDaysCount))} Days
+                            </span>
+                        </div>
                     </div>
                 </div>
             </motion.div>
@@ -367,116 +378,96 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
             {/* Dashboard Main Content */}
             <div className="space-y-6">
 
-                {/* 1. Monthly Salary Distribution (Moved to Top) */}
+                {/* 1. Monthly Salary Distribution (Redesigned Block Chart) */}
                 <motion.div
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="neumo-card p-6 flex flex-col justify-between"
+                    className="neumo-card p-6 flex flex-col gap-6"
                 >
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex justify-between items-start">
                         <div className="flex items-center gap-2 text-gray-400">
                             <div className="p-2 rounded-xl neumo-pressed text-purple-500">
                                 <TrendingUp size={20} />
                             </div>
                             <h2 className="text-xs font-black uppercase tracking-widest">本月薪資分布</h2>
                         </div>
-                        {/* legends at top right */}
-                        <div className="flex flex-wrap gap-x-4 gap-y-1">
-                            <LegendItem color="bg-sky-400" label="底薪" />
-                            <LegendItem color="bg-orange-500" label="加班" />
-                            <LegendItem color="bg-emerald-500" label="津貼" />
-                            <LegendItem color="bg-amber-500" label="獎金" />
+                        {/* Big Amount */}
+                        <div className="text-right">
+                            <div
+                                onClick={() => setShowSalary(!showSalary)}
+                                className="text-4xl lg:text-5xl font-black text-[#202731] tracking-tighter cursor-pointer hover:opacity-80 transition-opacity select-none leading-none"
+                            >
+                                {(isPrivacy || !showSalary) ? '••••' : '$' + Math.round(monthMetrics.estimatedTotal).toLocaleString()}
+                            </div>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1 block">Total Estimated</span>
                         </div>
                     </div>
 
-
-                    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-                        {/* Big Number */}
-                        <div className="flex flex-col">
-                            <div className="flex items-baseline gap-2">
-                                <span
-                                    onClick={() => setShowSalary(!showSalary)}
-                                    className="text-5xl lg:text-6xl font-black text-[#202731] tracking-tighter cursor-pointer hover:opacity-80 transition-opacity select-none"
-                                >
-                                    {(isPrivacy || !showSalary) ? '••••' : '$' + Math.round(monthMetrics.estimatedTotal).toLocaleString()}
-                                </span>
-                                <div className="flex flex-col">
-                                    <span className="text-sm font-bold text-gray-400 leading-none">TWD</span>
-                                    <span className="text-[10px] font-black text-neumo-brand mt-1 whitespace-nowrap">
-                                        {monthMetrics.dayOfMonth}/{monthMetrics.daysInMonth} = {monthMetrics.monthPercent}%
-                                    </span>
-                                </div>
+                    {/* Custom Block Chart (CSS Grid) */}
+                    <div className="h-16 w-full flex gap-1 rounded-2xl overflow-hidden neumo-pressed p-1.5 bg-gray-100/50">
+                        {(!isPrivacy && showSalary) ? (
+                            <>
+                                <BlockBar label="底薪" value={monthMetrics.baseMonthly} total={monthMetrics.estimatedTotal} color="bg-sky-400" />
+                                <BlockBar label="加班" value={monthMetrics.otPay} total={monthMetrics.estimatedTotal} color="bg-orange-500" />
+                                <BlockBar label="津貼" value={monthMetrics.travelAllowance} total={monthMetrics.estimatedTotal} color="bg-emerald-500" />
+                                <BlockBar label="獎金" value={monthMetrics.bonus} total={monthMetrics.estimatedTotal} color="bg-amber-500" />
+                            </>
+                        ) : (
+                            <div className="w-full h-full bg-gray-200/50 rounded-xl flex items-center justify-center animate-pulse">
+                                <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Hidden</span>
                             </div>
-                        </div>
+                        )}
+                    </div>
 
-                        {/* Chart Section */}
-                        <div className="flex-1 w-full min-w-0 h-[60px] relative">
-                            <Bar data={barData} options={barOptions} plugins={[textPlugin]} />
-                        </div>
+                    {/* Legend Grid Below */}
+                    <div className="grid grid-cols-4 gap-2">
+                        <LegendBlock label="底薪" value={monthMetrics.baseMonthly} color="bg-sky-400" privacy={isPrivacy || !showSalary} mask={mask} />
+                        <LegendBlock label="加班" value={monthMetrics.otPay} color="bg-orange-500" privacy={isPrivacy || !showSalary} mask={mask} />
+                        <LegendBlock label="津貼" value={monthMetrics.travelAllowance} color="bg-emerald-500" privacy={isPrivacy || !showSalary} mask={mask} />
+                        <LegendBlock label="獎金" value={monthMetrics.bonus} color="bg-amber-500" privacy={isPrivacy || !showSalary} mask={mask} />
                     </div>
                 </motion.div>
 
-                {/* 2. Secondary Grid: OT, Toolbox, Battery */}
+                {/* 2. Secondary Grid: OT, Toolbox, Battery (Redesigned Blocks) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                    {/* Row 1: Combined Battery Stats (Moved to Middle) */}
+                    {/* Row 1: Combined Battery Stats (Redesigned as Filled Blocks) */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="md:col-span-2 neumo-card p-6 flex flex-col md:flex-row items-center justify-center gap-12 relative overflow-hidden"
+                        className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6"
                     >
-                        <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 to-transparent pointer-events-none" />
+                        {/* Dept Comp Block */}
+                        <FilledStatsBlock
+                            label="部門補休"
+                            icon={Battery}
+                            value={Math.round(cumulativeDeptCompBalance)}
+                            total={Math.round(allDeptCompEarned)}
+                            used={Math.round(allDeptCompUsed)}
+                            unit="Unit"
+                            color="bg-purple-500"
+                            trackColor="bg-purple-100"
+                            textColor="text-purple-600"
+                            isPrivacy={isPrivacy}
+                        />
 
-                        {/* Dept Comp Battery - Corrected to Remaining / Total Earned */}
-                        <div className="flex flex-col items-center gap-4 relative z-10">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Battery size={20} className="text-purple-500" />
-                                <span className="text-sm font-black text-gray-500 uppercase tracking-widest">部門補休</span>
-                            </div>
-                            <BatteryIcon
-                                value={Math.round(cumulativeDeptCompBalance)}
-                                total={Math.round(allDeptCompEarned)}
-                                unit=""
-                                size="large"
-                                showDetails={true}
-                                label=""
-                                subLabel=""
-                                color="bg-purple-500"
-                            />
-                            <div className="flex gap-4 text-[10px] font-bold text-gray-400">
-                                <span>已用: {Math.round(allDeptCompUsed)}</span>
-                                <span>剩餘: {Math.round(cumulativeDeptCompBalance)}</span>
-                            </div>
-                        </div>
-
-                        {/* Divider (Desktop) */}
-                        <div className="hidden md:block w-px h-32 bg-gray-200/50" />
-
-                        {/* Annual Leave Battery - Corrected to Remaining / Total Given */}
-                        <div className="flex flex-col items-center gap-4 relative z-10">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Palmtree size={20} className="text-teal-500" />
-                                <span className="text-sm font-black text-gray-500 uppercase tracking-widest">特休狀況</span>
-                            </div>
-                            <BatteryIcon
-                                value={Number(remainingAnnual).toFixed(1)}
-                                total={annualGiven}
-                                unit=""
-                                size="large"
-                                showDetails={true}
-                                label=""
-                                subLabel=""
-                                color="bg-teal-500"
-                            />
-                            <div className="flex gap-4 text-[10px] font-bold text-gray-400">
-                                <span>已用: {Number(annualUsed).toFixed(1)}</span>
-                                <span>剩餘: {Number(remainingAnnual).toFixed(1)}</span>
-                            </div>
-                        </div>
+                        {/* Annual Leave Block */}
+                        <FilledStatsBlock
+                            label="特休狀況"
+                            icon={Palmtree}
+                            value={Number(remainingAnnual).toFixed(1)}
+                            total={annualGiven}
+                            used={Number(annualUsed).toFixed(1)}
+                            unit="Days"
+                            color="bg-teal-500"
+                            trackColor="bg-teal-100"
+                            textColor="text-teal-600"
+                            isPrivacy={isPrivacy}
+                        />
                     </motion.div>
 
-                    {/* Row 2 Left: OT Stats (Reduced Height) */}
+                    {/* Row 2 Left: OT Stats (Classic Card) */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -501,7 +492,6 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                                 <span className="text-sm font-black text-blue-600">{mask(monthMetrics.totalOT.toFixed(1))}h</span>
                             </div>
                         </div>
-                        {/* Visual Decoration or Mini Graph could go here */}
                         <div className="h-full w-1 bg-gradient-to-b from-transparent via-blue-100 to-transparent rounded-full opacity-50" />
                     </motion.div>
 
@@ -530,12 +520,101 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
     )
 }
 
-function LegendItem({ color, label }) {
+// Helper Components for Redesign
+function BlockBar({ label, value, total, color }) {
+    const percent = total > 0 ? (value / total) * 100 : 0;
+    if (percent === 0) return null;
     return (
-        <div className="flex items-center gap-1.5">
-            <div className={cn("w-2 h-2 rounded-full", color)} />
-            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{label}</span>
+        <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: `${percent}%`, opacity: 1 }}
+            transition={{ duration: 1, ease: "easeOut" }}
+            className={cn("h-full rounded-xl relative group overflow-hidden", color)}
+        >
+            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+            {/* Tooltip-ish label on hover or if wide enough */}
+            {percent > 15 && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span className="text-[10px] font-black text-white drop-shadow-md uppercase tracking-wide">{label}</span>
+                </div>
+            )}
+        </motion.div>
+    )
+}
+
+function LegendBlock({ label, value, color, privacy, mask }) {
+    return (
+        <div className="neumo-pressed p-2 rounded-xl flex flex-col items-center justify-center gap-1">
+            <div className="flex items-center gap-1.5 mb-1">
+                <div className={cn("w-1.5 h-1.5 rounded-full", color)} />
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{label}</span>
+            </div>
+            <span className="text-xs font-black text-gray-700">
+                {privacy ? '•••' : '$' + Math.round(value / 1000).toLocaleString() + 'k'}
+            </span>
         </div>
+    )
+}
+
+function FilledStatsBlock({ label, icon: Icon, value, total, used, unit, color, trackColor, textColor, isPrivacy }) {
+    const safeValue = parseFloat(value) || 0;
+    const safeTotal = parseFloat(total) || 1;
+    const percent = Math.min(100, Math.max(0, (safeValue / safeTotal) * 100));
+
+    // Masking logic
+    const displayValue = isPrivacy ? '••••' : safeValue;
+    const displayUsed = isPrivacy ? '••' : used;
+    const displayTotal = isPrivacy ? '••' : total;
+
+    return (
+        <motion.div
+            whileHover={{ scale: 1.02 }}
+            className="neumo-card p-1 relative h-32 overflow-hidden group cursor-default"
+        >
+            {/* Background Container (Pressed) */}
+            <div className="w-full h-full rounded-2xl neumo-pressed relative overflow-hidden bg-gray-50/50">
+                {/* Fill Animation */}
+                <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: `${percent}%` }}
+                    transition={{ duration: 1.2, type: "spring", bounce: 0.2 }}
+                    className={cn("absolute bottom-0 left-0 right-0 w-full opacity-90 shadow-[0_0_20px_rgba(0,0,0,0.1)]", color)}
+                />
+
+                {/* Content Layer */}
+                <div className="absolute inset-0 p-4 flex flex-col justify-between z-10 transition-colors duration-300">
+                    <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2">
+                            <div className="p-1.5 rounded-lg bg-white/40 backdrop-blur-md shadow-sm text-gray-600 group-hover:scale-110 transition-transform">
+                                <Icon size={16} />
+                            </div>
+                            <span className={cn("text-[10px] font-black uppercase tracking-widest transition-colors duration-300", percent > 60 ? "text-white/90" : "text-gray-400")}>
+                                {label}
+                            </span>
+                        </div>
+                        <div className={cn("text-[9px] font-black uppercase tracking-widest opacity-80", percent > 80 ? "text-white" : "text-gray-400")}>
+                            {percent.toFixed(0)}%
+                        </div>
+                    </div>
+
+                    <div className="flex items-end justify-between">
+                        <div className="flex flex-col">
+                            <span className={cn("text-3xl font-black tracking-tighter leading-none transition-colors duration-300",
+                                percent > 40 ? "text-white drop-shadow-md" : textColor)}>
+                                {displayValue}
+                            </span>
+                            <span className={cn("text-[9px] font-bold uppercase transition-colors duration-300", percent > 40 ? "text-white/80" : "text-gray-400")}>
+                                Remaining {unit}
+                            </span>
+                        </div>
+                        <div className={cn("text-[9px] font-black text-right transition-colors duration-300", percent > 20 ? "text-white/70" : "text-gray-400")}>
+                            Used: {displayUsed}<br />Total: {displayTotal}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </motion.div>
     )
 }
 
