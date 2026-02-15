@@ -412,7 +412,8 @@ export const addOrUpdateRecord = async (input) => {
             } else {
                 newData[index] = {
                     ...record,
-                    bonus: parseFloat(existing.bonus) || 0,
+                    // If record has bonus explicitly set (even 0), use it. Otherwise preserve existing.
+                    bonus: record.bonus !== undefined ? record.bonus : (parseFloat(existing.bonus) || 0),
                     bonusEntries: existing.bonusEntries || [],
                     bonusCategory: existing.bonusCategory || '',
                     bonusName: existing.bonusName || ''

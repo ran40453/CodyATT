@@ -8,7 +8,7 @@ import InfoPage from './components/InfoPage'
 import Tabbar from './components/Tabbar'
 import AddRecordModal from './components/AddRecordModal'
 
-import { fetchRecordsFromSheets, fetchSettingsFromSheets, addOrUpdateRecord, loadSettings, loadData } from './lib/storage'
+import { fetchRecordsFromSheets, fetchSettingsFromSheets, addOrUpdateRecord, loadSettings, loadData, deleteRecord } from './lib/storage'
 import { useClickFeedback } from './hooks/useClickFeedback'
 
 function App() {
@@ -67,6 +67,12 @@ function App() {
         }
     }
 
+    const handleDeleteRecord = async (date) => {
+        const newRecords = deleteRecord(date);
+        setRecords(newRecords);
+        setToast({ type: 'success', message: '紀錄已刪除' });
+    }
+
     const renderPage = () => {
         const commonProps = {
             isPrivacy,
@@ -79,7 +85,7 @@ function App() {
             case 'home':
                 return <Dashboard data={records} {...commonProps} />
             case 'calendar':
-                return <CalendarPage data={records} onUpdate={handleUpdateRecord} {...commonProps} />
+                return <CalendarPage data={records} onUpdate={handleUpdateRecord} onDelete={handleDeleteRecord} {...commonProps} />
             case 'analysis':
                 return <AnalysisPage data={records} onUpdate={handleUpdateRecord} {...commonProps} />
             case 'info':

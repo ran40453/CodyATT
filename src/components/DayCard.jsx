@@ -100,8 +100,16 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy }) {
                 {/* Right Top: Desktop Price Pill */}
                 <div className="hidden md:flex flex-col items-end gap-1">
                     {dailySalary > 0 && !isLeave && (
-                        <div className="bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded-full border border-gray-100 shadow-sm">
-                            <span className="text-[10px] font-black text-gray-500 tabular-nums">
+                        <div className={cn(
+                            "backdrop-blur-sm px-2 py-0.5 rounded-full border shadow-sm",
+                            (salaryMetrics?.bonus > 0 || record?.bonus > 0)
+                                ? "bg-yellow-100/80 border-yellow-200"
+                                : "bg-white/80 border-gray-100"
+                        )}>
+                            <span className={cn(
+                                "text-[10px] font-black tabular-nums",
+                                (salaryMetrics?.bonus > 0 || record?.bonus > 0) ? "text-yellow-700" : "text-gray-500"
+                            )}>
                                 {mask('$' + Math.round(dailySalary).toLocaleString())}
                             </span>
                         </div>

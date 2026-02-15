@@ -2,13 +2,13 @@ import React, { useState, useEffect, useRef } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, subMonths, isSameDay, startOfWeek, endOfWeek, setMonth, setYear, getDay, eachMonthOfInterval, isToday } from 'date-fns'
 import { ChevronLeft, ChevronRight, Calendar, Grid3X3 } from 'lucide-react'
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion'
-import { loadData, addOrUpdateRecord, fetchRecordsFromGist } from '../lib/storage'
+import { loadData, addOrUpdateRecord, fetchRecordsFromGist, deleteRecord } from '../lib/storage'
 import { isTaiwanHoliday } from '../lib/holidays'
 import CalendarMonthGrid from './CalendarMonthGrid'
 
 import HeaderActions from './HeaderActions'
 
-function CalendarPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsClick }) {
+function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsClick }) {
     const [currentDate, setCurrentDate] = useState(new Date())
     const [focusedDay, setFocusedDay] = useState(null)
     const [isYearView, setIsYearView] = useState(false)
@@ -180,6 +180,7 @@ function CalendarPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                                     monthDate={subMonths(currentDate, 1)}
                                     data={data}
                                     onUpdate={handleUpdateRecord}
+                                    onDelete={onDelete}
                                     isPrivacy={isPrivacy}
                                     focusedDay={null} // Don't focus off-screen
                                     setFocusedDay={() => { }}
@@ -193,6 +194,7 @@ function CalendarPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                                 monthDate={currentDate}
                                 data={data}
                                 onUpdate={handleUpdateRecord}
+                                onDelete={onDelete}
                                 isPrivacy={isPrivacy}
                                 focusedDay={focusedDay}
                                 setFocusedDay={setFocusedDay}
@@ -206,6 +208,7 @@ function CalendarPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                                     monthDate={addMonths(currentDate, 1)}
                                     data={data}
                                     onUpdate={handleUpdateRecord}
+                                    onDelete={onDelete}
                                     isPrivacy={isPrivacy}
                                     focusedDay={null}
                                     setFocusedDay={() => { }}

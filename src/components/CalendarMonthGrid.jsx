@@ -10,6 +10,7 @@ function CalendarMonthGrid({
     monthDate,
     data,
     onUpdate,
+    onDelete,
     isPrivacy,
     focusedDay,
     setFocusedDay
@@ -133,6 +134,7 @@ function CalendarMonthGrid({
                             record={getRecordForDay(focusedDay)}
                             geometry={overlayGeo}
                             onUpdate={onUpdate}
+                            onDelete={onDelete}
                             onClose={() => setFocusedDay(null)}
                             isPrivacy={isPrivacy}
                         />
@@ -143,7 +145,7 @@ function CalendarMonthGrid({
     )
 }
 
-function CalendarOverlay({ day, record, geometry, onUpdate, onClose, isPrivacy }) {
+function CalendarOverlay({ day, record, geometry, onUpdate, onDelete, onClose, isPrivacy }) {
     const { row, col, targetStartRow, targetStartCol, overlayWidth, overlayHeight, isInside } = geometry;
 
     const isMobile = window.innerWidth < 768;
@@ -193,6 +195,7 @@ function CalendarOverlay({ day, record, geometry, onUpdate, onClose, isPrivacy }
                         day={day}
                         record={record}
                         onUpdate={onUpdate}
+                        onDelete={onDelete}
                         onClose={onClose}
                         hideHeader={!isInside}
                         className="h-full w-full shadow-none bg-transparent"
