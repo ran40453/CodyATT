@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { FileText, Loader2, ChevronLeft, StickyNote, AlertCircle, Save, Folder, FolderPlus, FilePlus, ChevronRight, Edit2, X, Plus } from 'lucide-react'
+import { FileText, Loader2, ChevronLeft, StickyNote, AlertCircle, Save, Folder, FolderPlus, FilePlus, ChevronRight, Edit2, X, Plus, Sun, Moon } from 'lucide-react'
 import { fetchGistFiles, updateGistFile, loadSettings, saveSettings, syncSettingsToGist } from '../lib/storage'
 import { cn } from '../lib/utils'
 import HeaderActions from './HeaderActions'
@@ -13,6 +13,7 @@ function InfoPage() {
     const [selectedFile, setSelectedFile] = useState(null)
     const [loading, setLoading] = useState(true)
     const [isMobileListVisible, setIsMobileListVisible] = useState(true)
+    const [theme, setTheme] = useState('dark') // 'light' | 'dark'
 
     // Editing State
     const [isEditing, setIsEditing] = useState(false)
@@ -44,6 +45,12 @@ function InfoPage() {
         const settings = loadSettings();
         const savedFolders = settings.infoPageFolders || {};
         setFolders(savedFolders);
+
+        // Load theme from settings (or local storage specific to info page if preferred, but settings is global sync)
+        if (settings.infoPageTheme) {
+            setTheme(settings.infoPageTheme);
+        }
+
         // Default open all folders
         const defaultOpen = Object.keys(savedFolders).reduce((acc, key) => ({ ...acc, [key]: true }), {});
         setOpenFolders(prev => ({ ...defaultOpen, ...prev })); // Keep existing states if any, else default open
@@ -54,6 +61,16 @@ function InfoPage() {
     useEffect(() => {
         load()
     }, [])
+
+    const toggleTheme = () => {
+        const newTheme = theme === 'dark' ? 'light' : 'dark';
+        setTheme(newTheme);
+        const settings = loadSettings();
+        saveSettings({ ...settings, infoPageTheme: newTheme });
+        // No auto-sync for theme change to avoid spamming revisons, or maybe debounce?
+        // User requested persistence, let's sync it.
+        syncSettingsToGist({ ...settings, infoPageTheme: newTheme });
+    }
 
     const handleFileSelect = (file) => {
         setSelectedFile(file)
@@ -142,13 +159,13 @@ function InfoPage() {
                 className={cn(
                     "w-full text-left p-2 pl-3 rounded-lg transition-all duration-200 group relative overflow-hidden mb-1 flex items-center gap-2",
                     selectedFile?.filename === file.filename
-                        ? "bg-[#FFE8A3] text-gray-900 shadow-sm"
-                        : "hover:bg-gray-200/50 text-gray-600"
+                        ? "bg-yellow-500/20 text-yellow-500 shadow-sm border border-yellow-500/30"
+                        : "hover:bg-gray-800 text-gray-400 hover:text-gray-200"
                 )}
             >
-                <FileText size={14} className={cn("shrink-0", selectedFile?.filename === file.filename ? "text-yellow-600" : "text-gray-400")} />
+                <FileText size={14} className={cn("shrink-0 transition-colors", selectedFile?.filename === file.filename ? "text-yellow-500" : "text-gray-500 group-hover:text-gray-300")} />
                 <div className="min-w-0">
-                    <h3 className={cn("text-xs font-bold truncate", selectedFile?.filename === file.filename ? "text-gray-900" : "text-gray-700")}>
+                    <h3 className={cn("text-xs font-bold truncate transition-colors", selectedFile?.filename === file.filename ? "text-yellow-100" : "text-gray-400 group-hover:text-gray-200")}>
                         {file.filename.replace('.md', '')}
                     </h3>
                 </div>
@@ -158,18 +175,38 @@ function InfoPage() {
 
     const uncategorized = getUncategorizedFiles(files, folders);
 
-    return (
-        <div className="h-[calc(100vh-140px)] flex flex-col relative overflow-hidden rounded-2xl neumo-pressed bg-gray-900 border border-white/10 shadow-inner">
+    const isDark = theme === 'dark';
 
-            {/* Dark Header */}
-            <header className="flex justify-between items-center px-4 py-3 bg-gray-900 border-b border-gray-800 z-20">
+    return (
+        <div className={cn(
+            "h-[calc(100vh-140px)] flex flex-col relative overflow-hidden rounded-2xl neumo-pressed border shadow-inner transition-colors duration-300",
+            isDark ? "bg-gray-900 border-white/10" : "bg-gray-50 border-white/40"
+        )}>
+
+            {/* Header */}
+            <header className={cn(
+                "flex justify-between items-center px-4 py-3 border-b z-20 transition-colors duration-300",
+                isDark ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"
+            )}>
                 <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-gray-800 rounded-lg">
+                    <div className={cn("p-1.5 rounded-lg transition-colors", isDark ? "bg-gray-800" : "bg-gray-100")}>
                         <StickyNote size={18} className="text-yellow-500" />
                     </div>
-                    <h1 className="text-sm font-bold text-white tracking-wide">Info & Notes</h1>
+                    <h1 className={cn("text-sm font-bold tracking-wide transition-colors", isDark ? "text-white" : "text-gray-800")}>Info & Notes</h1>
                 </div>
-                <HeaderActions onSettingsClick={() => { /* Handled by parent or explicit logic? 
+
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={toggleTheme}
+                        className={cn(
+                            "p-2 rounded-lg transition-colors",
+                            isDark ? "hover:bg-gray-800 text-gray-400 hover:text-yellow-400" : "hover:bg-gray-100 text-gray-400 hover:text-orange-500"
+                        )}
+                        title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                    >
+                        {isDark ? <Sun size={18} /> : <Moon size={18} />}
+                    </button>
+                    <HeaderActions onSettingsClick={() => { /* Handled by parent or explicit logic? 
                     Actually App.jsx handles generic Settings click. 
                     If we want a specific settings for InfoPage, we might need a modal or dropdown here.
                     For now, reuse the global settings button logic from HeaderActions but we need to pass props if we want it to work.
@@ -180,26 +217,35 @@ function InfoPage() {
                     Analysis/Dashboard have the big header title AND the HeaderActions.
                     Let's replicate that structure.
                  */}} >
-                    {/* No children for now */}
-                </HeaderActions>
+                        {/* No children for now */}
+                    </HeaderActions>
+                </div>
             </header>
 
             <div className="flex-1 flex overflow-hidden relative">
                 {/* Sidebar (List) */}
                 <motion.div
                     className={cn(
-                        "flex flex-col w-full md:w-1/3 min-w-[260px] max-w-sm bg-[#F5F5F7] border-r border-gray-800 z-10 absolute md:relative h-full transition-transform duration-300",
-                        isMobileListVisible ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+                        "flex flex-col w-full md:w-1/3 min-w-[260px] max-w-sm border-r z-10 absolute md:relative h-full transition-all duration-300",
+                        isMobileListVisible ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+                        isDark ? "bg-[#111111] border-gray-800" : "bg-[#F5F5F7] border-gray-200"
                     )}
                 >
                     {/* Sidebar Header / Actions */}
-                    <div className="p-3 border-b border-gray-200 bg-[#F5F5F7] flex justify-between items-center">
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
+                    <div className={cn(
+                        "p-3 border-b flex justify-between items-center transition-colors",
+                        isDark ? "border-gray-800 bg-[#111111]" : "border-gray-200 bg-[#F5F5F7]"
+                    )}>
+                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-wider">
                             {files.length} ITEMS
                         </span>
                         <button
                             onClick={() => setIsFolderModalOpen(true)}
-                            className="p-1.5 hover:bg-gray-200 rounded-md text-gray-500 transition-colors" title="New Folder"
+                            className={cn(
+                                "p-1.5 rounded-md transition-colors",
+                                isDark ? "hover:bg-gray-800 text-gray-500 hover:text-gray-300" : "hover:bg-gray-200 text-gray-500"
+                            )}
+                            title="New Folder"
                         >
                             <FolderPlus size={16} />
                         </button>
@@ -208,7 +254,7 @@ function InfoPage() {
                     <div className="flex-1 overflow-y-auto p-2 space-y-4">
                         {loading ? (
                             <div className="flex justify-center items-center h-40">
-                                <Loader2 className="animate-spin text-gray-400" />
+                                <Loader2 className="animate-spin text-gray-500" />
                             </div>
                         ) : (
                             <>
@@ -222,10 +268,13 @@ function InfoPage() {
                                     >
                                         <button
                                             onClick={() => toggleFolder(folderName)}
-                                            className="flex items-center gap-1.5 w-full text-left px-2 py-1 text-xs font-bold text-gray-500 hover:text-gray-800 transition-colors"
+                                            className={cn(
+                                                "flex items-center gap-1.5 w-full text-left px-2 py-1 text-xs font-bold transition-colors",
+                                                isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-800"
+                                            )}
                                         >
                                             {openFolders[folderName] ? <ChevronRight size={12} className="rotate-90 transition-transform" /> : <ChevronRight size={12} className="transition-transform" />}
-                                            <Folder size={14} className="text-blue-400" />
+                                            <Folder size={14} className="text-blue-500" />
                                             {folderName}
                                         </button>
 
@@ -235,7 +284,7 @@ function InfoPage() {
                                                     initial={{ height: 0, opacity: 0 }}
                                                     animate={{ height: 'auto', opacity: 1 }}
                                                     exit={{ height: 0, opacity: 0 }}
-                                                    className="overflow-hidden ml-4 pl-2 border-l border-gray-200"
+                                                    className={cn("overflow-hidden ml-4 pl-2 border-l", isDark ? "border-gray-800" : "border-gray-200")}
                                                 >
                                                     {renderFileList(files.filter(f => folders[folderName].includes(f.filename)))}
                                                 </motion.div>
@@ -250,7 +299,7 @@ function InfoPage() {
                                     onDrop={(e) => handleDrop(e, 'uncategorized')}
                                     className="pt-2"
                                 >
-                                    <div className="px-2 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                                    <div className="px-2 py-1 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
                                         Uncategorized
                                     </div>
                                     {renderFileList(uncategorized)}
@@ -262,13 +311,17 @@ function InfoPage() {
 
                 {/* Content Area */}
                 <div className={cn(
-                    "flex-1 bg-[#1e1e1e] h-full overflow-hidden flex flex-col w-full absolute md:relative transition-transform duration-300",
-                    !isMobileListVisible ? "translate-x-0" : "translate-x-full md:translate-x-0"
+                    "flex-1 h-full overflow-hidden flex flex-col w-full absolute md:relative transition-all duration-300",
+                    !isMobileListVisible ? "translate-x-0" : "translate-x-full md:translate-x-0",
+                    isDark ? "bg-[#1e1e1e]" : "bg-white"
                 )}>
                     {selectedFile ? (
                         <>
                             {/* Mobile Header for Content */}
-                            <div className="md:hidden p-3 border-b border-gray-700 flex items-center gap-2 bg-[#1e1e1e] text-white">
+                            <div className={cn(
+                                "md:hidden p-3 border-b flex items-center gap-2 sticky top-0 z-10",
+                                isDark ? "bg-[#1e1e1e] border-gray-700 text-white" : "bg-white border-gray-100 text-gray-800"
+                            )}>
                                 <button onClick={handleBackToList} className="p-1 -ml-1 text-yellow-500 flex items-center gap-1">
                                     <ChevronLeft size={18} />
                                     <span className="text-xs font-bold">List</span>
@@ -286,12 +339,15 @@ function InfoPage() {
                             </div>
 
                             {/* Desktop Toolbar (Floating / Top) */}
-                            <div className="hidden md:flex justify-between items-center p-3 border-b border-gray-800 bg-[#1e1e1e] text-white">
-                                <span className="text-sm font-bold text-gray-300">{selectedFile.filename}</span>
+                            <div className={cn(
+                                "hidden md:flex justify-between items-center p-3 border-b",
+                                isDark ? "border-gray-800 bg-[#1e1e1e] text-white" : "border-gray-100 bg-white text-gray-800"
+                            )}>
+                                <span className={cn("text-sm font-bold", isDark ? "text-gray-300" : "text-gray-700")}>{selectedFile.filename}</span>
                                 <div className="flex gap-2">
                                     {isEditing ? (
                                         <>
-                                            <button onClick={() => setIsEditing(false)} className="px-3 py-1.5 rounded-md text-xs font-bold text-gray-400 hover:bg-gray-800 transition-colors">Cancel</button>
+                                            <button onClick={() => setIsEditing(false)} className={cn("px-3 py-1.5 rounded-md text-xs font-bold transition-colors", isDark ? "text-gray-400 hover:bg-gray-800" : "text-gray-500 hover:bg-gray-100")}>Cancel</button>
                                             <button
                                                 onClick={handleSave}
                                                 disabled={isSaving}
@@ -304,7 +360,7 @@ function InfoPage() {
                                     ) : (
                                         <button
                                             onClick={() => setIsEditing(true)}
-                                            className="px-3 py-1.5 rounded-md text-xs font-bold text-gray-400 hover:text-white hover:bg-gray-800 transition-colors flex items-center gap-2"
+                                            className={cn("px-3 py-1.5 rounded-md text-xs font-bold transition-colors flex items-center gap-2", isDark ? "text-gray-400 hover:text-white hover:bg-gray-800" : "text-gray-500 hover:text-gray-900 hover:bg-gray-100")}
                                         >
                                             <Edit2 size={14} /> Edit
                                         </button>
@@ -317,11 +373,17 @@ function InfoPage() {
                                     <textarea
                                         value={editContent}
                                         onChange={(e) => setEditContent(e.target.value)}
-                                        className="w-full h-full p-6 bg-[#1e1e1e] text-gray-300 resize-none focus:outline-none font-mono text-sm leading-relaxed"
+                                        className={cn(
+                                            "w-full h-full p-6 resize-none focus:outline-none font-mono text-sm leading-relaxed",
+                                            isDark ? "bg-[#1e1e1e] text-gray-200" : "bg-white text-gray-800"
+                                        )}
                                         spellCheck={false}
                                     />
                                 ) : (
-                                    <div className="p-6 md:p-8 prose prose-invert prose-sm max-w-none prose-headings:font-black prose-a:text-yellow-500 prose-pre:bg-gray-800 prose-pre:border prose-pre:border-gray-700">
+                                    <div className={cn(
+                                        "p-6 md:p-8 prose prose-sm max-w-none prose-headings:font-black prose-a:text-yellow-500",
+                                        isDark ? "prose-invert prose-pre:bg-gray-800 prose-pre:border prose-pre:border-gray-700" : "prose-pre:bg-gray-50 prose-pre:border prose-pre:border-gray-200 text-gray-800"
+                                    )}>
                                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                             {selectedFile.content}
                                         </ReactMarkdown>
@@ -330,7 +392,7 @@ function InfoPage() {
                             </div>
                         </>
                     ) : (
-                        <div className="flex-1 flex flex-col justify-center items-center text-gray-600">
+                        <div className="flex-1 flex flex-col justify-center items-center text-gray-500">
                             <StickyNote size={48} className="mb-4 opacity-20" />
                             <p className="text-sm font-bold uppercase tracking-widest opacity-50">Select a note to view</p>
                         </div>
@@ -354,7 +416,7 @@ function InfoPage() {
                                 value={newFolderName}
                                 onChange={(e) => setNewFolderName(e.target.value)}
                                 placeholder="Folder Name"
-                                className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                                className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-yellow-400 text-gray-800"
                                 autoFocus
                             />
                             <div className="flex justify-end gap-2">
