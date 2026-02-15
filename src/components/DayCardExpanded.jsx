@@ -247,6 +247,50 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
         })
     }
 
+    // --- Derived Values for Display ---
+    let otHours = 0;
+    const d = getDay(day);
+    const effectiveIsHoliday = isHoliday || isTaiwanHoliday(day);
+    const isRestDay = (d === 0 || d === 6 || effectiveIsHoliday) && !isWorkDay;
+
+    if (!isLeave) {
+        if (isWorkDay) {
+            const stdEnd = settings?.rules?.standardEndTime || "17:30";
+            otHours = calculateOTHours(endTime, stdEnd);
+        } else if (isRestDay) {
+            const start = settings?.rules?.standardStartTime || "08:00";
+            const breakTime = settings?.rules?.lunchBreak || 1.5;
+            otHours = calculateDuration(start, endTime, breakTime);
+        } else {
+            const stdEnd = settings?.rules?.standardEndTime || "17:30";
+            otHours = calculateOTHours(endTime, stdEnd);
+        }
+    }
+
+    // Calculate Comp Units (if implemented)
+    const compUnits = calculateCompLeaveUnits ? calculateCompLeaveUnits(otHours, isRestDay) : 0;
+
+    // Calculate Salary Preview
+    // We need to construct a temporary 'record' object to pass to calculateDailySalary
+    const tempRecord = {
+        date: day,
+        endTime: endTime,
+        travelCountry: travelCountry,
+        isHoliday: isHoliday,
+        isWorkDay: isWorkDay,
+        isLeave: isLeave,
+        otType: otType,
+        leaveType: leaveType,
+        leaveDuration: isFullDay ? 8 : leaveDuration,
+        leaveStartTime: leaveStartTime,
+        leaveEndTime: leaveEndTime,
+        bonus: bonus,
+        otHours: otHours // Critical: pass calculated hours
+    };
+
+    const salaryMetrics = calculateDailySalary(tempRecord, settings);
+    const dailySalary = salaryMetrics?.total || 0;
+
     return (
         <div style={style} className={cn("neumo-card p-4 flex flex-col gap-4 relative z-50 bg-[#E0E5EC] shadow-2xl", className)} onClick={e => e.stopPropagation()}>
             {/* Header Section with Date (if needed) or just Close button */}
