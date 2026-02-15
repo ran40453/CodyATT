@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
-import { LayoutDashboard, Calendar, BarChart2, Settings } from 'lucide-react'
+import { LayoutDashboard, Calendar, BarChart2, Settings, StickyNote } from 'lucide-react'
 import Dashboard from './components/Dashboard'
 import CalendarPage from './components/CalendarPage'
 import AnalysisPage from './components/AnalysisPage'
 import SettingsPage from './components/SettingsPage'
+import InfoPage from './components/InfoPage'
 import Tabbar from './components/Tabbar'
 import AddRecordModal from './components/AddRecordModal'
 
@@ -67,17 +68,26 @@ function App() {
     }
 
     const renderPage = () => {
+        const commonProps = {
+            isPrivacy,
+            setIsPrivacy: togglePrivacy, // Passing togglePrivacy as setIsPrivacy to keep compat where applicable, or update pages
+            togglePrivacy,
+            onSettingsClick: () => setActiveTab('settings')
+        }
+
         switch (activeTab) {
             case 'home':
-                return <Dashboard data={records} isPrivacy={isPrivacy} setIsPrivacy={togglePrivacy} />
+                return <Dashboard data={records} {...commonProps} />
             case 'calendar':
-                return <CalendarPage data={records} onUpdate={handleUpdateRecord} isPrivacy={isPrivacy} />
+                return <CalendarPage data={records} onUpdate={handleUpdateRecord} {...commonProps} />
             case 'analysis':
-                return <AnalysisPage data={records} onUpdate={handleUpdateRecord} isPrivacy={isPrivacy} />
+                return <AnalysisPage data={records} onUpdate={handleUpdateRecord} {...commonProps} />
+            case 'info':
+                return <InfoPage />
             case 'settings':
                 return <SettingsPage isPrivacy={isPrivacy} />
             default:
-                return <Dashboard data={records} isPrivacy={isPrivacy} setIsPrivacy={togglePrivacy} />
+                return <Dashboard data={records} {...commonProps} />
         }
     }
 
@@ -85,7 +95,7 @@ function App() {
         { id: 'home', label: '主頁', icon: LayoutDashboard },
         { id: 'calendar', label: '月曆', icon: Calendar },
         { id: 'analysis', label: '分析', icon: BarChart2 },
-        { id: 'settings', label: '設定', icon: Settings },
+        { id: 'info', label: '資訊', icon: StickyNote },
     ]
 
     return (

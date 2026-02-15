@@ -3,6 +3,8 @@ import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, subDays, 
 import { TrendingUp, Globe, Wallet, Clock, Coffee, Moon, Gift, Eye, EyeOff, Briefcase, ChevronRight, Calendar, Battery, Palmtree, Check } from 'lucide-react'
 
 import QuickCopyTool from './toolbox/QuickCopyTool'
+import HeaderActions from './HeaderActions'
+
 import { motion } from 'framer-motion'
 import {
     Chart as ChartJS,
@@ -21,7 +23,7 @@ import { cn } from '../lib/utils'
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend)
 
-function Dashboard({ data, isPrivacy, setIsPrivacy }) {
+function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsClick }) {
     const [settings, setSettings] = useState(null)
     const [liveRate, setLiveRate] = useState(null)
     const [showSalary, setShowSalary] = useState(false) // Default hidden
@@ -326,12 +328,12 @@ function Dashboard({ data, isPrivacy, setIsPrivacy }) {
                     </h1>
                     <p className="text-gray-500 text-xs font-bold tracking-widest uppercase italic">Powered by Cody</p>
                 </div>
-                <button
-                    onClick={() => setIsPrivacy(!isPrivacy)}
-                    className="neumo-button p-3 text-gray-400 hover:text-neumo-brand transition-colors"
-                >
-                    {isPrivacy ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
+
+                <HeaderActions
+                    isPrivacy={isPrivacy}
+                    togglePrivacy={togglePrivacy || setIsPrivacy} // Robustness
+                    onSettingsClick={onSettingsClick}
+                />
             </header>
 
             {/* Attendance Block (Redesigned: Grid of Squares) */}

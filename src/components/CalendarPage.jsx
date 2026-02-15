@@ -6,10 +6,16 @@ import { loadData, addOrUpdateRecord, fetchRecordsFromGist } from '../lib/storag
 import { isTaiwanHoliday } from '../lib/holidays'
 import CalendarMonthGrid from './CalendarMonthGrid'
 
-function CalendarPage({ data, onUpdate, isPrivacy }) {
+import HeaderActions from './HeaderActions'
+
+function CalendarPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsClick }) {
     const [currentDate, setCurrentDate] = useState(new Date())
     const [focusedDay, setFocusedDay] = useState(null)
     const [isYearView, setIsYearView] = useState(false)
+
+    // ... (Swipe logic remains the same, assuming it's correctly hooks)
+    // Actually, I need to make sure I don't break the existing component structure. 
+    // The previous view_file showed the hooks. I will just replace the top part and the header.
 
     // Swipe Logic
     const x = useMotionValue(0);
@@ -97,11 +103,33 @@ function CalendarPage({ data, onUpdate, isPrivacy }) {
     return (
         <div className="space-y-4 relative overflow-hidden">
             {/* Month Header */}
-            <header className="flex justify-between items-end px-1">
+            <header className="flex justify-between items-end px-1 mb-2">
                 <div className="space-y-1">
                     <h1 className="text-3xl font-black tracking-tight text-[#202731]">Calendar</h1>
                     <p className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-400">Monthly View</p>
                 </div>
+
+                <HeaderActions
+                    isPrivacy={isPrivacy}
+                    togglePrivacy={togglePrivacy || setIsPrivacy}
+                    onSettingsClick={onSettingsClick}
+                >
+                    {/* Header Controls for Calendar */}
+                    <button
+                        onClick={() => { setCurrentDate(new Date()); setIsYearView(false); }}
+                        className="neumo-button p-2 text-neumo-brand hover:bg-gray-100/50"
+                        title="跳至本月"
+                    >
+                        <Calendar size={18} />
+                    </button>
+                    <button
+                        onClick={() => setIsYearView(!isYearView)}
+                        className={`neumo-button p-2 hidden md:flex hover:bg-gray-100/50 ${isYearView ? 'text-neumo-brand' : 'text-gray-400'}`}
+                        title="年曆模式"
+                    >
+                        <Grid3X3 size={18} />
+                    </button>
+                </HeaderActions>
             </header>
 
             <div className="flex justify-between items-center bg-[#E0E5EC] neumo-raised rounded-3xl p-4 z-20 relative">
@@ -122,20 +150,6 @@ function CalendarPage({ data, onUpdate, isPrivacy }) {
                             {months.map(m => <option key={m} value={m}>{format(new Date(2024, m), 'MM')}</option>)}
                         </select>
                     </div>
-                    <button
-                        onClick={() => { setCurrentDate(new Date()); setIsYearView(false); }}
-                        className="neumo-button p-1.5 text-neumo-brand"
-                        title="跳至本月"
-                    >
-                        <Calendar size={16} />
-                    </button>
-                    <button
-                        onClick={() => setIsYearView(!isYearView)}
-                        className={`neumo-button p-1.5 hidden md:flex ${isYearView ? 'text-neumo-brand' : 'text-gray-400'}`}
-                        title="年曆模式"
-                    >
-                        <Grid3X3 size={16} />
-                    </button>
                 </div>
                 <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="neumo-button p-2">
                     <ChevronRight size={20} />

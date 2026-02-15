@@ -590,6 +590,36 @@ export const fetchSettingsFromGist = async (tokenOverride, gistIdOverride) => {
 };
 
 /**
+ * Fetch list of files from Gist for Info Page
+ */
+export const fetchGistFiles = async () => {
+    const settings = loadSettings();
+    const token = settings.githubToken;
+    const gistId = settings.gistId;
+
+    if (!gistId) return [];
+
+    try {
+        const headers = {};
+        if (token) headers['Authorization'] = `token ${token}`;
+
+        const response = await fetch(GET_GIST_URL(gistId), { headers });
+        if (!response.ok) throw new Error('Failed to fetch Gist');
+
+        const gist = await response.json();
+        return Object.values(gist.files).map(f => ({
+            filename: f.filename,
+            content: f.content,
+            language: f.language,
+            updated_at: gist.updated_at // timestamp of gist, not individual file but close enough
+        }));
+    } catch (e) {
+        console.error('InfoPage: Failed to fetch Gist files', e);
+        return [];
+    }
+};
+
+/**
  * Save settings to Gist
  */
 export const syncSettingsToGist = async (settings) => {

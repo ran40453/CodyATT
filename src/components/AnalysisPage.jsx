@@ -20,6 +20,7 @@ import {
 import { Bar, Line, Chart, Doughnut } from 'react-chartjs-2'
 import { cn } from '../lib/utils'
 import { loadSettings, calculateDailySalary, fetchExchangeRate, calculateCompLeaveUnits, calculateOTHours, standardizeCountry, saveData, syncRecordsToGist } from '../lib/storage'
+import HeaderActions from './HeaderActions'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, BarController, LineController, Title, Tooltip, Legend, Filler, ArcElement)
 
@@ -31,7 +32,7 @@ const parse = (d) => {
     return new Date(d);
 }
 
-function AnalysisPage({ data, onUpdate, isPrivacy }) {
+function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsClick }) {
     const [settings, setSettings] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [liveRate, setLiveRate] = useState(32.5);
@@ -370,16 +371,24 @@ function AnalysisPage({ data, onUpdate, isPrivacy }) {
     }
 
     return (
+
         <div className="space-y-6 pb-32">
             <header className="flex justify-between items-end">
                 <div className="space-y-1">
                     <h1 className="text-3xl font-black tracking-tight">Analysis</h1>
                     <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">Insights & Trends</p>
                 </div>
-                <div className="neumo-pressed px-3 py-1.5 rounded-xl flex items-center gap-2 text-[9px] font-black text-green-600">
-                    <Globe size={12} className="animate-pulse" />
-                    USD: {liveRate.toFixed(2)}
-                </div>
+
+                <HeaderActions
+                    isPrivacy={isPrivacy}
+                    togglePrivacy={togglePrivacy || setIsPrivacy}
+                    onSettingsClick={onSettingsClick}
+                >
+                    <div className="neumo-pressed px-3 py-2 rounded-xl flex items-center gap-2 text-[9px] font-black text-green-600 h-full">
+                        <Globe size={12} className="animate-pulse" />
+                        USD: {liveRate.toFixed(2)}
+                    </div>
+                </HeaderActions>
             </header>
 
             {/* Tab Navigation */}
