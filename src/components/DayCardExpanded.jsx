@@ -28,11 +28,50 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
     const [bonus, setBonus] = useState(record?.bonus || 0); // New Bonus State
     const [activeTab, setActiveTab] = useState('schedule'); // 'schedule', 'remarks'
 
-    // ... (rest of the component state and effects)
+    // Auto-calculate duration (Partial Day)
+    useEffect(() => {
+        if (isLeave && !isFullDay && settings) {
+            const dur = calculateDuration(leaveStartTime, leaveEndTime, settings.rules?.lunchBreak || 1.5);
+            if (dur !== leaveDuration) setLeaveDuration(dur);
+        } else if (isLeave && isFullDay) {
+            if (leaveDuration !== 8) setLeaveDuration(8);
+        }
+    }, [leaveStartTime, leaveEndTime, isFullDay, isLeave, settings]);
 
-    // ... (syncUpdate function)
+    const [isDragging, setIsDragging] = useState(false)
+    const [isSaved, setIsSaved] = useState(false)
 
-    // ... (handleSave function)
+    const dragStartY = useRef(0)
+    const startMinutes = useRef(0)
+    const currentEndTimeRef = useRef(endTime)
+
+    useEffect(() => { currentEndTimeRef.current = endTime }, [endTime])
+
+    useEffect(() => {
+        const init = async () => {
+            const s = loadSettings();
+            const rate = await fetchExchangeRate();
+            setSettings({ ...s, liveRate: rate });
+        };
+        init();
+    }, []);
+
+    const handleSave = (e) => {
+        if (e) e.stopPropagation();
+
+        // Future Date Check
+        if (isAfter(day, new Date())) {
+            const confirmed = window.confirm("此日期尚未發生。確定要儲存嗎？ (Date is in the future)");
+            if (!confirmed) return;
+        }
+
+        syncUpdate();
+        setIsSaved(true);
+        setTimeout(() => {
+            setIsSaved(false);
+            if (onClose) onClose();
+        }, 800);
+    }
 
     // Sync state if record changes externally
     useEffect(() => {
