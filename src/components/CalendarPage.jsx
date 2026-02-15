@@ -101,7 +101,7 @@ function CalendarPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
     }
 
     return (
-        <div className="space-y-4 relative overflow-hidden">
+        <div className="space-y-4 relative">
             {/* Month Header */}
             <header className="flex justify-between items-end px-1 mb-2">
                 <div className="space-y-1">

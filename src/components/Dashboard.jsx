@@ -317,7 +317,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
     const attendedPercent = totalDaysCount > 0 ? Math.round((attendedCount / totalDaysCount) * 100) : 0;
 
     return (
-        <div className="space-y-6 pb-32">
+        <div className="space-y-6 pb-32 px-2 md:px-0">
             <QuickCopyTool isOpen={isQuickCopyOpen} onClose={() => setIsQuickCopyOpen(false)} />
 
             {/* Header */}

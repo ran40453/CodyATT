@@ -100,7 +100,7 @@ function App() {
 
     return (
         <div className="min-h-screen pb-24">
-            <main className="container mx-auto px-4 pt-6">
+            <main className="container mx-auto px-1 md:px-4 pt-4 md:pt-6"> {/* Reduced padding for mobile to fix Calendar/Info full width */}
                 {renderPage()}
             </main>
 
