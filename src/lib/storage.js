@@ -620,6 +620,47 @@ export const fetchGistFiles = async () => {
 };
 
 /**
+ * Update a specific file in the Gist (for Info Page editing)
+ */
+export const updateGistFile = async (filename, content) => {
+    const settings = loadSettings();
+    const token = settings.githubToken;
+    const gistId = settings.gistId;
+
+    if (!token || !gistId) return { ok: false, error: 'Missing token or Gist ID' };
+
+    try {
+        console.log(`InfoPage: Updating ${filename} in Gist ${gistId}...`);
+        const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `token ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                files: {
+                    [filename]: {
+                        content: content
+                    }
+                }
+            })
+        });
+
+        if (response.ok) {
+            console.log(`InfoPage: ${filename} updated successfully.`);
+            return { ok: true };
+        } else {
+            const errData = await response.json();
+            console.error(`InfoPage Error: Failed to update ${filename}`, errData);
+            return { ok: false, error: errData.message };
+        }
+    } catch (e) {
+        console.error(`InfoPage Error: Network error updating ${filename}`, e);
+        return { ok: false, error: e.message };
+    }
+};
+
+/**
  * Save settings to Gist
  */
 export const syncSettingsToGist = async (settings) => {
