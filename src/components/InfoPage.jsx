@@ -381,8 +381,10 @@ function InfoPage() {
                                     />
                                 ) : (
                                     <div className={cn(
-                                        "p-6 md:p-8 prose prose-sm max-w-none prose-headings:font-black prose-a:text-yellow-500",
-                                        isDark ? "prose-invert prose-pre:bg-gray-800 prose-pre:border prose-pre:border-gray-700" : "prose-pre:bg-gray-50 prose-pre:border prose-pre:border-gray-200 text-gray-800"
+                                        "p-6 md:p-8 prose prose-slate max-w-none prose-headings:font-black prose-a:text-yellow-500",
+                                        isDark
+                                            ? "prose-invert prose-p:text-gray-200 prose-headings:text-white prose-li:text-gray-200 prose-pre:bg-gray-800 prose-pre:border prose-pre:border-gray-700"
+                                            : "prose-pre:bg-gray-50 prose-pre:border prose-pre:border-gray-200 text-gray-800"
                                     )}>
                                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                             {selectedFile.content}
