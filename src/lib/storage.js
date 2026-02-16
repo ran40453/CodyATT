@@ -410,11 +410,20 @@ export const addOrUpdateRecord = async (input) => {
                     bonusEntries: newEntries
                 };
             } else {
+                const existingBonus = parseFloat(existing.bonus) || 0;
+                const inputBonus = record.bonus !== undefined ? parseFloat(record.bonus) : existingBonus;
+
+                // If bonus is updated and value changed, clear existing breakdown entries
+                // to prevents mismatch between total bonus and breakdown in AnalysisPage
+                let newEntries = existing.bonusEntries || [];
+                if (record.bonus !== undefined && Math.abs(inputBonus - existingBonus) > 0.01) {
+                    newEntries = [];
+                }
+
                 newData[index] = {
                     ...record,
-                    // If record has bonus explicitly set (even 0), use it. Otherwise preserve existing.
-                    bonus: record.bonus !== undefined ? record.bonus : (parseFloat(existing.bonus) || 0),
-                    bonusEntries: existing.bonusEntries || [],
+                    bonus: inputBonus, // Ensure it's stored as number
+                    bonusEntries: newEntries,
                     bonusCategory: existing.bonusCategory || '',
                     bonusName: existing.bonusName || ''
                 };
