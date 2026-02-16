@@ -1009,6 +1009,44 @@ function BonusDetailModal({ isOpen, onClose, data, onUpdate, isPrivacy }) {
     });
     const sortedYears = Object.keys(grouped).sort((a, b) => b - a);
 
+    const handleEditClick = (b) => {
+        setEditingId(b.id);
+        setEditForm({ amount: b.amount, category: b.category, name: b.name || '' });
+    };
+
+    const handleSaveEdit = (original) => {
+        const updatedData = data.map(r => {
+            const dateStr = format(new Date(r.date), 'yyyy-MM-dd');
+            if (dateStr !== original.parentDate) return r;
+
+            let newEntries = [];
+            if (Array.isArray(r.bonusEntries)) {
+                newEntries = r.bonusEntries.map(e => e.id === original.id ? { ...e, amount: parseFloat(editForm.amount), name: editForm.name } : e);
+            } else {
+                // Handle legacy scalar bonus conversion to entry if edited
+                newEntries = [{
+                    id: `be-${Date.now()}`,
+                    amount: parseFloat(editForm.amount),
+                    category: '獎金', // Default category
+                    name: editForm.name,
+                    date: r.date
+                }];
+            }
+
+            const newTotal = newEntries.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+            return {
+                ...r,
+                bonus: newTotal,
+                bonusEntries: newEntries,
+                // Clear legacy fields if migrated
+                bonusCategory: '',
+                bonusName: ''
+            };
+        });
+        onUpdate(updatedData);
+        setEditingId(null);
+    };
+
     const handleDelete = (b) => {
         const updatedData = data.map(r => {
             const dateStr = format(new Date(r.date), 'yyyy-MM-dd');
@@ -1037,14 +1075,45 @@ function BonusDetailModal({ isOpen, onClose, data, onUpdate, isPrivacy }) {
                             <div className="space-y-2">
                                 {grouped[year].map((b, idx) => (
                                     <div key={idx} className="neumo-pressed p-4 rounded-xl flex justify-between items-center">
-                                        <div>
-                                            <div className="flex gap-2 mb-1"><span className="text-[10px] bg-white/50 px-2 rounded font-black text-gray-500">{format(new Date(b.date), 'MM/dd')}</span><span className="text-[10px] text-amber-600 border border-amber-200 px-2 rounded font-black">{b.category}</span></div>
-                                            <div className="text-xs font-bold text-gray-600">{b.name || '-'}</div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="font-black text-gray-800">{mask('$' + Math.round(b.amount).toLocaleString())}</div>
-                                            <button onClick={() => handleDelete(b)} className="p-1 text-gray-300 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>
-                                        </div>
+                                        {editingId === b.id ? (
+                                            <div className="flex-1 flex flex-col gap-2">
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={editForm.name}
+                                                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                                        placeholder="項目名稱"
+                                                        className="flex-1 bg-white/50 px-2 py-1 rounded text-xs font-bold text-gray-700 outline-none border border-transparent focus:border-amber-300"
+                                                    />
+                                                    <input
+                                                        type="number"
+                                                        value={editForm.amount}
+                                                        onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                                                        placeholder="金額"
+                                                        className="w-24 bg-white/50 px-2 py-1 rounded text-xs font-black text-gray-800 outline-none border border-transparent focus:border-amber-300 text-right"
+                                                    />
+                                                </div>
+                                                <div className="flex justify-end gap-2">
+                                                    <button onClick={() => setEditingId(null)} className="px-3 py-1 text-[10px] font-black text-gray-400 hover:text-gray-600">取消</button>
+                                                    <button onClick={() => handleSaveEdit(b)} className="px-3 py-1 bg-amber-500 text-white rounded text-[10px] font-black hover:bg-amber-600 shadow-sm">儲存</button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div>
+                                                    <div className="flex gap-2 mb-1">
+                                                        <span className="text-[10px] bg-white/50 px-2 rounded font-black text-gray-500">{format(new Date(b.date), 'MM/dd')}</span>
+                                                        <span className="text-[10px] text-amber-600 border border-amber-200 px-2 rounded font-black">{b.category}</span>
+                                                    </div>
+                                                    <div className="text-xs font-bold text-gray-600">{b.name || '-'}</div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="font-black text-gray-800">{mask('$' + Math.round(b.amount).toLocaleString())}</div>
+                                                    <button onClick={() => handleEditClick(b)} className="p-1 text-gray-300 hover:text-amber-500 transition-colors"><Edit2 size={12} /></button>
+                                                    <button onClick={() => handleDelete(b)} className="p-1 text-gray-300 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 ))}
                             </div>
