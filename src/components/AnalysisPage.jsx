@@ -1020,7 +1020,8 @@ function BonusDetailModal({ isOpen, onClose, data, onUpdate, isPrivacy }) {
             if (dateStr !== original.parentDate) return r;
 
             let newEntries = [];
-            if (Array.isArray(r.bonusEntries)) {
+            // Check if bonusEntries exists AND has items. If empty array, treat as legacy/scalar mode.
+            if (Array.isArray(r.bonusEntries) && r.bonusEntries.length > 0) {
                 newEntries = r.bonusEntries.map(e => e.id === original.id ? { ...e, amount: parseFloat(editForm.amount), name: editForm.name } : e);
             } else {
                 // Handle legacy scalar bonus conversion to entry if edited
