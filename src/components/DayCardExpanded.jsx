@@ -268,7 +268,8 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
     }
 
     // Calculate Comp Units (if implemented)
-    const compUnits = calculateCompLeaveUnits ? calculateCompLeaveUnits(otHours, isRestDay) : 0;
+    // Fix: Pass object as expected by storage.js
+    const compUnits = calculateCompLeaveUnits ? calculateCompLeaveUnits({ otType, otHours }) : 0;
 
     // Calculate Salary Preview
     // We need to construct a temporary 'record' object to pass to calculateDailySalary
