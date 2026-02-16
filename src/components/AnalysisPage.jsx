@@ -78,13 +78,14 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
     // Dynamic Chart Months based on Range
     const getChartMonths = (range) => {
         if (range === 'year') {
-            return eachMonthOfInterval({ start: startOfYear(now), end: endOfMonth(now) })
+            // Rolling 12 months (current month included)
+            return eachMonthOfInterval({ start: subMonths(startOfMonth(now), 11), end: endOfMonth(now) })
         }
         // All History
-        if (data.length === 0) return eachMonthOfInterval({ start: startOfYear(now), end: endOfMonth(now) });
+        if (data.length === 0) return eachMonthOfInterval({ start: subMonths(startOfMonth(now), 11), end: endOfMonth(now) });
 
         const dates = data.map(r => parse(r.date)).filter(d => d instanceof Date && !isNaN(d));
-        if (dates.length === 0) return eachMonthOfInterval({ start: startOfYear(now), end: endOfMonth(now) });
+        if (dates.length === 0) return eachMonthOfInterval({ start: subMonths(startOfMonth(now), 11), end: endOfMonth(now) });
 
         const minTs = Math.min(...dates.map(d => d.getTime()));
         const maxTs = Math.max(...dates.map(d => d.getTime()));
@@ -501,7 +502,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                                             incomeRange === 'year' ? "bg-white text-neumo-brand shadow-sm" : "text-gray-400 hover:text-gray-600"
                                         )}
                                     >
-                                        今年
+                                        近一年
                                     </button>
                                     <button
                                         onClick={() => setIncomeRange('all')}
@@ -722,7 +723,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                                             workloadRange === 'year' ? "bg-white text-neumo-brand shadow-sm" : "text-gray-400 hover:text-gray-600"
                                         )}
                                     >
-                                        今年
+                                        近一年
                                     </button>
                                     <button
                                         onClick={() => setWorkloadRange('all')}
