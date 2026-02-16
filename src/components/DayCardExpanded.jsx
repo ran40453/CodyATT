@@ -247,6 +247,13 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
         })
     }
 
+    const toggleOtType = (e) => {
+        if (e && e.stopPropagation) e.stopPropagation();
+        const next = otType === 'pay' ? 'leave' : otType === 'leave' ? 'internal' : 'pay';
+        setOtType(next);
+        syncUpdate({ otType: next });
+    };
+
     // --- Derived Values for Display ---
     let otHours = 0;
     const d = getDay(day);
