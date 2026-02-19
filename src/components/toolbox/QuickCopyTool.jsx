@@ -20,7 +20,7 @@ function QuickCopyTool({ isOpen, onClose }) {
     const fullText = `Nolan哥，${content} ` +
         (m03 ? `(M03) ` : ``) +
         (gtk ? `(GTK刷臉) ` : ``) +
-        `${dateStr} ${units}，謝謝！`
+        `${dateStr} +${units}單位，謝謝！`
 
     const handleCopy = () => {
         navigator.clipboard.writeText(fullText)
