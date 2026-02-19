@@ -17,9 +17,10 @@ function QuickCopyTool({ isOpen, onClose }) {
     targetDate.setDate(targetDate.getDate() + dateOffset)
     const dateStr = `${targetDate.getMonth() + 1}/${targetDate.getDate()}`
 
-    const fullText = `[${dateStr}] ${content} ` +
-        (m03 ? `(M03)${units} ` : `${units} `) +
-        (gtk ? `(GTK刷臉)` : ``)
+    const fullText = `Nolan哥，${content} ` +
+        (m03 ? `(M03) ` : ``) +
+        (gtk ? `(GTK刷臉) ` : ``) +
+        `${dateStr} ${units}，謝謝！`
 
     const handleCopy = () => {
         navigator.clipboard.writeText(fullText)
