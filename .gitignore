@@ -5,3 +5,4 @@ dist
 .vercel
 .gemini
 package-lock.json
+.env*.local

@@ -482,7 +482,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
                     />
 
                     {/* Row 2 Right: Tools / App Library */}
-                    <div className="h-32"> {/* Fixed height container for AppFolder */}
+                    <div>
                         <AppFolder />
                     </div>
                     {/* 
