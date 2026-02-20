@@ -3,6 +3,7 @@ import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, subDays, 
 import { TrendingUp, Globe, Wallet, Clock, Coffee, Moon, Gift, Eye, EyeOff, Briefcase, ChevronRight, Calendar, Battery, Palmtree, Check } from 'lucide-react'
 
 import QuickCopyTool from './toolbox/QuickCopyTool'
+import AppFolder from './AppFolder'
 import HeaderActions from './HeaderActions'
 
 import { motion } from 'framer-motion'
@@ -480,7 +481,11 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
                         isOT={true} // Special flag for OT layout (handled by display prop hijacking)
                     />
 
-                    {/* Row 2 Right: Tools grid */}
+                    {/* Row 2 Right: Tools / App Library */}
+                    <div className="h-32"> {/* Fixed height container for AppFolder */}
+                        <AppFolder />
+                    </div>
+                    {/* 
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -489,7 +494,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
                     >
                         <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Tools</h3>
                         <div className="flex-1 grid grid-cols-4 gap-3 overflow-hidden">
-                            {/* Quick Copy Button (New Style) */}
+                             Quick Copy Button (Old Style) 
                             <button
                                 onClick={() => setIsQuickCopyOpen(true)}
                                 className="h-full rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all duration-200 group bg-orange-50 hover:bg-orange-100 border border-orange-100 hover:scale-105 active:scale-95"
@@ -501,6 +506,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
                             </button>
                         </div>
                     </motion.div>
+                    */}
                 </div>
             </div>
         </div>
