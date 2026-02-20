@@ -32,13 +32,11 @@ const AppFolder = () => {
     const [isQuickCopyOpen, setIsQuickCopyOpen] = useState(false);
 
     const handleAppClick = (app, e) => {
+        console.log(`[AppFolder] Clicked ${app.name} (${app.id}) -> ${app.url}`);
         if (app.type === 'tool' && app.id === 'quickcopy') {
             e.preventDefault();
+            console.log('[AppFolder] Opening QuickCopy tool');
             setIsQuickCopyOpen(true);
-            // Don't close folder immediately? Or do? 
-            // Better to keep folder open or close it? 
-            // QuickCopy is a modal. If we open it, we should probably close the folder or let it stack.
-            // Let's close folder for clarity.
             setIsOpen(false);
         }
     };
