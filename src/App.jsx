@@ -7,6 +7,7 @@ import SettingsPage from './components/SettingsPage'
 import InfoPage from './components/InfoPage'
 import Tabbar from './components/Tabbar'
 import AddRecordModal from './components/AddRecordModal'
+import Layout from './components/Layout'
 
 import { fetchRecordsFromSheets, fetchSettingsFromSheets, addOrUpdateRecord, loadSettings, loadData, deleteRecord } from './lib/storage'
 import { useClickFeedback } from './hooks/useClickFeedback'
@@ -53,7 +54,6 @@ function App() {
 
     const handleUpdateRecord = async (updatedRecord) => {
         const result = await addOrUpdateRecord(updatedRecord)
-        // Check if result has { records, sync } structure (new) or just array (legacy/sync fallback)
         if (result.records) {
             setRecords(result.records)
             if (!result.sync.ok && result.sync.error === 'Config missing') {
@@ -62,7 +62,6 @@ function App() {
                 setToast({ type: 'error', message: '已儲存至本機 (雲端同步失敗)' })
             }
         } else {
-            // Fallback if addOrUpdateRecord returns array directly (shouldn't happen with new code but safe to handle)
             setRecords(result)
         }
     }
@@ -76,7 +75,7 @@ function App() {
     const renderPage = () => {
         const commonProps = {
             isPrivacy,
-            setIsPrivacy: togglePrivacy, // Passing togglePrivacy as setIsPrivacy to keep compat where applicable, or update pages
+            setIsPrivacy: togglePrivacy,
             togglePrivacy,
             onSettingsClick: () => setActiveTab('settings')
         }
@@ -105,10 +104,17 @@ function App() {
     ]
 
     return (
-        <div className="min-h-screen pb-24">
-            <main className="container mx-auto px-1 md:px-4 pt-4 md:pt-6"> {/* Reduced padding for mobile to fix Calendar/Info full width */}
+        <Layout
+            title="CodyATT"
+            subtitle="ATTENDANCE DASHBOARD"
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            onAddClick={() => setIsModalOpen(true)}
+            tabs={tabs}
+        >
+            <div className="flex-1 min-h-[50vh]">
                 {renderPage()}
-            </main>
+            </div>
 
             {toast && (
                 <div className={`fixed top-4 left-1/2 -translate-x-1/2 px-4 py-3 rounded-2xl shadow-xl z-50 text-xs font-black transition-all duration-300 flex items-center gap-2 ${toast.type === 'error' ? 'bg-red-500 text-white' :
@@ -118,12 +124,15 @@ function App() {
                 </div>
             )}
 
-            <Tabbar
-                tabs={tabs}
-                activeTab={activeTab}
-                onChange={setActiveTab}
-                onAddClick={() => setIsModalOpen(true)}
-            />
+            {/* Floating Tabbar - Hide on md breakpoint (desktop) */}
+            <div className="md:hidden">
+                <Tabbar
+                    tabs={tabs}
+                    activeTab={activeTab}
+                    onChange={setActiveTab}
+                    onAddClick={() => setIsModalOpen(true)}
+                />
+            </div>
 
             <AddRecordModal
                 isOpen={isModalOpen}
@@ -132,7 +141,7 @@ function App() {
                 settings={settings}
                 records={records}
             />
-        </div>
+        </Layout>
     )
 }
 
