@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Calendar, Grid3X3 } from 'lucide-react'
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion'
 import { loadData, addOrUpdateRecord, fetchRecordsFromGist, deleteRecord } from '../lib/storage'
 import { isTaiwanHoliday } from '../lib/holidays'
+import { cn } from '../lib/utils'
 import CalendarMonthGrid from './CalendarMonthGrid'
 
 import HeaderActions from './HeaderActions'
@@ -100,6 +101,24 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
         return data.find(r => r.date && format(new Date(r.date), 'yyyy-MM-dd') === dayStr)
     }
 
+    const mask = (val) => isPrivacy ? '••••' : val;
+
+    // Attendance Grid Data for currentDate
+    const currentMonthInterval = { start: startOfMonth(currentDate), end: endOfMonth(currentDate) };
+    const currentMonthDays = eachDayOfInterval(currentMonthInterval);
+
+    const attendanceBoxes = currentMonthDays.map(day => {
+        const dayStr = format(day, 'yyyy-MM-dd');
+        const record = data.find(r => r.date && format(new Date(r.date), 'yyyy-MM-dd') === dayStr);
+        let type = 'none';
+        if (record) type = record.isLeave ? 'leave' : 'attendance';
+        return { day, type };
+    });
+
+    const attendedCount = attendanceBoxes.filter(b => b.type === 'attendance').length;
+    const totalDaysCount = attendanceBoxes.length;
+    const attendedPercent = totalDaysCount > 0 ? Math.round((attendedCount / totalDaysCount) * 100) : 0;
+
     return (
         <div className="space-y-4 relative">
             {/* Month Header */}
@@ -131,6 +150,44 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
                     </button>
                 </HeaderActions>
             </header>
+
+            {/* Compact Attendance Block */}
+            {!isYearView && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="neumo-card p-1 bg-purple-500 overflow-hidden relative group"
+                >
+                    <div className="absolute inset-0 bg-purple-500 z-0 transition-all duration-500 group-hover:brightness-105" />
+                    <div className="relative z-10 w-full h-14 flex flex-col justify-between p-2.5">
+                        <div className="flex justify-between items-center mb-1">
+                            <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-black text-white/90 uppercase tracking-widest drop-shadow-sm">本月出勤</span>
+                                <span className="text-[10px] font-black text-white drop-shadow-sm">{mask(format(currentDate, 'yyyy / MM'))}</span>
+                            </div>
+                            <span className="text-xl font-black text-white drop-shadow-md tracking-tighter leading-none">
+                                {mask(String(attendedPercent))}<span className="text-xs align-top">%</span>
+                            </span>
+                        </div>
+                        <div className="flex-1 rounded-md bg-gray-100/90 p-1 flex items-center justify-between gap-[2px] overflow-hidden shadow-inner group-hover:shadow-lg transition-all duration-300">
+                            {attendanceBoxes.map((box, idx) => {
+                                const isPastOrToday = box.day <= today;
+                                return (
+                                    <div
+                                        key={idx}
+                                        className={cn(
+                                            "flex-1 h-full rounded-[1px] transition-all duration-300",
+                                            isPastOrToday
+                                                ? (box.type === 'attendance' ? "bg-purple-500 shadow-sm" : "bg-purple-200")
+                                                : "bg-gray-200"
+                                        )}
+                                    />
+                                )
+                            })}
+                        </div>
+                    </div>
+                </motion.div>
+            )}
 
             <div className="flex justify-between items-center bg-[#E0E5EC] neumo-raised rounded-3xl p-4 z-20 relative">
                 <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="neumo-button p-2">
