@@ -6,6 +6,7 @@ import { loadData, addOrUpdateRecord, fetchRecordsFromGist, deleteRecord } from 
 import { isTaiwanHoliday } from '../lib/holidays'
 import { cn } from '../lib/utils'
 import CalendarMonthGrid from './CalendarMonthGrid'
+import InteractiveAttendanceBar from './InteractiveAttendanceBar'
 
 import HeaderActions from './HeaderActions'
 
@@ -169,21 +170,8 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
                                 {mask(String(attendedPercent))}<span className="text-xs align-top">%</span>
                             </span>
                         </div>
-                        <div className="flex-1 rounded-md bg-gray-100/90 p-1 flex items-center justify-between gap-[2px] overflow-hidden shadow-inner group-hover:shadow-lg transition-all duration-300">
-                            {attendanceBoxes.map((box, idx) => {
-                                const isPastOrToday = box.day <= today;
-                                return (
-                                    <div
-                                        key={idx}
-                                        className={cn(
-                                            "flex-1 h-full rounded-[1px] transition-all duration-300",
-                                            isPastOrToday
-                                                ? (box.type === 'attendance' ? "bg-purple-500 shadow-sm" : "bg-purple-200")
-                                                : "bg-gray-200"
-                                        )}
-                                    />
-                                )
-                            })}
+                        <div className="flex-1 rounded-md bg-gray-100/90 p-1 flex shadow-inner group-hover:shadow-lg transition-all duration-300 relative z-20">
+                            <InteractiveAttendanceBar attendanceBoxes={attendanceBoxes} today={today} className="w-full h-full gap-[2px]" />
                         </div>
                     </div>
                 </motion.div>

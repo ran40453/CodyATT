@@ -5,6 +5,7 @@ import { TrendingUp, Globe, Wallet, Clock, Coffee, Moon, Gift, Eye, EyeOff, Brie
 import QuickCopyTool from './toolbox/QuickCopyTool'
 import AppFolder from './AppFolder'
 import HeaderActions from './HeaderActions'
+import InteractiveAttendanceBar from './InteractiveAttendanceBar'
 
 import { motion } from 'framer-motion'
 import {
@@ -373,18 +374,12 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
                     </div>
 
                     {/* Bottom Grid of Squares (Light Gray Internal BG) */}
-                    <div className="mt-2 flex-1 rounded-xl bg-gray-100/90 backdrop-blur-sm p-1.5 flex items-center justify-between gap-1 overflow-hidden shadow-inner group-hover:shadow-lg transition-all duration-300">
-                        {attendanceBoxes.map((box, idx) => (
-                            <div
-                                key={idx}
-                                className={cn(
-                                    "flex-1 h-full rounded-[2px] transition-all duration-300",
-                                    box.day <= today
-                                        ? (box.type === 'attendance' ? "bg-purple-500 shadow-sm group-hover:bg-purple-400" : "bg-purple-200 group-hover:bg-purple-300")
-                                        : "bg-gray-200 group-hover:bg-gray-100"
-                                )}
-                            />
-                        ))}
+                    <div className="mt-2 flex-1 rounded-xl bg-gray-100/90 backdrop-blur-sm p-1.5 flex shadow-inner group-hover:shadow-lg transition-all duration-300 relative z-20">
+                        <InteractiveAttendanceBar
+                            attendanceBoxes={attendanceBoxes}
+                            today={today}
+                            className="w-full h-full gap-1"
+                        />
                     </div>
                 </div>
             </motion.div>
