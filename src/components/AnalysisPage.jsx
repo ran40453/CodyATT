@@ -1001,14 +1001,15 @@ function BonusDetailModal({ isOpen, onClose, data, onUpdate, isPrivacy }) {
         return [];
     }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    // Group by year
+    // Group by Year/Month
     const grouped = {};
     bonusRecords.forEach(b => {
-        const y = new Date(b.date).getFullYear();
-        if (!grouped[y]) grouped[y] = [];
-        grouped[y].push(b);
+        const d = new Date(b.date);
+        const yyyyMM = format(d, 'yyyy / MM');
+        if (!grouped[yyyyMM]) grouped[yyyyMM] = [];
+        grouped[yyyyMM].push(b);
     });
-    const sortedYears = Object.keys(grouped).sort((a, b) => b - a);
+    const sortedGroups = Object.keys(grouped).sort((a, b) => b.localeCompare(a)); // desc string sort works for yyyy / MM
 
     const handleEditClick = (b) => {
         setEditingId(b.id);
@@ -1021,15 +1022,13 @@ function BonusDetailModal({ isOpen, onClose, data, onUpdate, isPrivacy }) {
             if (dateStr !== original.parentDate) return r;
 
             let newEntries = [];
-            // Check if bonusEntries exists AND has items. If empty array, treat as legacy/scalar mode.
             if (Array.isArray(r.bonusEntries) && r.bonusEntries.length > 0) {
                 newEntries = r.bonusEntries.map(e => e.id === original.id ? { ...e, amount: parseFloat(editForm.amount), name: editForm.name } : e);
             } else {
-                // Handle legacy scalar bonus conversion to entry if edited
                 newEntries = [{
                     id: `be-${Date.now()}`,
                     amount: parseFloat(editForm.amount),
-                    category: '獎金', // Default category
+                    category: '獎金',
                     name: editForm.name,
                     date: r.date
                 }];
@@ -1040,7 +1039,6 @@ function BonusDetailModal({ isOpen, onClose, data, onUpdate, isPrivacy }) {
                 ...r,
                 bonus: newTotal,
                 bonusEntries: newEntries,
-                // Clear legacy fields if migrated
                 bonusCategory: '',
                 bonusName: ''
             };
@@ -1070,13 +1068,13 @@ function BonusDetailModal({ isOpen, onClose, data, onUpdate, isPrivacy }) {
                     <h3 className="text-lg font-black uppercase text-amber-500 flex items-center gap-2"><Gift size={20} /> 獎金明細</h3>
                     <button onClick={onClose}><X size={18} /></button>
                 </div>
-                <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-                    {sortedYears.map(year => (
-                        <div key={year}>
-                            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">{year}</div>
-                            <div className="space-y-2">
-                                {grouped[year].map((b, idx) => (
-                                    <div key={idx} className="neumo-pressed p-4 rounded-xl flex justify-between items-center">
+                <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+                    {sortedGroups.map(group => (
+                        <div key={group} className="space-y-2">
+                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">{group}</div>
+                            <div className="neumo-card p-4 space-y-4">
+                                {grouped[group].map((b, idx) => (
+                                    <div key={idx} className={cn("flex justify-between items-center", idx !== grouped[group].length - 1 && "border-b border-gray-100 pb-4")}>
                                         {editingId === b.id ? (
                                             <div className="flex-1 flex flex-col gap-2">
                                                 <div className="flex gap-2">
@@ -1085,34 +1083,36 @@ function BonusDetailModal({ isOpen, onClose, data, onUpdate, isPrivacy }) {
                                                         value={editForm.name}
                                                         onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                                                         placeholder="項目名稱"
-                                                        className="flex-1 bg-white/50 px-2 py-1 rounded text-xs font-bold text-gray-700 outline-none border border-transparent focus:border-amber-300"
+                                                        className="flex-1 bg-gray-50 px-2 py-1 rounded-md text-xs font-bold text-gray-700 outline-none border border-transparent focus:border-amber-300"
                                                     />
                                                     <input
                                                         type="number"
                                                         value={editForm.amount}
                                                         onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
                                                         placeholder="金額"
-                                                        className="w-24 bg-white/50 px-2 py-1 rounded text-xs font-black text-gray-800 outline-none border border-transparent focus:border-amber-300 text-right"
+                                                        className="w-24 bg-gray-50 px-2 py-1 rounded-md text-xs font-black text-gray-800 outline-none border border-transparent focus:border-amber-300 text-right"
                                                     />
                                                 </div>
                                                 <div className="flex justify-end gap-2">
-                                                    <button onClick={() => setEditingId(null)} className="px-3 py-1 text-[10px] font-black text-gray-400 hover:text-gray-600">取消</button>
-                                                    <button onClick={() => handleSaveEdit(b)} className="px-3 py-1 bg-amber-500 text-white rounded text-[10px] font-black hover:bg-amber-600 shadow-sm">儲存</button>
+                                                    <button onClick={() => setEditingId(null)} className="px-3 py-1.5 neumo-button text-[10px] font-black text-gray-400">取消</button>
+                                                    <button onClick={() => handleSaveEdit(b)} className="px-3 py-1.5 neumo-button text-amber-500 text-[10px] font-black">儲存</button>
                                                 </div>
                                             </div>
                                         ) : (
                                             <>
                                                 <div>
                                                     <div className="flex gap-2 mb-1">
-                                                        <span className="text-[10px] bg-white/50 px-2 rounded font-black text-gray-500">{format(new Date(b.date), 'MM/dd')}</span>
-                                                        <span className="text-[10px] text-amber-600 border border-amber-200 px-2 rounded font-black">{b.category}</span>
+                                                        <span className="text-[10px] font-black text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded uppercase">{format(new Date(b.date), 'MM/dd')}</span>
+                                                        <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">{b.category}</span>
                                                     </div>
-                                                    <div className="text-xs font-bold text-gray-600">{b.name || '-'}</div>
+                                                    <div className="text-xs font-bold text-gray-700 pl-0.5">{b.name || '-'}</div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="font-black text-gray-800">{mask('$' + Math.round(b.amount).toLocaleString())}</div>
-                                                    <button onClick={() => handleEditClick(b)} className="p-1 text-gray-300 hover:text-amber-500 transition-colors"><Edit2 size={12} /></button>
-                                                    <button onClick={() => handleDelete(b)} className="p-1 text-gray-300 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="font-black text-[#202731]">{mask('$' + Math.round(b.amount).toLocaleString())}</div>
+                                                    <div className="flex gap-1">
+                                                        <button onClick={() => handleEditClick(b)} className="p-1.5 text-gray-300 hover:text-amber-500 transition-colors neumo-button"><Edit2 size={12} /></button>
+                                                        <button onClick={() => handleDelete(b)} className="p-1.5 text-gray-300 hover:text-rose-500 transition-colors neumo-button"><Trash2 size={12} /></button>
+                                                    </div>
                                                 </div>
                                             </>
                                         )}
@@ -1136,14 +1136,14 @@ function LeaveListModal({ isOpen, onClose, data, onDelete }) {
         return r.leaveType !== '部門補休';
     }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    // Group by year
+    // Group by Year/Month
     const grouped = {};
     filtered.forEach(r => {
-        const y = new Date(r.date).getFullYear();
-        if (!grouped[y]) grouped[y] = [];
-        grouped[y].push(r);
+        const yyyyMM = format(new Date(r.date), 'yyyy / MM');
+        if (!grouped[yyyyMM]) grouped[yyyyMM] = [];
+        grouped[yyyyMM].push(r);
     });
-    const sortedYears = Object.keys(grouped).sort((a, b) => b - a);
+    const sortedGroups = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -1165,16 +1165,16 @@ function LeaveListModal({ isOpen, onClose, data, onDelete }) {
                             leaveViewMode === 'deptComp' ? "bg-purple-500 text-white shadow-md" : "text-gray-400 hover:text-gray-600")}
                     >部門補休</button>
                 </div>
-                <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-                    {sortedYears.length === 0 && <p className="text-center text-gray-400 text-xs">尚無{leaveViewMode === 'deptComp' ? '部門補休' : '請假'}紀錄</p>}
-                    {sortedYears.map(year => (
-                        <div key={year}>
-                            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">{year}</div>
-                            <div className="space-y-2">
-                                {grouped[year].map((r, i) => (
-                                    <div key={i} className="neumo-pressed p-3 rounded-xl flex justify-between items-center">
+                <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+                    {sortedGroups.length === 0 && <p className="text-center text-gray-400 text-xs py-10">尚無{leaveViewMode === 'deptComp' ? '部門補休' : '請假'}紀錄</p>}
+                    {sortedGroups.map(group => (
+                        <div key={group} className="space-y-2">
+                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">{group}</div>
+                            <div className="neumo-card p-4 space-y-4">
+                                {grouped[group].map((r, i) => (
+                                    <div key={i} className={cn("flex justify-between items-center", i !== grouped[group].length - 1 && "border-b border-gray-100 pb-4")}>
                                         <div className="flex items-center gap-3">
-                                            <div className="flex flex-col items-center justify-center w-10 h-10 bg-white rounded-lg shadow-sm">
+                                            <div className="flex flex-col items-center justify-center w-10 h-10 bg-gray-50 rounded-lg shrink-0">
                                                 <span className="text-[8px] font-black text-gray-400 uppercase">{format(new Date(r.date), 'MMM')}</span>
                                                 <span className="text-lg font-black text-[#202731] leading-none">{format(new Date(r.date), 'dd')}</span>
                                             </div>
@@ -1186,11 +1186,11 @@ function LeaveListModal({ isOpen, onClose, data, onDelete }) {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <div className={cn("px-2 py-1 rounded text-[9px] font-black border",
-                                                leaveViewMode === 'deptComp' ? "bg-purple-50 text-purple-600 border-purple-100" : "bg-rose-50 text-rose-600 border-rose-100")}>
+                                            <div className={cn("px-2 py-1 rounded-md text-[9px] font-black uppercase",
+                                                leaveViewMode === 'deptComp' ? "bg-purple-50 text-purple-600" : "bg-rose-50 text-rose-600")}>
                                                 {r.leaveType || '請假'}
                                             </div>
-                                            {onDelete && <button onClick={() => onDelete(format(new Date(r.date), 'yyyy-MM-dd'))} className="p-1 text-gray-300 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>}
+                                            {onDelete && <button onClick={() => onDelete(format(new Date(r.date), 'yyyy-MM-dd'))} className="p-1.5 neumo-button text-gray-300 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>}
                                         </div>
                                     </div>
                                 ))}
@@ -1218,14 +1218,14 @@ function OTListModal({ isOpen, onClose, data, settings, liveRate, onDelete }) {
         ? filtered.reduce((sum, r) => sum + (calculateDailySalary(r, { ...settings, liveRate }).otPay || 0), 0)
         : filtered.reduce((sum, r) => sum + calculateCompLeaveUnits(r), 0);
 
-    // Group by year
+    // Group by Year/Month
     const grouped = {};
     filtered.forEach(r => {
-        const y = new Date(r.date).getFullYear();
-        if (!grouped[y]) grouped[y] = [];
-        grouped[y].push(r);
+        const yyyyMM = format(new Date(r.date), 'yyyy / MM');
+        if (!grouped[yyyyMM]) grouped[yyyyMM] = [];
+        grouped[yyyyMM].push(r);
     });
-    const sortedYears = Object.keys(grouped).sort((a, b) => b - a);
+    const sortedGroups = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -1264,34 +1264,34 @@ function OTListModal({ isOpen, onClose, data, settings, liveRate, onDelete }) {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-                    {sortedYears.length === 0 && <p className="text-center text-gray-400 text-xs py-10">尚無相關紀錄</p>}
-                    {sortedYears.map(year => (
-                        <div key={year}>
-                            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">{year}</div>
-                            <div className="space-y-2">
-                                {grouped[year].map((r, i) => (
-                                    <div key={i} className="neumo-pressed p-3 rounded-xl flex justify-between items-center">
+                <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+                    {sortedGroups.length === 0 && <p className="text-center text-gray-400 text-xs py-10">尚無相關紀錄</p>}
+                    {sortedGroups.map(group => (
+                        <div key={group} className="space-y-2">
+                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">{group}</div>
+                            <div className="neumo-card p-4 space-y-4">
+                                {grouped[group].map((r, i) => (
+                                    <div key={i} className={cn("flex justify-between items-center", i !== grouped[group].length - 1 && "border-b border-gray-100 pb-4")}>
                                         <div className="flex items-center gap-3">
-                                            <div className="flex flex-col items-center justify-center w-10 h-10 bg-white rounded-lg shadow-sm">
+                                            <div className="flex flex-col items-center justify-center w-10 h-10 bg-gray-50 rounded-lg shrink-0">
                                                 <span className="text-[7px] font-black text-gray-400 uppercase leading-none">{format(new Date(r.date), 'MMM')}</span>
                                                 <span className="text-lg font-black text-[#202731] leading-none">{format(new Date(r.date), 'dd')}</span>
                                             </div>
                                             <div>
-                                                <div className="text-xs font-black text-gray-700">{parseFloat(r.otHours).toFixed(1)}H</div>
+                                                <div className="text-xs font-black text-[#202731]">{parseFloat(r.otHours).toFixed(1)}H</div>
                                                 <div className="text-[8px] font-bold text-gray-400">
                                                     {r.endTime ? `~ ${r.endTime}` : '手動輸入'}
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className={cn("px-2 py-1 rounded text-[9px] font-black border",
-                                                viewMode === 'pay' ? "bg-green-50 text-green-600 border-green-100" : "bg-purple-50 text-purple-600 border-purple-100")}>
+                                        <div className="flex items-center gap-3">
+                                            <div className={cn("px-2 py-1 rounded-md text-[9px] font-black w-14 text-center",
+                                                viewMode === 'pay' ? "bg-green-50 text-green-600" : "bg-purple-50 text-purple-600")}>
                                                 {viewMode === 'pay'
                                                     ? `$${Math.round(calculateDailySalary(r, { ...settings, liveRate }).otPay || 0)}`
                                                     : `${calculateCompLeaveUnits(r)}`}
                                             </div>
-                                            {onDelete && <button onClick={() => onDelete(format(new Date(r.date), 'yyyy-MM-dd'))} className="p-1 text-gray-300 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>}
+                                            {onDelete && <button onClick={() => onDelete(format(new Date(r.date), 'yyyy-MM-dd'))} className="p-1.5 neumo-button text-gray-300 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>}
                                         </div>
                                     </div>
                                 ))}
@@ -1345,14 +1345,14 @@ function TravelListModal({ isOpen, onClose, data, settings, liveRate, onDelete }
     // Sort ranges DESC for display
     ranges.sort((a, b) => new Date(b.start.date) - new Date(a.start.date));
 
-    // Group by year
+    // Group by Year/Month
     const grouped = {};
     ranges.forEach(range => {
-        const y = new Date(range.start.date).getFullYear();
-        if (!grouped[y]) grouped[y] = [];
-        grouped[y].push(range);
+        const yyyyMM = format(new Date(range.start.date), 'yyyy / MM');
+        if (!grouped[yyyyMM]) grouped[yyyyMM] = [];
+        grouped[yyyyMM].push(range);
     });
-    const sortedYears = Object.keys(grouped).sort((a, b) => b - a);
+    const sortedGroups = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
 
     const getCountryName = (code) => {
         const map = { 'VN': 'Vietnam', 'IN': 'India', 'CN': 'China' };
@@ -1373,38 +1373,38 @@ function TravelListModal({ isOpen, onClose, data, settings, liveRate, onDelete }
                     <h3 className="text-lg font-black uppercase text-emerald-500 flex items-center gap-2"><MapPin size={20} /> 出差紀錄</h3>
                     <button onClick={onClose}><X size={18} /></button>
                 </div>
-                <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-                    {sortedYears.length === 0 && <p className="text-center text-gray-400 text-xs">尚無出差紀錄</p>}
-                    {sortedYears.map(year => (
-                        <div key={year}>
-                            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">{year}</div>
-                            <div className="space-y-2">
-                                {grouped[year].map((range, i) => {
+                <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+                    {sortedGroups.length === 0 && <p className="text-center text-gray-400 text-xs py-10">尚無出差紀錄</p>}
+                    {sortedGroups.map(group => (
+                        <div key={group} className="space-y-2">
+                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">{group}</div>
+                            <div className="neumo-card p-4 space-y-4">
+                                {grouped[group].map((range, i) => {
                                     const totalAllowance = range.records.reduce((sum, r) => {
                                         const results = calculateDailySalary(r, { ...settings, liveRate });
                                         return sum + (results?.travelAllowance || 0);
                                     }, 0);
 
                                     return (
-                                        <div key={i} className="neumo-pressed p-4 rounded-xl flex justify-between items-center">
+                                        <div key={i} className={cn("flex justify-between items-center", i !== grouped[group].length - 1 && "border-b border-gray-100 pb-4")}>
                                             <div>
-                                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{getCountryName(range.country)}</div>
-                                                <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded uppercase">{getCountryName(range.country)}</span>
+                                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{range.records.length}天</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-xs font-bold text-gray-700 pl-0.5">
                                                     <span>{format(parse(range.start.date), 'MM/dd')}</span>
                                                     <span className="text-gray-400">&rarr;</span>
                                                     <span>{format(parse(range.end.date), 'MM/dd')}</span>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-4">
                                                 <div className="text-right">
-                                                    <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-0.5">
-                                                        {range.records.length}天
-                                                    </div>
-                                                    <div className="text-xs font-black text-gray-700">
+                                                    <div className="text-xs font-black text-[#202731]">
                                                         ${Math.round(totalAllowance).toLocaleString()}
                                                     </div>
                                                 </div>
-                                                {onDelete && <button onClick={() => handleDeleteRange(range)} className="p-1 text-gray-300 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>}
+                                                {onDelete && <button onClick={() => handleDeleteRange(range)} className="p-1.5 neumo-button text-gray-300 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>}
                                             </div>
                                         </div>
                                     );

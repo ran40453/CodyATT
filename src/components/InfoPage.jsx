@@ -160,12 +160,12 @@ function InfoPage() {
                     "w-full text-left p-2 pl-3 rounded-lg transition-all duration-200 group relative overflow-hidden mb-1 flex items-center gap-2",
                     selectedFile?.filename === file.filename
                         ? "bg-yellow-500/20 text-yellow-500 shadow-sm border border-yellow-500/30"
-                        : "hover:bg-gray-800 text-gray-400 hover:text-gray-200"
+                        : (isDark ? "hover:bg-white/5 text-gray-400 hover:text-gray-200" : "hover:bg-black/5 text-gray-600 hover:text-gray-900")
                 )}
             >
-                <FileText size={14} className={cn("shrink-0 transition-colors", selectedFile?.filename === file.filename ? "text-yellow-500" : "text-gray-500 group-hover:text-gray-300")} />
+                <FileText size={14} className={cn("shrink-0 transition-colors", selectedFile?.filename === file.filename ? "text-yellow-500" : "text-gray-500")} />
                 <div className="min-w-0">
-                    <h3 className={cn("text-xs font-bold truncate transition-colors", selectedFile?.filename === file.filename ? "text-yellow-100" : "text-gray-400 group-hover:text-gray-200")}>
+                    <h3 className={cn("text-xs font-bold truncate transition-colors", selectedFile?.filename === file.filename ? (isDark ? "text-yellow-100" : "text-yellow-700") : (isDark ? "text-gray-400 group-hover:text-gray-200" : "text-gray-600 group-hover:text-gray-900"))}>
                         {file.filename.replace('.md', '')}
                     </h3>
                 </div>
@@ -178,72 +178,57 @@ function InfoPage() {
     const isDark = theme === 'dark';
 
     return (
-        <div className={cn(
-            "h-[calc(100vh-140px)] flex flex-col relative overflow-hidden rounded-2xl neumo-pressed border shadow-inner transition-colors duration-300",
-            isDark ? "bg-gray-900 border-white/10" : "bg-gray-50 border-white/40"
-        )}>
+        <div className="space-y-4 relative w-full h-[calc(100vh-80px)] md:h-auto md:min-h-[85vh] flex flex-col">
 
-            {/* Header */}
-            <header className={cn(
-                "flex justify-between items-center px-4 py-3 border-b z-20 transition-colors duration-300",
-                isDark ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"
-            )}>
-                <div className="flex items-center gap-2">
-                    <div className={cn("p-1.5 rounded-lg transition-colors", isDark ? "bg-gray-800" : "bg-gray-100")}>
-                        <StickyNote size={18} className="text-yellow-500" />
-                    </div>
-                    <h1 className={cn("text-sm font-bold tracking-wide transition-colors", isDark ? "text-white" : "text-gray-800")}>Info & Notes</h1>
+            {/* Standard Neumorphic Header */}
+            <header className="flex justify-between items-end px-1 mb-2">
+                <div className="space-y-1">
+                    <h1 className="text-3xl font-black tracking-tight text-[#202731]">Info & Notes</h1>
+                    <p className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-400">Documentation Library</p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <HeaderActions onSettingsClick={() => { /* Handled by global App layout if needed */ }}>
+                    {/* Theme Toggle Button */}
                     <button
                         onClick={toggleTheme}
                         className={cn(
-                            "p-2 rounded-lg transition-colors",
-                            isDark ? "hover:bg-gray-800 text-gray-400 hover:text-yellow-400" : "hover:bg-gray-100 text-gray-400 hover:text-orange-500"
+                            "neumo-button p-2 transition-colors",
+                            isDark ? "text-yellow-500" : "text-gray-400 hover:text-orange-500"
                         )}
                         title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
                     >
                         {isDark ? <Sun size={18} /> : <Moon size={18} />}
                     </button>
-                    <HeaderActions onSettingsClick={() => { /* Handled by parent or explicit logic? 
-                    Actually App.jsx handles generic Settings click. 
-                    If we want a specific settings for InfoPage, we might need a modal or dropdown here.
-                    For now, reuse the global settings button logic from HeaderActions but we need to pass props if we want it to work.
-                    Wait, HeaderActions usually takes props from App.jsx. 
-                    Since this is inside the page, we don't have direct access unless passed.
-                    Let's just use a simple Settings button here if needed, or rely on the Global Header if we were using it.
-                    BUT, user requested "Please compare to other pages having top header bar".
-                    Analysis/Dashboard have the big header title AND the HeaderActions.
-                    Let's replicate that structure.
-                 */}} >
-                        {/* No children for now */}
-                    </HeaderActions>
-                </div>
+                    {/* Settings/Sync Icon can also live here if needed, but App.jsx has a global one */}
+                </HeaderActions>
             </header>
 
-            <div className="flex-1 flex overflow-hidden relative">
+            {/* Main Content Area Container: Neumo card holding Sidebar + Content */}
+            <div className={cn(
+                "flex-1 flex overflow-hidden relative neumo-raised rounded-3xl z-20 transition-colors duration-300",
+                isDark ? "bg-[#202731]" : "bg-[#E0E5EC]"
+            )}>
                 {/* Sidebar (List) */}
                 <motion.div
                     className={cn(
                         "flex flex-col w-full md:w-1/3 min-w-[260px] max-w-sm border-r z-10 absolute md:relative h-full transition-all duration-300",
                         isMobileListVisible ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-                        isDark ? "bg-[#111111] border-gray-800" : "bg-[#F5F5F7] border-gray-200"
+                        isDark ? "bg-[#1A202A] border-white/5" : "bg-[#D6DCE5] border-white/50"
                     )}
                 >
                     {/* Sidebar Header / Actions */}
                     <div className={cn(
-                        "p-3 border-b flex justify-between items-center transition-colors",
-                        isDark ? "border-gray-800 bg-[#111111]" : "border-gray-200 bg-[#F5F5F7]"
+                        "p-3 border-b flex justify-between items-center transition-colors shadow-sm",
+                        isDark ? "border-white/5 bg-[#171C24]" : "border-white/50 bg-[#D0D6DF]"
                     )}>
-                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-wider">
+                        <span className={cn("text-[10px] font-black uppercase tracking-wider", isDark ? "text-gray-400" : "text-gray-500")}>
                             {files.length} ITEMS
                         </span>
                         <button
                             onClick={() => setIsFolderModalOpen(true)}
                             className={cn(
                                 "p-1.5 rounded-md transition-colors",
-                                isDark ? "hover:bg-gray-800 text-gray-500 hover:text-gray-300" : "hover:bg-gray-200 text-gray-500"
+                                isDark ? "hover:bg-gray-800 text-gray-400 hover:text-gray-200" : "hover:bg-gray-200 text-gray-600"
                             )}
                             title="New Folder"
                         >
@@ -270,11 +255,11 @@ function InfoPage() {
                                             onClick={() => toggleFolder(folderName)}
                                             className={cn(
                                                 "flex items-center gap-1.5 w-full text-left px-2 py-1 text-xs font-bold transition-colors",
-                                                isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-800"
+                                                isDark ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-gray-900"
                                             )}
                                         >
                                             {openFolders[folderName] ? <ChevronRight size={12} className="rotate-90 transition-transform" /> : <ChevronRight size={12} className="transition-transform" />}
-                                            <Folder size={14} className="text-blue-500" />
+                                            <Folder size={14} className={cn(isDark ? "text-blue-400" : "text-blue-500")} />
                                             {folderName}
                                         </button>
 
@@ -284,7 +269,7 @@ function InfoPage() {
                                                     initial={{ height: 0, opacity: 0 }}
                                                     animate={{ height: 'auto', opacity: 1 }}
                                                     exit={{ height: 0, opacity: 0 }}
-                                                    className={cn("overflow-hidden ml-4 pl-2 border-l", isDark ? "border-gray-800" : "border-gray-200")}
+                                                    className={cn("overflow-hidden ml-4 pl-2 border-l", isDark ? "border-white/10" : "border-gray-300")}
                                                 >
                                                     {renderFileList(files.filter(f => folders[folderName].includes(f.filename)))}
                                                 </motion.div>
@@ -313,14 +298,14 @@ function InfoPage() {
                 <div className={cn(
                     "flex-1 h-full overflow-hidden flex flex-col w-full absolute md:relative transition-all duration-300",
                     !isMobileListVisible ? "translate-x-0" : "translate-x-full md:translate-x-0",
-                    isDark ? "bg-[#1e1e1e]" : "bg-white"
+                    isDark ? "bg-[#202731]" : "bg-[#E0E5EC]"
                 )}>
                     {selectedFile ? (
                         <>
                             {/* Mobile Header for Content */}
                             <div className={cn(
                                 "md:hidden p-3 border-b flex items-center gap-2 sticky top-0 z-10",
-                                isDark ? "bg-[#1e1e1e] border-gray-700 text-white" : "bg-white border-gray-100 text-gray-800"
+                                isDark ? "bg-[#1A202A] border-white/5 text-gray-200" : "bg-[#D6DCE5] border-white/50 text-gray-800"
                             )}>
                                 <button onClick={handleBackToList} className="p-1 -ml-1 text-yellow-500 flex items-center gap-1">
                                     <ChevronLeft size={18} />
@@ -341,7 +326,7 @@ function InfoPage() {
                             {/* Desktop Toolbar (Floating / Top) */}
                             <div className={cn(
                                 "hidden md:flex justify-between items-center p-3 border-b",
-                                isDark ? "border-gray-800 bg-[#1e1e1e] text-white" : "border-gray-100 bg-white text-gray-800"
+                                isDark ? "border-white/5 bg-[#171C24] text-gray-200" : "border-white/50 bg-[#D0D6DF] text-gray-800"
                             )}>
                                 <span className={cn("text-sm font-bold", isDark ? "text-gray-300" : "text-gray-700")}>{selectedFile.filename}</span>
                                 <div className="flex gap-2">
@@ -375,7 +360,7 @@ function InfoPage() {
                                         onChange={(e) => setEditContent(e.target.value)}
                                         className={cn(
                                             "w-full h-full p-6 resize-none focus:outline-none font-mono text-sm leading-relaxed",
-                                            isDark ? "bg-[#1e1e1e] text-gray-200" : "bg-white text-gray-800"
+                                            isDark ? "bg-[#202731] text-gray-300" : "bg-[#E0E5EC] text-gray-800"
                                         )}
                                         spellCheck={false}
                                     />
@@ -410,20 +395,26 @@ function InfoPage() {
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white p-4 rounded-xl shadow-xl w-64 space-y-4"
+                            className={cn(
+                                "p-5 rounded-2xl shadow-2xl w-72 space-y-4 border neumo-raised",
+                                isDark ? "bg-[#202731] border-white/10" : "bg-[#E0E5EC] border-white/50"
+                            )}
                         >
-                            <h3 className="text-sm font-black text-gray-800">New Folder</h3>
+                            <h3 className={cn("text-sm font-black uppercase tracking-wider", isDark ? "text-gray-300" : "text-gray-600")}>New Folder</h3>
                             <input
                                 type="text"
                                 value={newFolderName}
                                 onChange={(e) => setNewFolderName(e.target.value)}
                                 placeholder="Folder Name"
-                                className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-yellow-400 text-gray-800"
+                                className={cn(
+                                    "w-full px-3 py-2 rounded-xl text-sm font-bold focus:outline-none neumo-pressed",
+                                    isDark ? "bg-transparent text-gray-200 placeholder-gray-600" : "bg-transparent text-gray-800 placeholder-gray-400"
+                                )}
                                 autoFocus
                             />
-                            <div className="flex justify-end gap-2">
-                                <button onClick={() => setIsFolderModalOpen(false)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-gray-500 hover:bg-gray-100">Cancel</button>
-                                <button onClick={createFolder} className="px-3 py-1.5 rounded-lg bg-yellow-400 text-yellow-900 text-xs font-bold hover:bg-yellow-500">Create</button>
+                            <div className="flex justify-end gap-3 mt-2">
+                                <button onClick={() => setIsFolderModalOpen(false)} className={cn("px-4 py-2 rounded-xl text-xs font-bold transition-colors", isDark ? "text-gray-400 hover:bg-white/5" : "text-gray-500 hover:bg-black/5")}>Cancel</button>
+                                <button onClick={createFolder} className="px-4 py-2 rounded-xl bg-yellow-400 text-yellow-900 text-xs font-black shadow-md hover:bg-yellow-500 transition-colors">Create</button>
                             </div>
                         </motion.div>
                     </div>

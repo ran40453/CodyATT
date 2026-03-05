@@ -8,21 +8,21 @@ const apps = [
         id: 'codysch',
         name: 'CodySCH',
         url: 'https://codysch.vercel.app',
-        color: 'bg-gray-800',
+        color: 'bg-[#94A3B8]', // Morandi Slate Blue
         icon: Calendar
     },
     {
         id: 'lifamily',
         name: 'LiFamily',
         url: 'https://lifamily.vercel.app',
-        color: 'bg-green-500',
+        color: 'bg-[#A3B18A]', // Morandi Sage Green
         icon: Home
     },
     {
         id: 'quickcopy',
         name: 'Copy',
         type: 'tool',
-        color: 'bg-orange-500',
+        color: 'bg-[#D4A373]', // Morandi Dusty Orange/Sand
         icon: Briefcase
     }
 ];

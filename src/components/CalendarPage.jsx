@@ -210,10 +210,14 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
             )}
 
             <div className="flex justify-between items-center bg-[#E0E5EC] neumo-raised rounded-3xl p-4 z-20 relative">
-                <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="neumo-button p-2">
-                    <ChevronLeft size={20} />
-                </button>
                 <div className="flex items-center gap-2">
+                    <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="neumo-button p-2">
+                        <ChevronLeft size={20} />
+                    </button>
+                    <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="neumo-button p-2">
+                        <ChevronRight size={20} />
+                    </button>
+                    <div className="w-px h-6 bg-gray-300 mx-2"></div>
                     <div className="relative">
                         <select value={currentDate.getFullYear()} onChange={(e) => setCurrentDate(setYear(currentDate, parseInt(e.target.value)))}
                             className="appearance-none bg-transparent font-extrabold uppercase tracking-widest text-[#202731] py-1 px-4 neumo-pressed rounded-xl focus:outline-none cursor-pointer text-sm">
@@ -228,9 +232,6 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
                         </select>
                     </div>
                 </div>
-                <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="neumo-button p-2">
-                    <ChevronRight size={20} />
-                </button>
             </div>
 
             {isYearView ? (

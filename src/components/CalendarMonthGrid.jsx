@@ -40,8 +40,27 @@ function CalendarMonthGrid({
             }
         }
 
-        if (isTaiwanHoliday(day)) {
+        const isHoliday = isTaiwanHoliday(day);
+
+        if (isHoliday) {
             return { date: dayStr, isHoliday: true, _isAutoHoliday: true }
+        }
+
+        const today = new Date();
+        const isPastOrToday = day <= today || isSameDay(day, today);
+        const dayOfWeek = day.getDay();
+        const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+
+        // Auto-fill implicit past/current weekdays as standard workdays
+        if (isPastOrToday && isWeekday) {
+            return {
+                date: dayStr,
+                isHoliday: false,
+                isAutoFilled: true, // Visual flag
+                startTime: '08:30',
+                endTime: '17:30',
+                isWorkDay: true
+            }
         }
 
         return null;

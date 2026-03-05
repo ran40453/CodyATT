@@ -88,7 +88,7 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy, setti
 
                 {/* Right Top: Desktop Price Pill */}
                 <div className="hidden md:flex flex-col items-end gap-1">
-                    {dailySalary > 0 && !isLeave && (
+                    {dailySalary > 0 && !isLeave && (!isSunday && !isSaturday || isWorkDay || otHours > 0 || travelCountry) && (
                         <div className={cn(
                             "backdrop-blur-sm px-2 py-0.5 rounded-full border shadow-sm",
                             (salaryMetrics?.bonus > 0 || record?.bonus > 0)

@@ -1,0 +1,32 @@
+# Antigravity & User Custom Rules
+
+## 1. Zero-Prompt Execution (CRITICAL)
+- **Automatic Context:** You must adhere to these rules strictly without the user needing to say "read project_context.md" or "read .cursorrules". 
+- **Auto-Push to GitHub:** Whenever a task, feature, or bug fix is successfully completed and verified, you MUST automatically stage, commit, and push the changes to GitHub (`git add . && git commit -m "..." && git push`). Do not wait for the user to ask for it.
+- **Auto-Build Validation:** Whenever you make structural, configuration, or feature changes, ALWAYS run the project's build command (e.g., `npm run build`) to ensure there are no compilation errors. Do this proactively without asking.
+
+## 2. Core Tech Stack & Architecture
+- **Primary Stack:** Vercel (Hosting) + GitHub Gist (Storage) + GitHub (Version Control).
+- **Project Structure:** Favor minimalistic, modular, and maintainable functional React components.
+
+## 3. UI/UX Design Preferences (CRITICAL)
+- **Aesthetics Elements:**
+  - **Glassmorphism & Neumorphism:** Favor dark, translucent glassmorphism for overdue/alert states, and soft neumorphic shadows/glows for general cards and buttons.
+  - **Themes:** Always implement and prefer a toggleable dual-theme system (Light Mode and Dark Mode). 
+- **Responsive Design:** 
+  - All UI builds must be strictly mobile-first and fully responsive across Mobile, Tablet, and Desktop.
+- **Floating Tabbar:**
+  - If a bottom Tabbar is used, the **Active Tab icon/button** should be circular, its height should strictly exceed the tabbar itself (popping out), and it must be vertically centered.
+  - **Only the Active Tab** should display its text label; inactive tabs should only display the icon.
+- **Icons & Typography:**
+  - Strictly use **Google Material Icons** (or standard SVG icon sets like `lucide-react` mapped to material feeling). **NEVER** use emojis as UI icons.
+- **Animations & Transitions:**
+  - Ensure **smooth, sliding, or fading transition animations** (e.g., via Framer Motion or CSS `transition-all duration-300`) between state changes and identical/similar buttons.
+
+## 4. Functional Preferences
+- **CRUD Operations:** By default, whenever a new item, list, or feature type is created, it MUST include built-in Edit and Remove/Delete buttons.
+- **Verification:** Always verify your code changes by running tests or reviewing the DOM via a browser subagent when UI changes are made.
+
+## 5. Proactive Design & Preference Adaptation
+- **Cross-Project Consistency:** If you observe that a specific UI element, Tailwind configuration, or logical flow is used across more than two projects, you must treat it as a foundational user preference.
+- **Self-Updating Rules:** Actively update this `.cursorrules` file if you discover new, consistent patterns in the user's workflow or design preferences, ensuring the AI continuously learns and adapts without explicit instruction.
