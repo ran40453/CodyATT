@@ -36,22 +36,26 @@ function SettingsPage({ isPrivacy }) {
 
     if (!settings) return null
 
-    const handleSave = async () => {
-        // Safety check: If we have a Gist ID but NO salary history and we are using default base salary,
-        // it's very likely we are on a new browser and haven't pulled yet.
-        const isLikelyEmpty = (!settings.salaryHistory || settings.salaryHistory.length === 0) &&
-            settings.salary.baseMonthly === 50000;
-
-        if (settings.gistId && isLikelyEmpty) {
-            const proceed = confirm('偵測到本機設定為初始狀態，直接同步可能蓋掉雲端已有的設定。建議先點選「從雲端恢復 (PULL)」。確定要直接覆蓋雲端嗎？');
-            if (!proceed) return;
+    const handleSave = () => {
+        if (document.activeElement) {
+            document.activeElement.blur();
         }
 
-        setIsSaving(true)
-        const updated = { ...settings, liveRate: liveRate || settings.allowance.exchangeRate }
-        saveSettings(updated)
-        await syncSettingsToGist(updated)
-        setTimeout(() => setIsSaving(false), 1000)
+        setTimeout(async () => {
+            const isLikelyEmpty = (!settings.salaryHistory || settings.salaryHistory.length === 0) &&
+                settings.salary.baseMonthly === 50000;
+
+            if (settings.gistId && isLikelyEmpty) {
+                const proceed = confirm('偵測到本機設定為初始狀態，直接同步可能蓋掉雲端已有的設定。建議先點選「從雲端恢復 (PULL)」。確定要直接覆蓋雲端嗎？');
+                if (!proceed) return;
+            }
+
+            setIsSaving(true)
+            const updated = { ...settings, liveRate: liveRate || settings.allowance.exchangeRate }
+            saveSettings(updated)
+            await syncSettingsToGist(updated)
+            setTimeout(() => setIsSaving(false), 1000)
+        }, 400);
     }
 
     const updateSetting = (section, field, value) => {
@@ -111,29 +115,39 @@ function SettingsPage({ isPrivacy }) {
         setIsSaving(false);
     }
 
-    const handleRecover = async () => {
+    const handleRecover = () => {
         if (!settings.githubToken || !settings.gistId) {
             alert('請先輸入 GitHub Token 與 Gist ID');
             return;
         }
-        if (!confirm('將從雲端讀取設定與紀錄，這將會蓋掉本機目前的未同步資料，確定要繼續？')) return;
 
-        setIsSaving(true);
-        try {
-            const remoteSettings = await fetchSettingsFromGist(settings.githubToken, settings.gistId);
-            const remoteRecords = await fetchRecordsFromGist(settings.githubToken, settings.gistId);
-
-            if (remoteSettings && remoteRecords) {
-                setSettings(remoteSettings);
-                alert('恢復成功！請手動重新整理頁面以套用所有變更。');
-                window.location.reload();
-            } else {
-                alert('從雲端取得資料失敗，請檢查 Token 與 Gist ID 是否正確。');
-            }
-        } catch (e) {
-            alert(`恢復發生錯誤: ${e.message}`);
+        if (document.activeElement) {
+            document.activeElement.blur();
         }
-        setIsSaving(false);
+
+        setTimeout(async () => {
+            if (!confirm('將從雲端讀取設定與紀錄，這將會蓋掉本機目前的未同步資料，確定要繼續？')) return;
+
+            setIsSaving(true);
+            try {
+                // Clear dirty flag so we don't accidentally push local broken data
+                localStorage.setItem('ot-data-dirty', 'false');
+
+                const remoteSettings = await fetchSettingsFromGist(settings.githubToken, settings.gistId);
+                const remoteRecords = await fetchRecordsFromGist(settings.githubToken, settings.gistId);
+
+                if (remoteSettings && remoteRecords) {
+                    setSettings(remoteSettings);
+                    alert('恢復成功！請手動重新整理頁面以套用所有變更。');
+                    window.location.reload();
+                } else {
+                    alert('從雲端取得資料失敗，請檢查 Token 與 Gist ID 是否正確。');
+                }
+            } catch (e) {
+                alert(`恢復發生錯誤: ${e.message}`);
+            }
+            setIsSaving(false);
+        }, 400);
     }
 
     const toggleSection = (id) => {
