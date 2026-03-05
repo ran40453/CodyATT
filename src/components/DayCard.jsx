@@ -3,21 +3,10 @@ import { format, isToday, getDay, isAfter, startOfDay } from 'date-fns'
 import { motion } from 'framer-motion'
 import { Palmtree, Moon, DollarSign, Coffee, MessageSquare } from 'lucide-react'
 import { cn } from '../lib/utils'
-import { loadSettings, calculateOTHours, calculateDuration, calculateDailySalary, fetchExchangeRate, standardizeCountry } from '../lib/storage'
+import { calculateOTHours, calculateDuration, calculateDailySalary, standardizeCountry } from '../lib/storage'
 import { isTaiwanHoliday, getHolidayName } from '../lib/holidays'
 
-function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy }) {
-    const [settings, setSettings] = useState(null)
-
-    useEffect(() => {
-        const init = async () => {
-            const s = loadSettings();
-            const rate = await fetchExchangeRate();
-            setSettings({ ...s, liveRate: rate });
-        };
-        init();
-    }, []);
-
+function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy, settings }) {
     const dayOfWeek = getDay(day);
     const isSunday = dayOfWeek === 0;
     const isSaturday = dayOfWeek === 6;
@@ -67,7 +56,7 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy }) {
     return (
         <motion.div
             layout
-            onClick={onClick}
+            onClick={() => onClick && onClick(day)}
             className={cn(
                 "neumo-card transition-all flex flex-col p-2 md:p-3 relative h-20 md:h-28", // Fixed height for predictability
                 isToday(day) && "ring-2 ring-neumo-brand/40",
@@ -182,4 +171,13 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy }) {
     );
 }
 
-export default DayCard;
+export default React.memo(DayCard, (prevProps, nextProps) => {
+    // Only re-render if fundamental props change.
+    return (
+        prevProps.day.getTime() === nextProps.day.getTime() &&
+        prevProps.isCurrentMonth === nextProps.isCurrentMonth &&
+        prevProps.isPrivacy === nextProps.isPrivacy &&
+        JSON.stringify(prevProps.record) === JSON.stringify(nextProps.record) &&
+        prevProps.settings === nextProps.settings
+    );
+});

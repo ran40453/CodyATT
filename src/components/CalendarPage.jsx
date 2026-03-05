@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, subMonths, isSameDay, startOfWeek, endOfWeek, setMonth, setYear, getDay, eachMonthOfInterval, isToday } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, subMonths, isSameDay, startOfWeek, endOfWeek, setMonth, setYear, getDay, eachMonthOfInterval, isToday, parseISO } from 'date-fns'
 import { ChevronLeft, ChevronRight, Calendar, Grid3X3 } from 'lucide-react'
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion'
-import { loadData, addOrUpdateRecord, fetchRecordsFromGist, deleteRecord } from '../lib/storage'
+import { loadData, addOrUpdateRecord, fetchRecordsFromGist, deleteRecord, loadSettings, fetchExchangeRate } from '../lib/storage'
 import { isTaiwanHoliday } from '../lib/holidays'
 import { cn } from '../lib/utils'
 import CalendarMonthGrid from './CalendarMonthGrid'
@@ -14,10 +14,42 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
     const [currentDate, setCurrentDate] = useState(new Date())
     const [focusedDay, setFocusedDay] = useState(null)
     const [isYearView, setIsYearView] = useState(false)
+    const [settings, setSettings] = useState(null)
+    const [liveRate, setLiveRate] = useState(null)
 
-    // ... (Swipe logic remains the same, assuming it's correctly hooks)
-    // Actually, I need to make sure I don't break the existing component structure. 
-    // The previous view_file showed the hooks. I will just replace the top part and the header.
+    useEffect(() => {
+        const init = async () => {
+            const s = loadSettings();
+            setSettings(s);
+            try {
+                const rate = await fetchExchangeRate().catch(() => 32.5);
+                if (rate) setLiveRate(rate);
+            } catch (err) {
+                console.error('CalendarPage: Rate fetch error:', err);
+            }
+        };
+        init();
+    }, []);
+
+    const parse = (d) => {
+        if (!d) return new Date(0);
+        if (d instanceof Date) return d;
+        const parsed = parseISO(d);
+        if (!isNaN(parsed.getTime())) return parsed;
+        return new Date(d);
+    }
+
+    // Hash Map for O(1) Record Lookups
+    const dataMap = useMemo(() => {
+        const map = new Map();
+        data.forEach(r => {
+            const d = parse(r.date);
+            if (d instanceof Date && !isNaN(d)) {
+                map.set(format(d, 'yyyy-MM-dd'), r);
+            }
+        });
+        return map;
+    }, [data]);
 
     // Swipe Logic
     const x = useMotionValue(0);
@@ -96,10 +128,10 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
         setCurrentDate(setMonth(currentDate, parseInt(e.target.value)))
     }
 
-    // Helper to get record (passed to YearView)
+    // Helper to get record (passed to YearView for legacy if needed, but we'll adapt it)
     const getRecordForDay = (day) => {
         const dayStr = format(day, 'yyyy-MM-dd')
-        return data.find(r => r.date && format(new Date(r.date), 'yyyy-MM-dd') === dayStr)
+        return dataMap.get(dayStr)
     }
 
     const mask = (val) => isPrivacy ? '••••' : val;
@@ -110,7 +142,7 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
 
     const attendanceBoxes = currentMonthDays.map(day => {
         const dayStr = format(day, 'yyyy-MM-dd');
-        const record = data.find(r => r.date && format(new Date(r.date), 'yyyy-MM-dd') === dayStr);
+        const record = dataMap.get(dayStr);
         let type = 'none';
         if (record) type = record.isLeave ? 'leave' : 'attendance';
         return { day, type };
@@ -204,7 +236,7 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
             {isYearView ? (
                 <YearView
                     year={currentDate.getFullYear()}
-                    data={data}
+                    dataMap={dataMap}
                     onSelectMonth={(m) => { setCurrentDate(setMonth(setYear(new Date(), currentDate.getFullYear()), m)); setIsYearView(false); }}
                 />
             ) : (
@@ -223,7 +255,8 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
                             {containerWidth > 0 && (
                                 <CalendarMonthGrid
                                     monthDate={subMonths(currentDate, 1)}
-                                    data={data}
+                                    dataMap={dataMap}
+                                    settings={{ ...settings, liveRate }}
                                     onUpdate={handleUpdateRecord}
                                     onDelete={onDelete}
                                     isPrivacy={isPrivacy}
@@ -237,7 +270,8 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
                         <div className="w-1/3 flex-shrink-0 px-1">
                             <CalendarMonthGrid
                                 monthDate={currentDate}
-                                data={data}
+                                dataMap={dataMap}
+                                settings={{ ...settings, liveRate }}
                                 onUpdate={handleUpdateRecord}
                                 onDelete={onDelete}
                                 isPrivacy={isPrivacy}
@@ -251,7 +285,8 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
                             {containerWidth > 0 && (
                                 <CalendarMonthGrid
                                     monthDate={addMonths(currentDate, 1)}
-                                    data={data}
+                                    dataMap={dataMap}
+                                    settings={{ ...settings, liveRate }}
                                     onUpdate={handleUpdateRecord}
                                     onDelete={onDelete}
                                     isPrivacy={isPrivacy}
@@ -267,15 +302,12 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
     )
 }
 
-function YearView({ year, data, onSelectMonth }) {
+function YearView({ year, dataMap, onSelectMonth }) {
     const yearMonths = Array.from({ length: 12 }, (_, i) => new Date(year, i, 1));
 
     const getRecordForDate = (date) => {
         const dayStr = format(date, 'yyyy-MM-dd');
-        return data.find(r => {
-            if (!r.date) return false;
-            try { return format(new Date(r.date), 'yyyy-MM-dd') === dayStr; } catch { return false; }
-        });
+        return dataMap.get(dayStr);
     };
 
     return (

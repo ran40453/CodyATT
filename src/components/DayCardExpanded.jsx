@@ -7,8 +7,7 @@ import { loadSettings, calculateOTHours, calculateDuration, calculateDailySalary
 import { isTaiwanHoliday, getHolidayName } from '../lib/holidays'
 import { playTick } from '../lib/audio'
 
-function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, className, hideHeader = false }) {
-    const [settings, setSettings] = useState(null) // Moved to top
+function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, className, hideHeader = false, settings }) {
     const [endTime, setEndTime] = useState(record?.endTime || '17:30')
     const [travelCountry, setTravelCountry] = useState(record?.travelCountry || '')
     const [isHoliday, setIsHoliday] = useState(record?.isHoliday || false)
@@ -46,15 +45,6 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
     const currentEndTimeRef = useRef(endTime)
 
     useEffect(() => { currentEndTimeRef.current = endTime }, [endTime])
-
-    useEffect(() => {
-        const init = async () => {
-            const s = loadSettings();
-            const rate = await fetchExchangeRate();
-            setSettings({ ...s, liveRate: rate });
-        };
-        init();
-    }, []);
 
     const handleSave = (e) => {
         if (e) e.stopPropagation();
