@@ -150,14 +150,13 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
         } else {
             // Apply implicit weekday attendance assumption
             const isHoliday = isTaiwanHoliday(day);
+            const isWeekday = day.getDay() >= 1 && day.getDay() <= 5;
             const isPastOrToday = day <= today || isSameDay(day, today);
-            const dayOfWeek = day.getDay();
-            const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
-            if (!isHoliday && isPastOrToday && isWeekday) {
+
+            if (!isHoliday && isWeekday && isPastOrToday) {
                 type = 'attendance';
             }
         }
-
         return { day, type };
     });
 

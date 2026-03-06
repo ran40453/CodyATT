@@ -316,16 +316,15 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
         if (record) {
             type = record.isLeave ? 'leave' : 'attendance';
         } else {
-            // Apply implicit weekday attendance assumption (mirroring Calendar logic)
+            // Apply implicit weekday attendance assumption
             const isHoliday = isTaiwanHoliday(day);
+            const isWeekday = day.getDay() >= 1 && day.getDay() <= 5;
             const isPastOrToday = day <= today || isSameDay(day, today);
-            const dayOfWeek = day.getDay();
-            const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
-            if (!isHoliday && isPastOrToday && isWeekday) {
+
+            if (!isHoliday && isWeekday && isPastOrToday) {
                 type = 'attendance';
             }
         }
-
         return { day, type };
     });
     const attendedCount = attendanceBoxes.filter(b => b.type === 'attendance').length;

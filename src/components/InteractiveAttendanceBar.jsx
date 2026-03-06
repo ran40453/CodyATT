@@ -41,12 +41,26 @@ export default function InteractiveAttendanceBar({ attendanceBoxes, today, class
             }}
         >
             {attendanceBoxes.map((box, idx) => {
-                const isPastOrToday = box.day <= today;
+                // Robust date-only comparison
+                const boxDay = new Date(box.day);
+                boxDay.setHours(0, 0, 0, 0);
+                const compareToday = new Date(today);
+                compareToday.setHours(0, 0, 0, 0);
+
+                const isPast = boxDay < compareToday;
+                const isToday = boxDay.getTime() === compareToday.getTime();
+                const isPastOrToday = isPast || isToday;
                 const isActive = activeIdx === idx;
 
-                let hexBg = "#e5e7eb"; // bg-gray-200
+                let hexBg = "#f3f4f6"; // default future/none (gray-100)
                 if (isPastOrToday) {
-                    hexBg = box.type === 'attendance' ? "#a855f7" : "#e9d5ff"; // purple-500 : purple-200
+                    if (box.type === 'attendance') {
+                        hexBg = "#a855f7"; // purple-500
+                    } else if (box.type === 'leave') {
+                        hexBg = "#f472b6"; // pink-400 (distinct for leave)
+                    } else {
+                        hexBg = "#e5e7eb"; // gray-200 (past weekend/holiday)
+                    }
                 }
 
                 return (
