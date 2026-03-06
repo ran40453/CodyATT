@@ -631,8 +631,11 @@ export const fetchGistFiles = async () => {
 
 /**
  * Update a specific file in the Gist (for Info Page editing)
+ * @param {string} filename The target filename to save or create
+ * @param {string|null} content The content to save. If null, deletes the file.
+ * @param {string} [oldFilename] If renaming, the original filename (will be deleted/nulled out)
  */
-export const updateGistFile = async (filename, content) => {
+export const updateGistFile = async (filename, content, oldFilename = null) => {
     const settings = loadSettings();
     const token = settings.githubToken;
     const gistId = settings.gistId;
@@ -641,6 +644,20 @@ export const updateGistFile = async (filename, content) => {
 
     try {
         console.log(`InfoPage: Updating ${filename} in Gist ${gistId}...`);
+
+        const filesPayload = {
+            [filename]: {
+                content: content
+            }
+        };
+
+        // If we are renaming, we delete the old file by setting content to null
+        if (oldFilename && oldFilename !== filename) {
+            filesPayload[oldFilename] = {
+                content: null // GitHub API deletes the file when content is null
+            };
+        }
+
         const response = await fetch(`https://api.github.com/gists/${gistId}`, {
             method: 'PATCH',
             headers: {
@@ -648,11 +665,7 @@ export const updateGistFile = async (filename, content) => {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                files: {
-                    [filename]: {
-                        content: content
-                    }
-                }
+                files: filesPayload
             })
         });
 

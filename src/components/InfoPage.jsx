@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { FileText, Loader2, ChevronLeft, StickyNote, AlertCircle, Save, Folder, FolderPlus, FilePlus, ChevronRight, Edit2, X, Plus, Sun, Moon } from 'lucide-react'
+import rehypeRaw from 'rehype-raw'
+import { FileText, Loader2, ChevronLeft, StickyNote, AlertCircle, Save, Folder, FolderPlus, FilePlus, ChevronRight, Edit2, X, Plus, Sun, Moon, Trash2, Copy, Heading1, Heading2, Heading3, Heading4, Heading5, Bold, Strikethrough, List, CheckSquare, Smile, Palette, SquarePen } from 'lucide-react'
 import { fetchGistFiles, updateGistFile, loadSettings, saveSettings, syncSettingsToGist } from '../lib/storage'
 import { cn } from '../lib/utils'
 import HeaderActions from './HeaderActions'
@@ -19,12 +20,21 @@ function InfoPage() {
     const [isEditing, setIsEditing] = useState(false)
     const [editContent, setEditContent] = useState('')
     const [isSaving, setIsSaving] = useState(false)
+    const editorRef = useRef(null)
 
     // Folder Management State
     const [openFolders, setOpenFolders] = useState({}) // { "FolderName": true/false }
+    const [activeFolder, setActiveFolder] = useState(null) // currently selected folder for placing new files
     const [isFolderModalOpen, setIsFolderModalOpen] = useState(false)
     const [newFolderName, setNewFolderName] = useState('')
     const [draggedFile, setDraggedFile] = useState(null)
+
+    // Toolbar / Edit Metadata
+    const [editFilename, setEditFilename] = useState('')
+    const [isCopying, setIsCopying] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
+    const [showColorPicker, setShowColorPicker] = useState(false)
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 
     // Uncategorized files are those not in any folder's list
     const getUncategorizedFiles = (allFiles, currentFolders) => {
@@ -75,9 +85,21 @@ function InfoPage() {
     const handleFileSelect = (file) => {
         setSelectedFile(file)
         setEditContent(file.content)
+        setEditFilename(file.filename.replace('.md', '')) // prepare for rename
         setIsEditing(false)
         setIsMobileListVisible(false)
+        setShowColorPicker(false)
+        setShowEmojiPicker(false)
     }
+
+    // Effect to initialize contentEditable when entering edit mode
+    useEffect(() => {
+        if (isEditing && editorRef.current) {
+            if (editorRef.current.innerHTML !== editContent) {
+                editorRef.current.innerHTML = editContent;
+            }
+        }
+    }, [isEditing, selectedFile]);
 
     const handleBackToList = () => {
         setIsMobileListVisible(true)
@@ -88,11 +110,42 @@ function InfoPage() {
     const handleSave = async () => {
         if (!selectedFile) return;
         setIsSaving(true);
-        const result = await updateGistFile(selectedFile.filename, editContent);
+
+        const newFilename = editFilename.trim() ? `${editFilename}.md` : selectedFile.filename;
+        const isRenaming = newFilename !== selectedFile.filename;
+
+        // If renaming, we conceptually create a new file and delete the old one in one API call
+        // The updateGistFile will be modified below to handle renaming by passing oldFilename
+        const result = await updateGistFile(newFilename, editContent, isRenaming ? selectedFile.filename : null);
+
         if (result.ok) {
             // Update local state
-            const updatedFile = { ...selectedFile, content: editContent };
-            setFiles(prev => prev.map(f => f.filename === selectedFile.filename ? updatedFile : f));
+            const updatedFile = { ...selectedFile, filename: newFilename, content: editContent };
+            let newFiles = prev => prev.map(f => f.filename === selectedFile.filename ? updatedFile : f);
+
+            // If it's a completely new file just added to state (no Gist backup yet), it might not map correctly 
+            // if we didn't push it yet. But our flow maps correctly because selectedFile has a placeholder.
+
+            setFiles(prev => {
+                const exists = prev.some(f => f.filename === selectedFile.filename);
+                if (exists) return prev.map(f => f.filename === selectedFile.filename ? updatedFile : f);
+                return [...prev, updatedFile];
+            });
+
+            // Re-map folder references if renamed
+            if (isRenaming) {
+                const newFolders = { ...folders };
+                Object.keys(newFolders).forEach(k => {
+                    const idx = newFolders[k].indexOf(selectedFile.filename);
+                    if (idx !== -1) {
+                        newFolders[k][idx] = newFilename;
+                    }
+                });
+                setFolders(newFolders);
+                saveSettings({ ...loadSettings(), infoPageFolders: newFolders });
+                syncSettingsToGist({ ...loadSettings(), infoPageFolders: newFolders });
+            }
+
             setSelectedFile(updatedFile);
             setIsEditing(false);
         } else {
@@ -101,13 +154,84 @@ function InfoPage() {
         setIsSaving(false);
     };
 
+    const handleDelete = async () => {
+        if (!selectedFile) return;
+        if (!window.confirm(`Are you sure you want to delete ${selectedFile.filename}?`)) return;
+
+        setIsDeleting(true);
+        // Delete implies sending null for content in the GitHub API via updateGistFile
+        const result = await updateGistFile(selectedFile.filename, null);
+
+        if (result.ok) {
+            // Remove from files array
+            setFiles(prev => prev.filter(f => f.filename !== selectedFile.filename));
+
+            // Remove from any folders
+            const newFolders = { ...folders };
+            Object.keys(newFolders).forEach(k => {
+                newFolders[k] = newFolders[k].filter(f => f !== selectedFile.filename);
+            });
+            setFolders(newFolders);
+            saveSettings({ ...loadSettings(), infoPageFolders: newFolders });
+            syncSettingsToGist({ ...loadSettings(), infoPageFolders: newFolders });
+
+            setSelectedFile(null);
+            setIsMobileListVisible(true);
+        } else {
+            alert('Failed to delete: ' + result.error);
+        }
+        setIsDeleting(false);
+    };
+
+    const handleCopy = () => {
+        if (!selectedFile) return;
+        navigator.clipboard.writeText(selectedFile.content || editContent).then(() => {
+            setIsCopying(true);
+            setTimeout(() => setIsCopying(false), 2000);
+        });
+    };
+
+    const handleCreateNewFile = () => {
+        const dummyName = `Untitled_${Math.floor(Math.random() * 10000)}`;
+        const newFile = { filename: `${dummyName}.md`, content: '' };
+
+        // Optimistically add to local state
+        setFiles(prev => [...prev, newFile]);
+        setSelectedFile(newFile);
+        setEditContent('');
+        setEditFilename(dummyName);
+        setIsEditing(true);
+        setIsMobileListVisible(false);
+
+        // If an active folder is selected, put it in there
+        if (activeFolder) {
+            const newFolders = { ...folders };
+            if (!newFolders[activeFolder]) newFolders[activeFolder] = [];
+            newFolders[activeFolder].push(`${dummyName}.md`);
+            setFolders(newFolders);
+        }
+    };
+
     const toggleFolder = (folderName) => {
+        setActiveFolder(folderName);
         setOpenFolders(prev => ({ ...prev, [folderName]: !prev[folderName] }));
     }
 
     const createFolder = () => {
         if (!newFolderName.trim()) return;
-        const newFolders = { ...folders, [newFolderName.trim()]: [] };
+
+        // Support nested / subfolders if activeFolder is set
+        const finalFolderName = activeFolder ? `${activeFolder}/${newFolderName.trim()}` : newFolderName.trim();
+
+        const newFolders = { ...folders, [finalFolderName]: [] };
+
+        // ensure parent is open if it exists
+        if (activeFolder) {
+            setOpenFolders(prev => ({ ...prev, [activeFolder]: true, [finalFolderName]: true }));
+        } else {
+            setOpenFolders(prev => ({ ...prev, [finalFolderName]: true }));
+        }
+
         setFolders(newFolders);
         saveSettings({ ...loadSettings(), infoPageFolders: newFolders });
         syncSettingsToGist({ ...loadSettings(), infoPageFolders: newFolders }); // Async backup
@@ -115,32 +239,88 @@ function InfoPage() {
         setIsFolderModalOpen(false);
     }
 
-    // Drag and Drop Logic (Simple implementation)
-    const handleDragStart = (e, filename) => {
-        e.dataTransfer.setData("text/plain", filename);
-        setDraggedFile(filename);
+    // Editor Toolbar Actions (Native WYSIWYG)
+    const handleFormat = (command, value = null) => {
+        if (editorRef.current) {
+            editorRef.current.focus();
+        }
+        document.execCommand(command, false, value);
+        if (editorRef.current) {
+            setEditContent(editorRef.current.innerHTML);
+        }
+    };
+
+    const insertColor = (color) => {
+        handleFormat('foreColor', color);
+        setShowColorPicker(false);
+    };
+
+    const COLORS = [
+        { name: 'Red', hex: '#EF4444' },
+        { name: 'Black', hex: '#000000' },
+        { name: 'Blue', hex: '#3B82F6' },
+        { name: 'White', hex: '#FFFFFF' },
+        { name: 'Orange', hex: '#F97316' },
+        { name: 'Green', hex: '#22C55E' },
+        { name: 'Yellow', hex: '#EAB308' }
+    ];
+
+    const EMOJIS = ['🚀', '✅', '🔥', '💡', '📌', '⚠️', 'bug', '💻', '📈', '✨', '🧠', '🛠'];
+
+    // Drag and Drop Logic (Files and Folders)
+    const handleDragStart = (e, name, type = 'file') => {
+        e.dataTransfer.setData("application/json", JSON.stringify({ name, type }));
+        setDraggedFile({ name, type });
     }
 
-    const handleDrop = (e, folderName) => {
+    const handleDrop = (e, targetFolderName) => {
         e.preventDefault();
-        const filename = e.dataTransfer.getData("text/plain");
-        if (!filename) return;
+        try {
+            const dataStr = e.dataTransfer.getData("application/json");
+            if (!dataStr) return;
+            const { name, type } = JSON.parse(dataStr);
 
-        // Remove from old folder if exists
-        const newFolders = { ...folders };
-        Object.keys(newFolders).forEach(key => {
-            newFolders[key] = newFolders[key].filter(f => f !== filename);
-        });
+            if (type === 'file') {
+                // Remove from old folder if exists
+                const newFolders = { ...folders };
+                Object.keys(newFolders).forEach(key => {
+                    newFolders[key] = newFolders[key].filter(f => f !== name);
+                });
 
-        // Add to new folder (if not 'uncategorized')
-        if (folderName !== 'uncategorized') {
-            if (!newFolders[folderName]) newFolders[folderName] = [];
-            newFolders[folderName].push(filename);
+                // Add to new folder
+                if (targetFolderName !== 'uncategorized') {
+                    if (!newFolders[targetFolderName]) newFolders[targetFolderName] = [];
+                    newFolders[targetFolderName].push(name);
+                }
+
+                setFolders(newFolders);
+                saveSettings({ ...loadSettings(), infoPageFolders: newFolders });
+                syncSettingsToGist({ ...loadSettings(), infoPageFolders: newFolders });
+            } else if (type === 'folder') {
+                if (name === targetFolderName || targetFolderName.startsWith(name + '/')) return; // Prevent self-nesting
+
+                const newFolders = { ...folders };
+                const targetPrefix = targetFolderName === 'uncategorized' ? '' : targetFolderName + '/';
+                const baseName = name.split('/').pop();
+                const newPath = targetPrefix + baseName;
+
+                const updatedFolders = {};
+                Object.keys(newFolders).forEach(k => {
+                    if (k === name || k.startsWith(name + '/')) {
+                        const renamedKey = k.replace(name, newPath);
+                        updatedFolders[renamedKey] = newFolders[k];
+                    } else {
+                        updatedFolders[k] = newFolders[k];
+                    }
+                });
+
+                setFolders(updatedFolders);
+                saveSettings({ ...loadSettings(), infoPageFolders: updatedFolders });
+                syncSettingsToGist({ ...loadSettings(), infoPageFolders: updatedFolders });
+            }
+        } catch (err) {
+            console.error("Drop error", err);
         }
-
-        setFolders(newFolders);
-        saveSettings({ ...loadSettings(), infoPageFolders: newFolders });
-        syncSettingsToGist({ ...loadSettings(), infoPageFolders: newFolders });
         setDraggedFile(null);
     }
 
@@ -154,7 +334,7 @@ function InfoPage() {
             <button
                 key={file.filename}
                 draggable
-                onDragStart={(e) => handleDragStart(e, file.filename)}
+                onDragStart={(e) => handleDragStart(e, file.filename, 'file')}
                 onClick={() => handleFileSelect(file)}
                 className={cn(
                     "w-full text-left p-2 pl-3 rounded-lg transition-all duration-200 group relative overflow-hidden mb-1 flex items-center gap-2",
@@ -221,19 +401,33 @@ function InfoPage() {
                         "p-3 border-b flex justify-between items-center transition-colors shadow-sm",
                         isDark ? "border-white/5 bg-[#171C24]" : "border-white/50 bg-[#D0D6DF]"
                     )}>
-                        <span className={cn("text-[10px] font-black uppercase tracking-wider", isDark ? "text-gray-400" : "text-gray-500")}>
-                            {files.length} ITEMS
-                        </span>
-                        <button
-                            onClick={() => setIsFolderModalOpen(true)}
-                            className={cn(
-                                "p-1.5 rounded-md transition-colors",
-                                isDark ? "hover:bg-gray-800 text-gray-400 hover:text-gray-200" : "hover:bg-gray-200 text-gray-600"
-                            )}
-                            title="New Folder"
-                        >
-                            <FolderPlus size={16} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <span className={cn("text-[10px] font-black uppercase tracking-wider", isDark ? "text-gray-400" : "text-gray-500")}>
+                                {files.length} ITEMS
+                            </span>
+                        </div>
+                        <div className="flex gap-1">
+                            <button
+                                onClick={handleCreateNewFile}
+                                className={cn(
+                                    "p-1.5 rounded-md transition-colors",
+                                    isDark ? "hover:bg-gray-800 text-gray-400 hover:text-yellow-400" : "hover:bg-gray-200 text-gray-600 hover:text-blue-600"
+                                )}
+                                title="New Note"
+                            >
+                                <SquarePen size={16} />
+                            </button>
+                            <button
+                                onClick={() => setIsFolderModalOpen(true)}
+                                className={cn(
+                                    "p-1.5 rounded-md transition-colors",
+                                    isDark ? "hover:bg-gray-800 text-gray-400 hover:text-green-400" : "hover:bg-gray-200 text-gray-600 hover:text-green-600"
+                                )}
+                                title={`New Folder ${activeFolder ? `in ${activeFolder}` : ''}`}
+                            >
+                                <FolderPlus size={16} />
+                            </button>
+                        </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-2 space-y-4">
@@ -252,15 +446,22 @@ function InfoPage() {
                                         className="space-y-1"
                                     >
                                         <button
+                                            draggable
+                                            onDragStart={(e) => handleDragStart(e, folderName, 'folder')}
                                             onClick={() => toggleFolder(folderName)}
                                             className={cn(
-                                                "flex items-center gap-1.5 w-full text-left px-2 py-1 text-xs font-bold transition-colors",
-                                                isDark ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-gray-900"
+                                                "flex items-center gap-1.5 w-full text-left px-2 py-1.5 rounded-md text-xs font-bold transition-colors cursor-grab active:cursor-grabbing",
+                                                activeFolder === folderName ? (isDark ? "bg-white/10 text-white" : "bg-black/10 text-gray-900") : (isDark ? "text-gray-400 hover:text-white hover:bg-white/5" : "text-gray-600 hover:text-gray-900 hover:bg-black/5")
                                             )}
                                         >
-                                            {openFolders[folderName] ? <ChevronRight size={12} className="rotate-90 transition-transform" /> : <ChevronRight size={12} className="transition-transform" />}
-                                            <Folder size={14} className={cn(isDark ? "text-blue-400" : "text-blue-500")} />
-                                            {folderName}
+                                            {openFolders[folderName] ? <ChevronRight size={14} className="rotate-90 transition-transform" /> : <ChevronRight size={14} className="transition-transform" />}
+                                            <Folder size={14} className={cn(
+                                                activeFolder === folderName ? "text-yellow-500" : (isDark ? "text-blue-400" : "text-blue-500")
+                                            )} />
+                                            {/* indent subfolders visually based on name slashes */}
+                                            <span style={{ paddingLeft: `${(folderName.split('/').length - 1) * 8}px` }}>
+                                                {folderName.split('/').pop()}
+                                            </span>
                                         </button>
 
                                         <AnimatePresence>
@@ -311,16 +512,36 @@ function InfoPage() {
                                     <ChevronLeft size={18} />
                                     <span className="text-xs font-bold">List</span>
                                 </button>
-                                <span className="text-xs font-bold truncate flex-1 text-center pr-8">{selectedFile.filename}</span>
                                 {isEditing ? (
-                                    <button onClick={handleSave} disabled={isSaving} className="text-green-500">
-                                        {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={18} />}
-                                    </button>
+                                    <input
+                                        type="text"
+                                        value={editFilename}
+                                        onChange={(e) => setEditFilename(e.target.value)}
+                                        className={cn(
+                                            "text-xs font-bold truncate flex-1 text-center bg-transparent border-none outline-none focus:ring-1 rounded px-1",
+                                            isDark ? "focus:ring-yellow-500 text-yellow-100" : "focus:ring-yellow-500 text-yellow-700"
+                                        )}
+                                    />
                                 ) : (
-                                    <button onClick={() => setIsEditing(true)} className="text-yellow-500">
-                                        <Edit2 size={16} />
-                                    </button>
+                                    <span className="text-xs font-bold truncate flex-1 text-center pr-2">{selectedFile.filename}</span>
                                 )}
+                                <div className="flex gap-2 items-center">
+                                    <button onClick={handleCopy} className="text-gray-400 hover:text-blue-500" title="Copy Content">
+                                        {isCopying ? <CheckSquare size={16} className="text-green-500" /> : <Copy size={16} />}
+                                    </button>
+                                    <button onClick={handleDelete} disabled={isDeleting} className="text-gray-400 hover:text-red-500" title="Delete Note">
+                                        {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                    </button>
+                                    {isEditing ? (
+                                        <button onClick={handleSave} disabled={isSaving} className="text-green-500" title="Save">
+                                            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={18} />}
+                                        </button>
+                                    ) : (
+                                        <button onClick={() => setIsEditing(true)} className="text-yellow-500" title="Edit">
+                                            <Edit2 size={16} />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Desktop Toolbar (Floating / Top) */}
@@ -328,8 +549,28 @@ function InfoPage() {
                                 "hidden md:flex justify-between items-center p-3 border-b",
                                 isDark ? "border-white/5 bg-[#171C24] text-gray-200" : "border-white/50 bg-[#D0D6DF] text-gray-800"
                             )}>
-                                <span className={cn("text-sm font-bold", isDark ? "text-gray-300" : "text-gray-700")}>{selectedFile.filename}</span>
-                                <div className="flex gap-2">
+                                {isEditing ? (
+                                    <input
+                                        type="text"
+                                        value={editFilename}
+                                        onChange={(e) => setEditFilename(e.target.value)}
+                                        className={cn(
+                                            "text-sm font-bold bg-transparent border-b outline-none pb-0.5",
+                                            isDark ? "border-gray-600 focus:border-yellow-500 text-yellow-100 placeholder-gray-600" : "border-gray-300 focus:border-yellow-500 text-yellow-700 placeholder-gray-400"
+                                        )}
+                                        placeholder="Note Title..."
+                                    />
+                                ) : (
+                                    <span className={cn("text-sm font-bold", isDark ? "text-gray-300" : "text-gray-700")}>{selectedFile.filename}</span>
+                                )}
+                                <div className="flex gap-2 items-center">
+                                    <button onClick={handleCopy} className="p-1.5 rounded-md text-gray-400 hover:text-blue-500 hover:bg-black/5 transition-colors" title="Copy Content">
+                                        {isCopying ? <CheckSquare size={16} className="text-green-500" /> : <Copy size={16} />}
+                                    </button>
+                                    <button onClick={handleDelete} disabled={isDeleting} className="p-1.5 rounded-md text-gray-400 hover:text-red-500 hover:bg-black/5 transition-colors" title="Delete Note">
+                                        {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                    </button>
+                                    <div className="w-px h-4 bg-gray-400/30 mx-1"></div>
                                     {isEditing ? (
                                         <>
                                             <button onClick={() => setIsEditing(false)} className={cn("px-3 py-1.5 rounded-md text-xs font-bold transition-colors", isDark ? "text-gray-400 hover:bg-gray-800" : "text-gray-500 hover:bg-gray-100")}>Cancel</button>
@@ -353,14 +594,65 @@ function InfoPage() {
                                 </div>
                             </div>
 
+                            {/* Markdown Toolbar (only visible when editing) */}
+                            {isEditing && (
+                                <div className={cn(
+                                    "flex flex-wrap items-center gap-1 p-2 border-b",
+                                    isDark ? "bg-[#1f262f] border-white/5" : "bg-[#f1f5f9] border-white/50"
+                                )}>
+                                    <button onClick={() => handleFormat('formatBlock', 'H1')} className="p-1.5 hover:bg-black/10 rounded text-gray-500" title="Heading 1"><Heading1 size={16} /></button>
+                                    <button onClick={() => handleFormat('formatBlock', 'H2')} className="p-1.5 hover:bg-black/10 rounded text-gray-500" title="Heading 2"><Heading2 size={16} /></button>
+                                    <button onClick={() => handleFormat('formatBlock', 'H3')} className="p-1.5 hover:bg-black/10 rounded text-gray-500" title="Heading 3"><Heading3 size={16} /></button>
+                                    <div className="w-px h-4 bg-gray-400/30 mx-1"></div>
+                                    <button onClick={() => handleFormat('bold')} className="p-1.5 hover:bg-black/10 rounded text-gray-500" title="Bold"><Bold size={16} /></button>
+                                    <button onClick={() => handleFormat('strikeThrough')} className="p-1.5 hover:bg-black/10 rounded text-gray-500" title="Strikethrough"><Strikethrough size={16} /></button>
+                                    <div className="w-px h-4 bg-gray-400/30 mx-1"></div>
+                                    <button onClick={() => handleFormat('insertUnorderedList')} className="p-1.5 hover:bg-black/10 rounded text-gray-500" title="Bullet List"><List size={16} /></button>
+                                    <button onClick={() => handleFormat('insertHTML', '<input type="checkbox" /> ')} className="p-1.5 hover:bg-black/10 rounded text-gray-500" title="Todo Request"><CheckSquare size={16} /></button>
+                                    <div className="w-px h-4 bg-gray-400/30 mx-1"></div>
+
+                                    {/* Color Picker Dropdown */}
+                                    <div className="relative">
+                                        <button onClick={() => { setShowColorPicker(!showColorPicker); setShowEmojiPicker(false); }} className={cn("p-1.5 hover:bg-black/10 rounded", showColorPicker ? "text-yellow-500 ring-1 ring-yellow-500" : "text-gray-500")} title="Text Color"><Palette size={16} /></button>
+                                        {showColorPicker && (
+                                            <div className="absolute top-full mt-1 left-0 bg-white shadow-xl border rounded-md p-2 flex flex-col gap-1 z-50">
+                                                {COLORS.map(c => (
+                                                    <button key={c.name} onClick={() => insertColor(c.hex)} className="flex items-center gap-2 px-2 py-1 hover:bg-gray-100 rounded text-xs text-gray-700">
+                                                        <span className="w-3 h-3 rounded-full border border-gray-300" style={{ backgroundColor: c.hex }}></span> {c.name}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Emoji Picker Dropdown */}
+                                    <div className="relative">
+                                        <button onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowColorPicker(false); }} className={cn("p-1.5 hover:bg-black/10 rounded", showEmojiPicker ? "text-yellow-500 ring-1 ring-yellow-500" : "text-gray-500")} title="Insert Emoji"><Smile size={16} /></button>
+                                        {showEmojiPicker && (
+                                            <div className="absolute top-full mt-1 left-0 bg-white shadow-xl border rounded-md p-2 grid grid-cols-4 gap-1 z-50 w-36">
+                                                {EMOJIS.map(e => (
+                                                    <button key={e} onMouseDown={(ev) => { ev.preventDefault(); handleFormat('insertText', e); setShowEmojiPicker(false); }} className="hover:bg-gray-100 rounded text-lg p-1">
+                                                        {e}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex-1 overflow-y-auto relative">
                                 {isEditing ? (
-                                    <textarea
-                                        value={editContent}
-                                        onChange={(e) => setEditContent(e.target.value)}
+                                    <div
+                                        id="editor-contenteditable"
+                                        ref={editorRef}
+                                        contentEditable
+                                        onInput={(e) => setEditContent(e.currentTarget.innerHTML)}
                                         className={cn(
-                                            "w-full h-full p-6 resize-none focus:outline-none font-mono text-sm leading-relaxed",
-                                            isDark ? "bg-[#202731] text-gray-300" : "bg-[#E0E5EC] text-gray-800"
+                                            "w-full min-h-full p-6 outline-none text-sm leading-relaxed prose prose-slate max-w-none prose-headings:font-black",
+                                            isDark
+                                                ? "bg-[#202731] text-gray-300 prose-invert prose-headings:text-white"
+                                                : "bg-[#E0E5EC] text-gray-800"
                                         )}
                                         spellCheck={false}
                                     />
@@ -371,7 +663,7 @@ function InfoPage() {
                                             ? "prose-invert prose-p:text-gray-200 prose-headings:text-white prose-li:text-gray-200 prose-pre:bg-gray-800 prose-pre:border prose-pre:border-gray-700"
                                             : "prose-pre:bg-gray-50 prose-pre:border prose-pre:border-gray-200 text-gray-800"
                                     )}>
-                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                        <ReactMarkdown rehypePlugins={[rehypeRaw]} remarkPlugins={[remarkGfm]}>
                                             {selectedFile.content}
                                         </ReactMarkdown>
                                     </div>
