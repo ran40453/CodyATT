@@ -5,13 +5,17 @@ import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import { marked } from 'marked'
 import TurndownService from 'turndown'
+import { gfm } from 'turndown-plugin-gfm'
+import ReactQuill from 'react-quill'
+import 'react-quill/dist/quill.snow.css'
 import { FileText, Loader2, ChevronLeft, StickyNote, AlertCircle, Save, Folder, FolderPlus, FilePlus, ChevronRight, Edit2, X, Plus, Sun, Moon, Trash2, Copy, Heading1, Heading2, Heading3, Heading4, Heading5, Bold, Strikethrough, List, CheckSquare, Smile, Palette, SquarePen } from 'lucide-react'
 import { fetchGistFiles, updateGistFile, loadSettings, saveSettings, syncSettingsToGist } from '../lib/storage'
 import { cn } from '../lib/utils'
 import HeaderActions from './HeaderActions'
 
-// Initialize Turndown to convert HTML back to Markdown 
+// Initialize Turndown to convert HTML back to Markdown, preserving GFM and colors
 const turndownService = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+turndownService.use(gfm);
 turndownService.keep(['span']); // explicitly keep color spans
 
 function InfoPage() {
@@ -26,7 +30,6 @@ function InfoPage() {
     const [isEditing, setIsEditing] = useState(false)
     const [editContent, setEditContent] = useState('')
     const [isSaving, setIsSaving] = useState(false)
-    const editorRef = useRef(null)
 
     // Folder Management State
     const [openFolders, setOpenFolders] = useState({}) // { "FolderName": true/false }
@@ -98,15 +101,6 @@ function InfoPage() {
         setShowColorPicker(false)
         setShowEmojiPicker(false)
     }
-
-    // Effect to initialize contentEditable when entering edit mode
-    useEffect(() => {
-        if (isEditing && editorRef.current) {
-            if (editorRef.current.innerHTML !== editContent) {
-                editorRef.current.innerHTML = editContent;
-            }
-        }
-    }, [isEditing, selectedFile]);
 
     const handleBackToList = () => {
         setIsMobileListVisible(true)
@@ -249,33 +243,16 @@ function InfoPage() {
         setIsFolderModalOpen(false);
     }
 
-    // Editor Toolbar Actions (Native WYSIWYG)
-    const handleFormat = (command, value = null) => {
-        if (editorRef.current) {
-            editorRef.current.focus();
-        }
-        document.execCommand(command, false, value);
-        if (editorRef.current) {
-            setEditContent(editorRef.current.innerHTML);
-        }
+    // React-Quill Toolbar Configuration
+    const quillModules = {
+        toolbar: [
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'strike'],
+            [{ 'list': 'bullet' }, { 'list': 'check' }],
+            [{ 'color': [] }],
+            ['clean']
+        ],
     };
-
-    const insertColor = (color) => {
-        handleFormat('foreColor', color);
-        setShowColorPicker(false);
-    };
-
-    const COLORS = [
-        { name: 'Red', hex: '#EF4444' },
-        { name: 'Black', hex: '#000000' },
-        { name: 'Blue', hex: '#3B82F6' },
-        { name: 'White', hex: '#FFFFFF' },
-        { name: 'Orange', hex: '#F97316' },
-        { name: 'Green', hex: '#22C55E' },
-        { name: 'Yellow', hex: '#EAB308' }
-    ];
-
-    const EMOJIS = ['🚀', '✅', '🔥', '💡', '📌', '⚠️', 'bug', '💻', '📈', '✨', '🧠', '🛠'];
 
     // Drag and Drop Logic (Files and Folders)
     const handleDragStart = (e, name, type = 'file') => {
@@ -583,7 +560,7 @@ function InfoPage() {
                                     <div className="w-px h-4 bg-gray-400/30 mx-1"></div>
                                     {isEditing ? (
                                         <>
-                                            <button onClick={() => { setIsEditing(false); setEditContent(marked.parse(selectedFile.content || '')); if (editorRef.current) { editorRef.current.innerHTML = marked.parse(selectedFile.content || ''); } }} className={cn("px-3 py-1.5 rounded-md text-xs font-bold transition-colors", isDark ? "text-gray-400 hover:bg-gray-800" : "text-gray-500 hover:bg-gray-100")}>Cancel</button>
+                                            <button onClick={() => { setIsEditing(false); setEditContent(marked.parse(selectedFile.content || '')); }} className={cn("px-3 py-1.5 rounded-md text-xs font-bold transition-colors", isDark ? "text-gray-400 hover:bg-gray-800" : "text-gray-500 hover:bg-gray-100")}>Cancel</button>
                                             <button
                                                 onClick={handleSave}
                                                 disabled={isSaving}
@@ -604,68 +581,49 @@ function InfoPage() {
                                 </div>
                             </div>
 
-                            {/* Markdown Toolbar (only visible when editing) */}
-                            {isEditing && (
-                                <div className={cn(
-                                    "flex flex-wrap items-center gap-1 p-2 border-b",
-                                    isDark ? "bg-[#1f262f] border-white/5" : "bg-[#f1f5f9] border-white/50"
-                                )}>
-                                    <button onClick={() => handleFormat('formatBlock', 'H1')} className="p-1.5 hover:bg-black/10 rounded text-gray-500" title="Heading 1"><Heading1 size={16} /></button>
-                                    <button onClick={() => handleFormat('formatBlock', 'H2')} className="p-1.5 hover:bg-black/10 rounded text-gray-500" title="Heading 2"><Heading2 size={16} /></button>
-                                    <button onClick={() => handleFormat('formatBlock', 'H3')} className="p-1.5 hover:bg-black/10 rounded text-gray-500" title="Heading 3"><Heading3 size={16} /></button>
-                                    <div className="w-px h-4 bg-gray-400/30 mx-1"></div>
-                                    <button onClick={() => handleFormat('bold')} className="p-1.5 hover:bg-black/10 rounded text-gray-500" title="Bold"><Bold size={16} /></button>
-                                    <button onClick={() => handleFormat('strikeThrough')} className="p-1.5 hover:bg-black/10 rounded text-gray-500" title="Strikethrough"><Strikethrough size={16} /></button>
-                                    <div className="w-px h-4 bg-gray-400/30 mx-1"></div>
-                                    <button onClick={() => handleFormat('insertUnorderedList')} className="p-1.5 hover:bg-black/10 rounded text-gray-500" title="Bullet List"><List size={16} /></button>
-                                    <button onClick={() => handleFormat('insertHTML', '<input type="checkbox" /> ')} className="p-1.5 hover:bg-black/10 rounded text-gray-500" title="Todo Request"><CheckSquare size={16} /></button>
-                                    <div className="w-px h-4 bg-gray-400/30 mx-1"></div>
-
-                                    {/* Color Picker Dropdown */}
-                                    <div className="relative">
-                                        <button onClick={() => { setShowColorPicker(!showColorPicker); setShowEmojiPicker(false); }} className={cn("p-1.5 hover:bg-black/10 rounded", showColorPicker ? "text-yellow-500 ring-1 ring-yellow-500" : "text-gray-500")} title="Text Color"><Palette size={16} /></button>
-                                        {showColorPicker && (
-                                            <div className="absolute top-full mt-1 left-0 bg-white shadow-xl border rounded-md p-2 flex flex-col gap-1 z-50">
-                                                {COLORS.map(c => (
-                                                    <button key={c.name} onClick={() => insertColor(c.hex)} className="flex items-center gap-2 px-2 py-1 hover:bg-gray-100 rounded text-xs text-gray-700">
-                                                        <span className="w-3 h-3 rounded-full border border-gray-300" style={{ backgroundColor: c.hex }}></span> {c.name}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Emoji Picker Dropdown */}
-                                    <div className="relative">
-                                        <button onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowColorPicker(false); }} className={cn("p-1.5 hover:bg-black/10 rounded", showEmojiPicker ? "text-yellow-500 ring-1 ring-yellow-500" : "text-gray-500")} title="Insert Emoji"><Smile size={16} /></button>
-                                        {showEmojiPicker && (
-                                            <div className="absolute top-full mt-1 left-0 bg-white shadow-xl border rounded-md p-2 grid grid-cols-4 gap-1 z-50 w-36">
-                                                {EMOJIS.map(e => (
-                                                    <button key={e} onMouseDown={(ev) => { ev.preventDefault(); handleFormat('insertText', e); setShowEmojiPicker(false); }} className="hover:bg-gray-100 rounded text-lg p-1">
-                                                        {e}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="flex-1 overflow-y-auto relative">
+                            <div className="flex-1 flex flex-col overflow-y-auto relative nice-scrollbar">
                                 {isEditing ? (
-                                    <div
-                                        id="editor-contenteditable"
-                                        ref={editorRef}
-                                        contentEditable
-                                        onInput={(e) => setEditContent(e.currentTarget.innerHTML)}
-                                        className={cn(
-                                            "w-full min-h-full p-6 outline-none text-sm leading-relaxed prose prose-slate max-w-none prose-headings:font-black",
-                                            isDark
-                                                ? "bg-[#202731] text-gray-300 prose-invert prose-headings:text-white"
-                                                : "bg-[#E0E5EC] text-gray-800"
-                                        )}
-                                        spellCheck={false}
-                                    />
+                                    <div className={cn(
+                                        "flex-1 w-full h-full quill-editor-wrapper flex flex-col",
+                                        isDark
+                                            ? "bg-[#202731] text-gray-300"
+                                            : "bg-[#E0E5EC] text-gray-800"
+                                    )}>
+                                        <style dangerouslySetInnerHTML={{
+                                            __html: `
+                                            .quill-editor-wrapper .ql-toolbar {
+                                                border: none !important;
+                                                border-bottom: 1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.5)'} !important;
+                                                background: ${isDark ? '#1f262f' : '#f1f5f9'};
+                                                padding: 8px !important;
+                                            }
+                                            .quill-editor-wrapper .ql-container {
+                                                border: none !important;
+                                                font-family: inherit;
+                                                font-size: 0.875rem;
+                                            }
+                                            .quill-editor-wrapper .ql-editor {
+                                                padding: 1.5rem 1.5rem 4rem 1.5rem;
+                                                min-height: 100%;
+                                            }
+                                            .quill-editor-wrapper .ql-stroke {
+                                                stroke: ${isDark ? '#9ca3af' : '#64748b'} !important;
+                                            }
+                                            .quill-editor-wrapper .ql-fill {
+                                                fill: ${isDark ? '#9ca3af' : '#64748b'} !important;
+                                            }
+                                            .quill-editor-wrapper .ql-picker {
+                                                color: ${isDark ? '#9ca3af' : '#64748b'} !important;
+                                            }
+                                        `}} />
+                                        <ReactQuill
+                                            theme="snow"
+                                            value={editContent}
+                                            onChange={setEditContent}
+                                            modules={quillModules}
+                                            className="flex-1 flex flex-col h-full"
+                                        />
+                                    </div>
                                 ) : (
                                     <div className={cn(
                                         "p-6 md:p-8 prose prose-slate max-w-none prose-headings:font-black prose-a:text-yellow-500",
