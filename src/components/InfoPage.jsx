@@ -250,8 +250,30 @@ function InfoPage() {
             // Optionally enforce boldness if they expected colors to be bold
             document.execCommand('bold', false, null);
         } else if (command === 'heading') {
-            // Browsers securely interpret generic 'formatBlock' with H1-H6 tags
-            document.execCommand('formatBlock', false, `H${value}`);
+            const selection = window.getSelection();
+            if (!selection.rangeCount || selection.isCollapsed) return;
+
+            const sizeMap = {
+                1: 'text-3xl font-black leading-tight', // H1
+                2: 'text-2xl font-extrabold leading-snug', // H2
+                3: 'text-xl font-bold leading-snug', // H3
+                4: 'text-lg font-bold leading-normal', // H4
+                5: 'text-base font-semibold leading-relaxed'  // H5
+            };
+
+            const range = selection.getRangeAt(0);
+            const span = document.createElement('span');
+            span.className = sizeMap[value] || sizeMap[3];
+
+            try {
+                span.appendChild(range.extractContents());
+                range.insertNode(span);
+
+                // Clear selection so the user can continue typing
+                selection.removeAllRanges();
+            } catch (e) {
+                console.error("Selection error:", e);
+            }
         } else if (command === 'list') {
             document.execCommand('insertUnorderedList', false, null);
         } else if (command === 'checklist') {
