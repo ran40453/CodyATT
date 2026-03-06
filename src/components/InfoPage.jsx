@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { marked } from 'marked'
-import { FileText, Loader2, ChevronLeft, StickyNote, AlertCircle, Save, Folder, FolderPlus, FilePlus, ChevronRight, Edit2, X, Plus, Sun, Moon, Trash2, Copy, Heading1, Heading2, Heading3, Heading4, Heading5, Bold, Strikethrough, List, CheckSquare, Smile, Palette, SquarePen, Type, Baseline, Navigation, List as ListIcon, ShoppingCart, Package, MapPin, Layers, Filter } from 'lucide-react'
+import { FileText, Loader2, ChevronLeft, StickyNote, AlertCircle, Save, Folder, FolderPlus, FilePlus, ChevronRight, Edit2, X, Plus, Sun, Moon, Trash2, Copy } from 'lucide-react'
+import SunEditor from 'suneditor-react'
+import 'suneditor/dist/css/suneditor.min.css'
 import { fetchGistFiles, updateGistFile, loadSettings, saveSettings, syncSettingsToGist } from '../lib/storage'
 import { cn } from '../lib/utils'
 import HeaderActions from './HeaderActions'
@@ -114,10 +116,9 @@ function InfoPage() {
         const newFilename = editFilename.trim() ? `${editFilename}.md` : selectedFile.filename;
         const isRenaming = newFilename !== selectedFile.filename;
 
-        // contentEditable sometimes introduces zero-width characters (\u200B) for cursor placement
-        // that can cause GitHub's Gist API JSON parser to throw a "Validation Failed" error.
-        // We sanitize these entirely before transmission.
-        let finalContent = editorRef.current ? editorRef.current.innerHTML : editContent;
+        // SunEditor handles zero-width spaces internally much better, but we leave the sanitizer
+        // just in case any weird pastes come through.
+        let finalContent = editContent;
         if (typeof finalContent === 'string') {
             finalContent = finalContent.replace(/[\u200B-\u200D\uFEFF]/g, '');
         }
@@ -223,69 +224,6 @@ function InfoPage() {
         setActiveFolder(folderName);
         setOpenFolders(prev => ({ ...prev, [folderName]: !prev[folderName] }));
     }
-
-    const handleFormat = (command, value = '') => {
-        if (!editorRef.current) return;
-
-        // We do NOT call focus() here unconditionally because that resets the cursor
-        // to the beginning. The onMouseDown=e=>e.preventDefault() on toolbar buttons 
-        // guarantees the editor does not lose focus during formatting clicks.
-
-        // Polyfill: force browser to use inline styles instead of <font> tags for colors
-        document.execCommand('styleWithCSS', false, true);
-
-        if (command === 'bold') {
-            document.execCommand('bold', false, null);
-        } else if (command === 'color') {
-            const colorMap = {
-                red: '#ef4444',
-                blue: '#3b82f6',
-                green: '#10b981', // emerald
-                orange: '#f97316',
-                yellow: '#eab308',
-                black: '#000000',
-                white: '#ffffff'
-            };
-            document.execCommand('foreColor', false, colorMap[value] || value);
-            // Optionally enforce boldness if they expected colors to be bold
-            document.execCommand('bold', false, null);
-        } else if (command === 'heading') {
-            const selection = window.getSelection();
-            if (!selection.rangeCount || selection.isCollapsed) return;
-
-            const sizeMap = {
-                1: 'text-3xl font-black leading-tight', // H1
-                2: 'text-2xl font-extrabold leading-snug', // H2
-                3: 'text-xl font-bold leading-snug', // H3
-                4: 'text-lg font-bold leading-normal', // H4
-                5: 'text-base font-semibold leading-relaxed'  // H5
-            };
-
-            const range = selection.getRangeAt(0);
-            const span = document.createElement('span');
-            span.className = sizeMap[value] || sizeMap[3];
-
-            try {
-                span.appendChild(range.extractContents());
-                range.insertNode(span);
-
-                // Clear selection so the user can continue typing
-                selection.removeAllRanges();
-            } catch (e) {
-                console.error("Selection error:", e);
-            }
-        } else if (command === 'list') {
-            document.execCommand('insertUnorderedList', false, null);
-        } else if (command === 'checklist') {
-            const checkboxHtml = '<span contenteditable="false" class="mr-2 inline-block -ml-1"><input type="checkbox" /></span> ';
-            document.execCommand('insertHTML', false, checkboxHtml);
-        } else if (command === 'strikethrough') {
-            document.execCommand('strikeThrough', false, null);
-        }
-
-        // Trigger manual sync since execCommand bypasses onInput
-        setEditContent(editorRef.current.innerHTML);
-    };
 
     const createFolder = () => {
         if (!newFolderName.trim()) return;
@@ -636,58 +574,66 @@ function InfoPage() {
                                 </div>
                             </div>
 
-                            <div className="flex-1 flex flex-col overflow-y-auto relative nice-scrollbar">
+                            <div className="flex-1 flex flex-col overflow-y-auto relative nice-scrollbar bg-white dark:bg-[#202731]">
                                 {isEditing ? (
-                                    <div className={cn(
-                                        "w-full h-full flex flex-col mde-wrapper",
-                                        isDark
-                                            ? "bg-[#202731] text-gray-300"
-                                            : "bg-[#E0E5EC] text-gray-800"
-                                    )}>
-                                        <div className={cn(
-                                            "flex items-center gap-1 p-2 rounded-t-xl overflow-x-auto border-b hide-scrollbar shrink-0",
-                                            isDark ? "bg-[#1f262f] border-white/5" : "bg-gray-100 border-black/5"
-                                        )}>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('bold')} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="Bold">
-                                                <Bold size={14} />
-                                            </button>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('strikethrough')} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="Strikethrough">
-                                                <Strikethrough size={14} />
-                                            </button>
-                                            <div className="w-px h-6 bg-gray-400/20 mx-1"></div>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('checklist')} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="Checklist">
-                                                <CheckSquare size={14} />
-                                            </button>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('list')} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="Bulleted List">
-                                                <ListIcon size={14} />
-                                            </button>
-                                            <div className="w-px h-6 bg-gray-400/20 mx-1"></div>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('heading', 1)} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="H1"><Type size={18} strokeWidth={3} /></button>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('heading', 2)} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="H2"><Type size={16} strokeWidth={2.5} /></button>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('heading', 3)} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="H3"><Type size={15} strokeWidth={2} /></button>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('heading', 4)} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="H4"><Type size={14} strokeWidth={2} /></button>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('heading', 5)} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="H5"><Type size={13} strokeWidth={2} /></button>
-                                            <div className="w-px h-6 bg-gray-400/20 mx-1"></div>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'red')} className="p-1 text-red-500 hover:bg-black/20 rounded-md border-b-2 border-red-500"><Baseline size={14} /></button>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'black')} className="p-1 text-black hover:bg-black/20 rounded-md border-b-2 border-black bg-white/50"><Baseline size={14} /></button>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'blue')} className="p-1 text-blue-500 hover:bg-black/20 rounded-md border-b-2 border-blue-500"><Baseline size={14} /></button>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'white')} className="p-1 text-white hover:bg-black/20 rounded-md border-b-2 border-white bg-black/50"><Baseline size={14} /></button>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'orange')} className="p-1 text-orange-500 hover:bg-black/20 rounded-md border-b-2 border-orange-500"><Baseline size={14} /></button>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'green')} className="p-1 text-emerald-500 hover:bg-black/20 rounded-md border-b-2 border-emerald-500"><Baseline size={14} /></button>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'yellow')} className="p-1 text-yellow-500 hover:bg-black/20 rounded-md border-b-2 border-yellow-500"><Baseline size={14} /></button>
-                                        </div>
-
-                                        <div
-                                            ref={editorRef}
-                                            contentEditable
-                                            className="flex-1 w-full bg-transparent outline-none p-6 md:p-8 text-sm leading-relaxed min-h-[50vh] prose prose-sm prose-slate dark:prose-invert max-w-none whitespace-pre-wrap"
-                                            onInput={e => setEditContent(e.currentTarget.innerHTML)}
-                                            onBlur={() => setEditContent(editorRef.current?.innerHTML || '')}
+                                    <div className="w-full flex-1 flex flex-col EditorWrapper h-full pb-20 md:pb-0">
+                                        <style>{`
+                                            .sun-editor {
+                                                border: none !important;
+                                                display: flex;
+                                                flex-direction: column;
+                                                height: 100%;
+                                                background-color: transparent !important;
+                                            }
+                                            .sun-editor .se-toolbar {
+                                                outline: none !important;
+                                                background: ${isDark ? '#1f262f' : '#f3f4f6'} !important;
+                                                border: none !important;
+                                                border-bottom: 1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} !important;
+                                            }
+                                            .sun-editor-editable {
+                                                background-color: transparent !important;
+                                                color: ${isDark ? '#e5e7eb' : '#1f2937'} !important;
+                                                font-family: inherit !important;
+                                                font-size: 14px;
+                                                line-height: 1.8;
+                                            }
+                                            .sun-editor .se-btn-tray {
+                                                display: flex;
+                                                flex-wrap: nowrap;
+                                                overflow-x: auto;
+                                            }
+                                            .sun-editor .se-btn-tray::-webkit-scrollbar {
+                                                display: none;
+                                            }
+                                            .sun-editor .se-resizing-bar {
+                                                display: none !important;
+                                            }
+                                        `}</style>
+                                        <SunEditor
+                                            setContents={editContent}
+                                            onChange={setEditContent}
+                                            width="100%"
+                                            height="100%"
+                                            setOptions={{
+                                                buttonList: [
+                                                    ['undo', 'redo'],
+                                                    ['formatBlock', 'font', 'fontSize'],
+                                                    ['bold', 'underline', 'italic', 'strike'],
+                                                    ['fontColor', 'hiliteColor'],
+                                                    ['removeFormat'],
+                                                    ['outdent', 'indent'],
+                                                    ['align', 'horizontalRule', 'list', 'lineHeight'],
+                                                    ['table', 'link']
+                                                ],
+                                                defaultStyle: "font-family: inherit; font-size: 14px;",
+                                                mode: "classic"
+                                            }}
                                         />
                                     </div>
                                 ) : (
                                     <div className={cn(
-                                        "p-6 md:p-8 prose prose-slate max-w-none prose-headings:font-black prose-a:text-yellow-500 whitespace-pre-wrap leading-relaxed select-text",
+                                        "p-6 md:p-8 prose prose-slate max-w-none prose-headings:font-black prose-a:text-blue-500 whitespace-pre-wrap leading-relaxed select-text",
                                         isDark
                                             ? "prose-invert prose-p:text-gray-200 prose-headings:text-white prose-li:text-gray-200 prose-pre:bg-gray-800 prose-pre:border prose-pre:border-gray-700"
                                             : "prose-pre:bg-gray-50 prose-pre:border prose-pre:border-gray-200 text-gray-800"
