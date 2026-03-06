@@ -3,10 +3,16 @@ import { motion, AnimatePresence } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
+import { marked } from 'marked'
+import TurndownService from 'turndown'
 import { FileText, Loader2, ChevronLeft, StickyNote, AlertCircle, Save, Folder, FolderPlus, FilePlus, ChevronRight, Edit2, X, Plus, Sun, Moon, Trash2, Copy, Heading1, Heading2, Heading3, Heading4, Heading5, Bold, Strikethrough, List, CheckSquare, Smile, Palette, SquarePen } from 'lucide-react'
 import { fetchGistFiles, updateGistFile, loadSettings, saveSettings, syncSettingsToGist } from '../lib/storage'
 import { cn } from '../lib/utils'
 import HeaderActions from './HeaderActions'
+
+// Initialize Turndown to convert HTML back to Markdown 
+const turndownService = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+turndownService.keep(['span']); // explicitly keep color spans
 
 function InfoPage() {
     const [files, setFiles] = useState([])
@@ -84,7 +90,8 @@ function InfoPage() {
 
     const handleFileSelect = (file) => {
         setSelectedFile(file)
-        setEditContent(file.content)
+        // Convert pure markdown to HTML on load for our WYSIWYG editor
+        setEditContent(marked.parse(file.content || ''))
         setEditFilename(file.filename.replace('.md', '')) // prepare for rename
         setIsEditing(false)
         setIsMobileListVisible(false)
@@ -114,13 +121,16 @@ function InfoPage() {
         const newFilename = editFilename.trim() ? `${editFilename}.md` : selectedFile.filename;
         const isRenaming = newFilename !== selectedFile.filename;
 
+        // Convert the WYSIWYG HTML back into clean Markdown to save
+        const markdownContent = turndownService.turndown(editContent);
+
         // If renaming, we conceptually create a new file and delete the old one in one API call
         // The updateGistFile will be modified below to handle renaming by passing oldFilename
-        const result = await updateGistFile(newFilename, editContent, isRenaming ? selectedFile.filename : null);
+        const result = await updateGistFile(newFilename, markdownContent, isRenaming ? selectedFile.filename : null);
 
         if (result.ok) {
             // Update local state
-            const updatedFile = { ...selectedFile, filename: newFilename, content: editContent };
+            const updatedFile = { ...selectedFile, filename: newFilename, content: markdownContent };
             let newFiles = prev => prev.map(f => f.filename === selectedFile.filename ? updatedFile : f);
 
             // If it's a completely new file just added to state (no Gist backup yet), it might not map correctly 
@@ -573,7 +583,7 @@ function InfoPage() {
                                     <div className="w-px h-4 bg-gray-400/30 mx-1"></div>
                                     {isEditing ? (
                                         <>
-                                            <button onClick={() => { setIsEditing(false); setEditContent(selectedFile.content); if (editorRef.current) { editorRef.current.innerHTML = selectedFile.content; } }} className={cn("px-3 py-1.5 rounded-md text-xs font-bold transition-colors", isDark ? "text-gray-400 hover:bg-gray-800" : "text-gray-500 hover:bg-gray-100")}>Cancel</button>
+                                            <button onClick={() => { setIsEditing(false); setEditContent(marked.parse(selectedFile.content || '')); if (editorRef.current) { editorRef.current.innerHTML = marked.parse(selectedFile.content || ''); } }} className={cn("px-3 py-1.5 rounded-md text-xs font-bold transition-colors", isDark ? "text-gray-400 hover:bg-gray-800" : "text-gray-500 hover:bg-gray-100")}>Cancel</button>
                                             <button
                                                 onClick={handleSave}
                                                 disabled={isSaving}

@@ -645,17 +645,20 @@ export const updateGistFile = async (filename, content, oldFilename = null) => {
     try {
         console.log(`InfoPage: Updating ${filename} in Gist ${gistId}...`);
 
-        const filesPayload = {
-            [filename]: {
-                content: content
-            }
-        };
+        const filesPayload = {};
 
-        // If we are renaming, we delete the old file by setting content to null
-        if (oldFilename && oldFilename !== filename) {
-            filesPayload[oldFilename] = {
-                content: null // GitHub API deletes the file when content is null
+        // If content is null, we are deleting the primary file
+        if (content === null) {
+            filesPayload[filename] = null;
+        } else {
+            filesPayload[filename] = {
+                content: content || ' ' // GitHub API requires at least a space
             };
+        }
+
+        // If we are renaming, delete the old file by setting it entirely to null
+        if (oldFilename && oldFilename !== filename) {
+            filesPayload[oldFilename] = null; // Correct format for Gist deletion
         }
 
         const response = await fetch(`https://api.github.com/gists/${gistId}`, {
