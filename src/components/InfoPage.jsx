@@ -247,6 +247,33 @@ function InfoPage() {
         setIsFolderModalOpen(false);
     }
 
+    const deleteFolder = (folderNameToDelete) => {
+        if (!window.confirm(`Are you sure you want to delete the folder "${folderNameToDelete}"?\nFiles inside will be moved to Uncategorized.`)) return;
+
+        const newFolders = { ...folders };
+
+        // Find all subfolders that start with this folder's name + slash
+        const foldersToRemove = [folderNameToDelete];
+        Object.keys(newFolders).forEach(k => {
+            if (k.startsWith(folderNameToDelete + '/')) {
+                foldersToRemove.push(k);
+            }
+        });
+
+        // Delete them from the state
+        foldersToRemove.forEach(f => {
+            delete newFolders[f];
+        });
+
+        setFolders(newFolders);
+        saveSettings({ ...loadSettings(), infoPageFolders: newFolders });
+        syncSettingsToGist({ ...loadSettings(), infoPageFolders: newFolders });
+
+        if (activeFolder && foldersToRemove.includes(activeFolder)) {
+            setActiveFolder(null);
+        }
+    }
+
     // Drag and Drop Logic (Files and Folders)
     const handleDragStart = (e, name, type = 'file') => {
         e.dataTransfer.setData("application/json", JSON.stringify({ name, type }));
@@ -306,6 +333,7 @@ function InfoPage() {
 
     const handleDragOver = (e) => {
         e.preventDefault();
+        e.stopPropagation();
     }
 
     const renderFileList = (fileList) => {
@@ -422,27 +450,44 @@ function InfoPage() {
                                     <div
                                         key={folderName}
                                         onDragOver={handleDragOver}
-                                        onDrop={(e) => handleDrop(e, folderName)}
-                                        className="space-y-1"
+                                        onDrop={(e) => {
+                                            e.stopPropagation();
+                                            handleDrop(e, folderName);
+                                        }}
+                                        className="space-y-1 group relative"
                                     >
-                                        <button
-                                            draggable
-                                            onDragStart={(e) => handleDragStart(e, folderName, 'folder')}
-                                            onClick={() => toggleFolder(folderName)}
-                                            className={cn(
-                                                "flex items-center gap-1.5 w-full text-left px-2 py-1.5 rounded-md text-xs font-bold transition-colors cursor-grab active:cursor-grabbing",
-                                                activeFolder === folderName ? (isDark ? "bg-white/10 text-white" : "bg-black/10 text-gray-900") : (isDark ? "text-gray-400 hover:text-white hover:bg-white/5" : "text-gray-600 hover:text-gray-900 hover:bg-black/5")
-                                            )}
-                                        >
-                                            {openFolders[folderName] ? <ChevronRight size={14} className="rotate-90 transition-transform" /> : <ChevronRight size={14} className="transition-transform" />}
-                                            <Folder size={14} className={cn(
-                                                activeFolder === folderName ? "text-yellow-500" : (isDark ? "text-blue-400" : "text-blue-500")
-                                            )} />
-                                            {/* indent subfolders visually based on name slashes */}
-                                            <span style={{ paddingLeft: `${(folderName.split('/').length - 1) * 8}px` }}>
-                                                {folderName.split('/').pop()}
-                                            </span>
-                                        </button>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                draggable
+                                                onDragStart={(e) => handleDragStart(e, folderName, 'folder')}
+                                                onClick={() => toggleFolder(folderName)}
+                                                className={cn(
+                                                    "flex items-center gap-1.5 flex-1 text-left px-2 py-1.5 rounded-md text-xs font-bold transition-colors cursor-grab active:cursor-grabbing",
+                                                    activeFolder === folderName ? (isDark ? "bg-white/10 text-white" : "bg-black/10 text-gray-900") : (isDark ? "text-gray-400 hover:text-white hover:bg-white/5" : "text-gray-600 hover:text-gray-900 hover:bg-black/5")
+                                                )}
+                                            >
+                                                {openFolders[folderName] ? <ChevronRight size={14} className="rotate-90 transition-transform" /> : <ChevronRight size={14} className="transition-transform" />}
+                                                <Folder size={14} className={cn(
+                                                    activeFolder === folderName ? "text-yellow-500" : (isDark ? "text-blue-400" : "text-blue-500")
+                                                )} />
+                                                {/* indent subfolders visually based on name slashes */}
+                                                <span style={{ paddingLeft: `${(folderName.split('/').length - 1) * 8}px` }} className="truncate">
+                                                    {folderName.split('/').pop()}
+                                                </span>
+                                            </button>
+
+                                            {/* Delete Folder Button */}
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); deleteFolder(folderName); }}
+                                                className={cn(
+                                                    "p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-all",
+                                                    isDark ? "hover:bg-red-500/20 text-gray-500 hover:text-red-400" : "hover:bg-red-100 text-gray-400 hover:text-red-600"
+                                                )}
+                                                title="Delete Folder"
+                                            >
+                                                <Trash2 size={12} />
+                                            </button>
+                                        </div>
 
                                         <AnimatePresence>
                                             {openFolders[folderName] && (
