@@ -144,7 +144,20 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
         const dayStr = format(day, 'yyyy-MM-dd');
         const record = dataMap.get(dayStr);
         let type = 'none';
-        if (record) type = record.isLeave ? 'leave' : 'attendance';
+
+        if (record) {
+            type = record.isLeave ? 'leave' : 'attendance';
+        } else {
+            // Apply implicit weekday attendance assumption
+            const isHoliday = isTaiwanHoliday(day);
+            const isPastOrToday = day <= today || isSameDay(day, today);
+            const dayOfWeek = day.getDay();
+            const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+            if (!isHoliday && isPastOrToday && isWeekday) {
+                type = 'attendance';
+            }
+        }
+
         return { day, type };
     });
 

@@ -279,26 +279,40 @@ function InfoPage() {
     const handleDragStart = (e, name, type = 'file') => {
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData("application/json", JSON.stringify({ name, type }));
+        e.dataTransfer.setData("text/plain", `${name}::${type}`); // Fallback for strict browsers
         setDraggedFile({ name, type });
     }
 
     const handleDrop = (e, targetFolderName) => {
         e.preventDefault();
         e.stopPropagation();
+        setDragOverFolder(null); // Clear visual state immediately
         try {
             let name, type;
-            const dataStr = e.dataTransfer.getData("application/json");
-            if (dataStr) {
-                const parsed = JSON.parse(dataStr);
-                name = parsed.name;
-                type = parsed.type;
-            } else if (draggedFile) {
+
+            // 1. Try React state first (most reliable for in-app drags)
+            if (draggedFile) {
                 name = draggedFile.name;
                 type = draggedFile.type;
             } else {
-                setDragOverFolder(null);
-                return;
+                // 2. Fallback to API payloads
+                const dataStr = e.dataTransfer.getData("application/json");
+                const fallbackStr = e.dataTransfer.getData("text/plain");
+
+                if (dataStr) {
+                    const parsed = JSON.parse(dataStr);
+                    name = parsed.name;
+                    type = parsed.type;
+                } else if (fallbackStr && fallbackStr.includes('::')) {
+                    const parts = fallbackStr.split('::');
+                    name = parts[0];
+                    type = parts[1];
+                } else {
+                    return; // Unrecognized drop
+                }
             }
+
+            if (!name || (type !== 'folder' && type !== 'file')) return;
 
             if (type === 'file') {
                 // Remove from old folder if exists
@@ -500,7 +514,8 @@ function InfoPage() {
                                                 onClick={() => toggleFolder(folderName)}
                                                 className={cn(
                                                     "flex items-center gap-1.5 flex-1 text-left px-1 py-1.5 text-xs font-bold transition-colors cursor-grab active:cursor-grabbing",
-                                                    activeFolder === folderName ? (isDark ? "text-yellow-400" : "text-yellow-600") : (isDark ? "text-gray-400" : "text-gray-600")
+                                                    activeFolder === folderName ? (isDark ? "text-yellow-400" : "text-yellow-600") : (isDark ? "text-gray-400" : "text-gray-600"),
+                                                    draggedFile?.name === folderName ? "opacity-30" : "opacity-100" // visually indicate dragging item
                                                 )}
                                             >
                                                 {openFolders[folderName] ? <ChevronRight size={14} className="rotate-90 transition-transform" /> : <ChevronRight size={14} className="transition-transform" />}
