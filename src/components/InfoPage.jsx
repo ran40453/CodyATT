@@ -1,11 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import rehypeRaw from 'rehype-raw'
-import SimpleMDE from 'react-simplemde-editor'
-import 'easymde/dist/easymde.min.css'
-import { FileText, Loader2, ChevronLeft, StickyNote, AlertCircle, Save, Folder, FolderPlus, FilePlus, ChevronRight, Edit2, X, Plus, Sun, Moon, Trash2, Copy, Heading1, Heading2, Heading3, Heading4, Heading5, Bold, Strikethrough, List, CheckSquare, Smile, Palette, SquarePen } from 'lucide-react'
+import { marked } from 'marked'
+import { FileText, Loader2, ChevronLeft, StickyNote, AlertCircle, Save, Folder, FolderPlus, FilePlus, ChevronRight, Edit2, X, Plus, Sun, Moon, Trash2, Copy, Heading1, Heading2, Heading3, Heading4, Heading5, Bold, Strikethrough, List, CheckSquare, Smile, Palette, SquarePen, Type, Baseline, Navigation, List as ListIcon, ShoppingCart, Package, MapPin, Layers, Filter } from 'lucide-react'
 import { fetchGistFiles, updateGistFile, loadSettings, saveSettings, syncSettingsToGist } from '../lib/storage'
 import { cn } from '../lib/utils'
 import HeaderActions from './HeaderActions'
@@ -22,6 +18,7 @@ function InfoPage() {
     const [isEditing, setIsEditing] = useState(false)
     const [editContent, setEditContent] = useState('')
     const [isSaving, setIsSaving] = useState(false)
+    const editorRef = useRef(null)
 
     // Folder Management State
     const [openFolders, setOpenFolders] = useState({}) // { "FolderName": true/false }
@@ -85,13 +82,25 @@ function InfoPage() {
 
     const handleFileSelect = (file) => {
         setSelectedFile(file)
-        setEditContent(file.content || '')
+
+        // If the file contents are already HTML from a previous WYSIWYG save, parse it properly
+        // marked.parse handles raw HTML correctly and Markdown smoothly.
+        const cleanHtmlOrMarkdown = marked.parse(file.content || '')
+        setEditContent(cleanHtmlOrMarkdown)
+
         setEditFilename(file.filename.replace('.md', '')) // prepare for rename
         setIsEditing(false)
         setIsMobileListVisible(false)
         setShowColorPicker(false)
         setShowEmojiPicker(false)
     }
+
+    // Initialize contentEditable sync
+    useEffect(() => {
+        if (isEditing && editorRef.current) {
+            editorRef.current.innerHTML = editContent || '';
+        }
+    }, [isEditing, editContent]);
 
     const handleBackToList = () => {
         setIsMobileListVisible(true)
@@ -106,12 +115,14 @@ function InfoPage() {
         const newFilename = editFilename.trim() ? `${editFilename}.md` : selectedFile.filename;
         const isRenaming = newFilename !== selectedFile.filename;
 
-        // SimpleMDE operates purely in Markdown, so editContent is already clean
-        const result = await updateGistFile(newFilename, editContent, isRenaming ? selectedFile.filename : null);
+        const finalContent = editorRef.current ? editorRef.current.innerHTML : editContent;
+
+        // Native HTML content editable acts directly on markup, meaning no GFM loss and WYSIWYG
+        const result = await updateGistFile(newFilename, finalContent, isRenaming ? selectedFile.filename : null);
 
         if (result.ok) {
             // Update local state
-            const updatedFile = { ...selectedFile, filename: newFilename, content: editContent };
+            const updatedFile = { ...selectedFile, filename: newFilename, content: finalContent };
             let newFiles = prev => prev.map(f => f.filename === selectedFile.filename ? updatedFile : f);
 
             // If it's a completely new file just added to state (no Gist backup yet), it might not map correctly 
@@ -207,6 +218,65 @@ function InfoPage() {
         setActiveFolder(folderName);
         setOpenFolders(prev => ({ ...prev, [folderName]: !prev[folderName] }));
     }
+
+    const handleFormat = (command, value = '') => {
+        if (!editorRef.current) return;
+        // Ensure focus is on the editor
+        editorRef.current.focus();
+
+        if (command === 'bold') {
+            document.execCommand('bold', false, null);
+        } else if (command === 'color') {
+            const selection = window.getSelection();
+            if (!selection.rangeCount || selection.isCollapsed) return;
+
+            const range = selection.getRangeAt(0);
+            const span = document.createElement('span');
+            const colorClass = ['black', 'white'].includes(value) ? `text-${value}` : `text-${value}-500`;
+            span.className = `${colorClass} font-bold`;
+
+            try {
+                span.appendChild(range.extractContents());
+                range.insertNode(span);
+            } catch (e) {
+                console.error("Selection error:", e);
+            }
+        } else if (command === 'heading') {
+            // For headings, we need to wrap the selected block in the appropriate tag
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+
+            const range = selection.getRangeAt(0);
+            let blockElement = range.startContainer;
+
+            // Find the closest block-level element (e.g., p, div, h1-h6)
+            while (blockElement && blockElement.nodeType !== 1 || !['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(blockElement.tagName)) {
+                blockElement = blockElement.parentNode;
+                if (blockElement === editorRef.current) break; // Stop if we reach the editor root
+            }
+
+            if (blockElement && blockElement !== editorRef.current) {
+                const newHeading = document.createElement(`H${value}`);
+                // Move children from old block to new heading
+                while (blockElement.firstChild) {
+                    newHeading.appendChild(blockElement.firstChild);
+                }
+                blockElement.parentNode.replaceChild(newHeading, blockElement);
+            } else {
+                // If no block element found or selection is directly in editor, just insert a new heading
+                document.execCommand('formatBlock', false, `<H${value}>`);
+            }
+        } else if (command === 'list') {
+            document.execCommand('insertUnorderedList', false, null);
+        } else if (command === 'checklist') {
+            const checkboxHtml = '<span contenteditable="false" class="mr-2 inline-block"><input type="checkbox" /></span> ';
+            document.execCommand('insertHTML', false, checkboxHtml);
+        } else if (command === 'strikethrough') {
+            document.execCommand('strikeThrough', false, null);
+        }
+
+        setEditContent(editorRef.current.innerHTML);
+    };
 
     const createFolder = () => {
         if (!newFolderName.trim()) return;
@@ -565,51 +635,55 @@ function InfoPage() {
                                             ? "bg-[#202731] text-gray-300"
                                             : "bg-[#E0E5EC] text-gray-800"
                                     )}>
-                                        <style dangerouslySetInnerHTML={{
-                                            __html: `
-                                            .mde-wrapper .editor-toolbar {
-                                                border: none !important;
-                                                border-bottom: 1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.5)'} !important;
-                                                background: ${isDark ? '#1f262f' : '#f1f5f9'} !important;
-                                                opacity: 1 !important;
-                                            }
-                                            .mde-wrapper .editor-toolbar button {
-                                                color: ${isDark ? '#9ca3af' : '#64748b'} !important;
-                                            }
-                                            .mde-wrapper .editor-toolbar button:hover, .mde-wrapper .editor-toolbar button.active {
-                                                background: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'} !important;
-                                                border-color: transparent !important;
-                                            }
-                                            .mde-wrapper .EasyMDEContainer .CodeMirror {
-                                                border: none !important;
-                                                background: transparent !important;
-                                                color: inherit !important;
-                                                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-                                                padding: 1.5rem;
-                                                min-height: 500px;
-                                            }
-                                        `}} />
-                                        <SimpleMDE
-                                            value={editContent}
-                                            onChange={setEditContent}
-                                            options={{
-                                                spellChecker: false,
-                                                status: false,
-                                                autofocus: true,
-                                            }}
-                                            className="flex-1 flex flex-col h-full m-0 p-0"
+                                        <div className={cn(
+                                            "flex items-center gap-1 p-2 rounded-t-xl overflow-x-auto border-b hide-scrollbar shrink-0",
+                                            isDark ? "bg-[#1f262f] border-white/5" : "bg-gray-100 border-black/5"
+                                        )}>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('bold')} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="Bold">
+                                                <Bold size={14} />
+                                            </button>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('strikethrough')} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="Strikethrough">
+                                                <Strikethrough size={14} />
+                                            </button>
+                                            <div className="w-px h-6 bg-gray-400/20 mx-1"></div>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('checklist')} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="Checklist">
+                                                <CheckSquare size={14} />
+                                            </button>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('list')} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="Bulleted List">
+                                                <ListIcon size={14} />
+                                            </button>
+                                            <div className="w-px h-6 bg-gray-400/20 mx-1"></div>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('heading', 1)} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="H1"><Type size={18} strokeWidth={3} /></button>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('heading', 2)} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="H2"><Type size={16} strokeWidth={2.5} /></button>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('heading', 3)} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="H3"><Type size={15} strokeWidth={2} /></button>
+                                            <div className="w-px h-6 bg-gray-400/20 mx-1"></div>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'red')} className="p-1 text-red-500 hover:bg-black/20 rounded-md border-b-2 border-red-500"><Baseline size={14} /></button>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'blue')} className="p-1 text-blue-500 hover:bg-black/20 rounded-md border-b-2 border-blue-500"><Baseline size={14} /></button>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'emerald')} className="p-1 text-emerald-500 hover:bg-black/20 rounded-md border-b-2 border-emerald-500"><Baseline size={14} /></button>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'orange')} className="p-1 text-orange-500 hover:bg-black/20 rounded-md border-b-2 border-orange-500"><Baseline size={14} /></button>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'yellow')} className="p-1 text-yellow-500 hover:bg-black/20 rounded-md border-b-2 border-yellow-500"><Baseline size={14} /></button>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'black')} className="p-1 text-black hover:bg-black/20 rounded-md border-b-2 border-black bg-white/50"><Baseline size={14} /></button>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'white')} className="p-1 text-white hover:bg-black/20 rounded-md border-b-2 border-white bg-black/50"><Baseline size={14} /></button>
+                                        </div>
+
+                                        <div
+                                            ref={editorRef}
+                                            contentEditable
+                                            className="flex-1 w-full bg-transparent outline-none p-6 md:p-8 text-sm leading-relaxed min-h-[50vh] prose prose-sm prose-slate dark:prose-invert max-w-none whitespace-pre-wrap"
+                                            onInput={e => setEditContent(e.currentTarget.innerHTML)}
+                                            onBlur={() => setEditContent(editorRef.current?.innerHTML || '')}
                                         />
                                     </div>
                                 ) : (
                                     <div className={cn(
-                                        "p-6 md:p-8 prose prose-slate max-w-none prose-headings:font-black prose-a:text-yellow-500",
+                                        "p-6 md:p-8 prose prose-slate max-w-none prose-headings:font-black prose-a:text-yellow-500 whitespace-pre-wrap leading-relaxed select-text",
                                         isDark
                                             ? "prose-invert prose-p:text-gray-200 prose-headings:text-white prose-li:text-gray-200 prose-pre:bg-gray-800 prose-pre:border prose-pre:border-gray-700"
                                             : "prose-pre:bg-gray-50 prose-pre:border prose-pre:border-gray-200 text-gray-800"
                                     )}>
-                                        <ReactMarkdown rehypePlugins={[rehypeRaw]} remarkPlugins={[remarkGfm]}>
-                                            {selectedFile.content}
-                                        </ReactMarkdown>
+                                        <div dangerouslySetInnerHTML={{
+                                            __html: (selectedFile.content || '').replace(/<span style="color:(red|blue|emerald|orange|yellow)">/g, '<span class="text-$1-500 font-bold">')
+                                        }} />
                                     </div>
                                 )}
                             </div>
