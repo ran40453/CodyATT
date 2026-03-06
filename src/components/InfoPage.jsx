@@ -114,7 +114,13 @@ function InfoPage() {
         const newFilename = editFilename.trim() ? `${editFilename}.md` : selectedFile.filename;
         const isRenaming = newFilename !== selectedFile.filename;
 
-        const finalContent = editorRef.current ? editorRef.current.innerHTML : editContent;
+        // contentEditable sometimes introduces zero-width characters (\u200B) for cursor placement
+        // that can cause GitHub's Gist API JSON parser to throw a "Validation Failed" error.
+        // We sanitize these entirely before transmission.
+        let finalContent = editorRef.current ? editorRef.current.innerHTML : editContent;
+        if (typeof finalContent === 'string') {
+            finalContent = finalContent.replace(/[\u200B-\u200D\uFEFF]/g, '');
+        }
 
         // Native HTML content editable acts directly on markup, meaning no GFM loss and WYSIWYG
         const result = await updateGistFile(newFilename, finalContent, isRenaming ? selectedFile.filename : null);
