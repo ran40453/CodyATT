@@ -3,20 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
-import { marked } from 'marked'
-import TurndownService from 'turndown'
-import { gfm } from 'turndown-plugin-gfm'
-import ReactQuill from 'react-quill'
-import 'react-quill/dist/quill.snow.css'
+import SimpleMDE from 'react-simplemde-editor'
+import 'easymde/dist/easymde.min.css'
 import { FileText, Loader2, ChevronLeft, StickyNote, AlertCircle, Save, Folder, FolderPlus, FilePlus, ChevronRight, Edit2, X, Plus, Sun, Moon, Trash2, Copy, Heading1, Heading2, Heading3, Heading4, Heading5, Bold, Strikethrough, List, CheckSquare, Smile, Palette, SquarePen } from 'lucide-react'
 import { fetchGistFiles, updateGistFile, loadSettings, saveSettings, syncSettingsToGist } from '../lib/storage'
 import { cn } from '../lib/utils'
 import HeaderActions from './HeaderActions'
-
-// Initialize Turndown to convert HTML back to Markdown, preserving GFM and colors
-const turndownService = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
-turndownService.use(gfm);
-turndownService.keep(['span']); // explicitly keep color spans
 
 function InfoPage() {
     const [files, setFiles] = useState([])
@@ -93,8 +85,7 @@ function InfoPage() {
 
     const handleFileSelect = (file) => {
         setSelectedFile(file)
-        // Convert pure markdown to HTML on load for our WYSIWYG editor
-        setEditContent(marked.parse(file.content || ''))
+        setEditContent(file.content || '')
         setEditFilename(file.filename.replace('.md', '')) // prepare for rename
         setIsEditing(false)
         setIsMobileListVisible(false)
@@ -115,16 +106,12 @@ function InfoPage() {
         const newFilename = editFilename.trim() ? `${editFilename}.md` : selectedFile.filename;
         const isRenaming = newFilename !== selectedFile.filename;
 
-        // Convert the WYSIWYG HTML back into clean Markdown to save
-        const markdownContent = turndownService.turndown(editContent);
-
-        // If renaming, we conceptually create a new file and delete the old one in one API call
-        // The updateGistFile will be modified below to handle renaming by passing oldFilename
-        const result = await updateGistFile(newFilename, markdownContent, isRenaming ? selectedFile.filename : null);
+        // SimpleMDE operates purely in Markdown, so editContent is already clean
+        const result = await updateGistFile(newFilename, editContent, isRenaming ? selectedFile.filename : null);
 
         if (result.ok) {
             // Update local state
-            const updatedFile = { ...selectedFile, filename: newFilename, content: markdownContent };
+            const updatedFile = { ...selectedFile, filename: newFilename, content: editContent };
             let newFiles = prev => prev.map(f => f.filename === selectedFile.filename ? updatedFile : f);
 
             // If it's a completely new file just added to state (no Gist backup yet), it might not map correctly 
@@ -242,17 +229,6 @@ function InfoPage() {
         setNewFolderName('');
         setIsFolderModalOpen(false);
     }
-
-    // React-Quill Toolbar Configuration
-    const quillModules = {
-        toolbar: [
-            [{ 'header': [1, 2, 3, false] }],
-            ['bold', 'strike'],
-            [{ 'list': 'bullet' }, { 'list': 'check' }],
-            [{ 'color': [] }],
-            ['clean']
-        ],
-    };
 
     // Drag and Drop Logic (Files and Folders)
     const handleDragStart = (e, name, type = 'file') => {
@@ -560,7 +536,7 @@ function InfoPage() {
                                     <div className="w-px h-4 bg-gray-400/30 mx-1"></div>
                                     {isEditing ? (
                                         <>
-                                            <button onClick={() => { setIsEditing(false); setEditContent(marked.parse(selectedFile.content || '')); }} className={cn("px-3 py-1.5 rounded-md text-xs font-bold transition-colors", isDark ? "text-gray-400 hover:bg-gray-800" : "text-gray-500 hover:bg-gray-100")}>Cancel</button>
+                                            <button onClick={() => { setIsEditing(false); setEditContent(selectedFile.content || ''); }} className={cn("px-3 py-1.5 rounded-md text-xs font-bold transition-colors", isDark ? "text-gray-400 hover:bg-gray-800" : "text-gray-500 hover:bg-gray-100")}>Cancel</button>
                                             <button
                                                 onClick={handleSave}
                                                 disabled={isSaving}
@@ -584,44 +560,44 @@ function InfoPage() {
                             <div className="flex-1 flex flex-col overflow-y-auto relative nice-scrollbar">
                                 {isEditing ? (
                                     <div className={cn(
-                                        "flex-1 w-full h-full quill-editor-wrapper flex flex-col",
+                                        "w-full h-full flex flex-col mde-wrapper",
                                         isDark
                                             ? "bg-[#202731] text-gray-300"
                                             : "bg-[#E0E5EC] text-gray-800"
                                     )}>
                                         <style dangerouslySetInnerHTML={{
                                             __html: `
-                                            .quill-editor-wrapper .ql-toolbar {
+                                            .mde-wrapper .editor-toolbar {
                                                 border: none !important;
                                                 border-bottom: 1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.5)'} !important;
-                                                background: ${isDark ? '#1f262f' : '#f1f5f9'};
-                                                padding: 8px !important;
+                                                background: ${isDark ? '#1f262f' : '#f1f5f9'} !important;
+                                                opacity: 1 !important;
                                             }
-                                            .quill-editor-wrapper .ql-container {
-                                                border: none !important;
-                                                font-family: inherit;
-                                                font-size: 0.875rem;
-                                            }
-                                            .quill-editor-wrapper .ql-editor {
-                                                padding: 1.5rem 1.5rem 4rem 1.5rem;
-                                                min-height: 100%;
-                                            }
-                                            .quill-editor-wrapper .ql-stroke {
-                                                stroke: ${isDark ? '#9ca3af' : '#64748b'} !important;
-                                            }
-                                            .quill-editor-wrapper .ql-fill {
-                                                fill: ${isDark ? '#9ca3af' : '#64748b'} !important;
-                                            }
-                                            .quill-editor-wrapper .ql-picker {
+                                            .mde-wrapper .editor-toolbar button {
                                                 color: ${isDark ? '#9ca3af' : '#64748b'} !important;
                                             }
+                                            .mde-wrapper .editor-toolbar button:hover, .mde-wrapper .editor-toolbar button.active {
+                                                background: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'} !important;
+                                                border-color: transparent !important;
+                                            }
+                                            .mde-wrapper .EasyMDEContainer .CodeMirror {
+                                                border: none !important;
+                                                background: transparent !important;
+                                                color: inherit !important;
+                                                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+                                                padding: 1.5rem;
+                                                min-height: 500px;
+                                            }
                                         `}} />
-                                        <ReactQuill
-                                            theme="snow"
+                                        <SimpleMDE
                                             value={editContent}
                                             onChange={setEditContent}
-                                            modules={quillModules}
-                                            className="flex-1 flex flex-col h-full"
+                                            options={{
+                                                spellChecker: false,
+                                                status: false,
+                                                autofocus: true,
+                                            }}
+                                            className="flex-1 flex flex-col h-full m-0 p-0"
                                         />
                                     </div>
                                 ) : (
