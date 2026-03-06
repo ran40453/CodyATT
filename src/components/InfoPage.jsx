@@ -24,15 +24,14 @@ function InfoPage() {
     const [openFolders, setOpenFolders] = useState({}) // { "FolderName": true/false }
     const [activeFolder, setActiveFolder] = useState(null) // currently selected folder for placing new files
     const [isFolderModalOpen, setIsFolderModalOpen] = useState(false)
-    const [newFolderName, setNewFolderName] = useState('')
     const [draggedFile, setDraggedFile] = useState(null)
 
     // Toolbar / Edit Metadata
     const [editFilename, setEditFilename] = useState('')
     const [isCopying, setIsCopying] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
+    const [newFolderName, setNewFolderName] = useState('')
     const [showColorPicker, setShowColorPicker] = useState(false)
-    const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 
     // Uncategorized files are those not in any folder's list
     const getUncategorizedFiles = (allFiles, currentFolders) => {
@@ -92,7 +91,6 @@ function InfoPage() {
         setIsEditing(false)
         setIsMobileListVisible(false)
         setShowColorPicker(false)
-        setShowEmojiPicker(false)
     }
 
     // Initialize contentEditable sync only when entering edit mode
@@ -222,60 +220,42 @@ function InfoPage() {
 
     const handleFormat = (command, value = '') => {
         if (!editorRef.current) return;
-        // Ensure focus is on the editor
-        editorRef.current.focus();
+
+        // We do NOT call focus() here unconditionally because that resets the cursor
+        // to the beginning. The onMouseDown=e=>e.preventDefault() on toolbar buttons 
+        // guarantees the editor does not lose focus during formatting clicks.
+
+        // Polyfill: force browser to use inline styles instead of <font> tags for colors
+        document.execCommand('styleWithCSS', false, true);
 
         if (command === 'bold') {
             document.execCommand('bold', false, null);
         } else if (command === 'color') {
-            const selection = window.getSelection();
-            if (!selection.rangeCount || selection.isCollapsed) return;
-
-            const range = selection.getRangeAt(0);
-            const span = document.createElement('span');
-            const colorClass = ['black', 'white'].includes(value) ? `text-${value}` : `text-${value}-500`;
-            span.className = `${colorClass} font-bold`;
-
-            try {
-                span.appendChild(range.extractContents());
-                range.insertNode(span);
-            } catch (e) {
-                console.error("Selection error:", e);
-            }
+            const colorMap = {
+                red: '#ef4444',
+                blue: '#3b82f6',
+                green: '#10b981', // emerald
+                orange: '#f97316',
+                yellow: '#eab308',
+                black: '#000000',
+                white: '#ffffff'
+            };
+            document.execCommand('foreColor', false, colorMap[value] || value);
+            // Optionally enforce boldness if they expected colors to be bold
+            document.execCommand('bold', false, null);
         } else if (command === 'heading') {
-            // For headings, we need to wrap the selected block in the appropriate tag
-            const selection = window.getSelection();
-            if (!selection.rangeCount) return;
-
-            const range = selection.getRangeAt(0);
-            let blockElement = range.startContainer;
-
-            // Find the closest block-level element (e.g., p, div, h1-h6)
-            while (blockElement && blockElement.nodeType !== 1 || !['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(blockElement.tagName)) {
-                blockElement = blockElement.parentNode;
-                if (blockElement === editorRef.current) break; // Stop if we reach the editor root
-            }
-
-            if (blockElement && blockElement !== editorRef.current) {
-                const newHeading = document.createElement(`H${value}`);
-                // Move children from old block to new heading
-                while (blockElement.firstChild) {
-                    newHeading.appendChild(blockElement.firstChild);
-                }
-                blockElement.parentNode.replaceChild(newHeading, blockElement);
-            } else {
-                // If no block element found or selection is directly in editor, just insert a new heading
-                document.execCommand('formatBlock', false, `<H${value}>`);
-            }
+            // Browsers securely interpret generic 'formatBlock' with H1-H6 tags
+            document.execCommand('formatBlock', false, `H${value}`);
         } else if (command === 'list') {
             document.execCommand('insertUnorderedList', false, null);
         } else if (command === 'checklist') {
-            const checkboxHtml = '<span contenteditable="false" class="mr-2 inline-block"><input type="checkbox" /></span> ';
+            const checkboxHtml = '<span contenteditable="false" class="mr-2 inline-block -ml-1"><input type="checkbox" /></span> ';
             document.execCommand('insertHTML', false, checkboxHtml);
         } else if (command === 'strikethrough') {
             document.execCommand('strikeThrough', false, null);
         }
 
+        // Trigger manual sync since execCommand bypasses onInput
         setEditContent(editorRef.current.innerHTML);
     };
 
@@ -657,14 +637,16 @@ function InfoPage() {
                                             <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('heading', 1)} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="H1"><Type size={18} strokeWidth={3} /></button>
                                             <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('heading', 2)} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="H2"><Type size={16} strokeWidth={2.5} /></button>
                                             <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('heading', 3)} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="H3"><Type size={15} strokeWidth={2} /></button>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('heading', 4)} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="H4"><Type size={14} strokeWidth={2} /></button>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('heading', 5)} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-black/20" title="H5"><Type size={13} strokeWidth={2} /></button>
                                             <div className="w-px h-6 bg-gray-400/20 mx-1"></div>
                                             <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'red')} className="p-1 text-red-500 hover:bg-black/20 rounded-md border-b-2 border-red-500"><Baseline size={14} /></button>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'blue')} className="p-1 text-blue-500 hover:bg-black/20 rounded-md border-b-2 border-blue-500"><Baseline size={14} /></button>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'emerald')} className="p-1 text-emerald-500 hover:bg-black/20 rounded-md border-b-2 border-emerald-500"><Baseline size={14} /></button>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'orange')} className="p-1 text-orange-500 hover:bg-black/20 rounded-md border-b-2 border-orange-500"><Baseline size={14} /></button>
-                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'yellow')} className="p-1 text-yellow-500 hover:bg-black/20 rounded-md border-b-2 border-yellow-500"><Baseline size={14} /></button>
                                             <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'black')} className="p-1 text-black hover:bg-black/20 rounded-md border-b-2 border-black bg-white/50"><Baseline size={14} /></button>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'blue')} className="p-1 text-blue-500 hover:bg-black/20 rounded-md border-b-2 border-blue-500"><Baseline size={14} /></button>
                                             <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'white')} className="p-1 text-white hover:bg-black/20 rounded-md border-b-2 border-white bg-black/50"><Baseline size={14} /></button>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'orange')} className="p-1 text-orange-500 hover:bg-black/20 rounded-md border-b-2 border-orange-500"><Baseline size={14} /></button>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'green')} className="p-1 text-emerald-500 hover:bg-black/20 rounded-md border-b-2 border-emerald-500"><Baseline size={14} /></button>
+                                            <button onMouseDown={e => e.preventDefault()} onClick={() => handleFormat('color', 'yellow')} className="p-1 text-yellow-500 hover:bg-black/20 rounded-md border-b-2 border-yellow-500"><Baseline size={14} /></button>
                                         </div>
 
                                         <div
@@ -683,7 +665,7 @@ function InfoPage() {
                                             : "prose-pre:bg-gray-50 prose-pre:border prose-pre:border-gray-200 text-gray-800"
                                     )}>
                                         <div dangerouslySetInnerHTML={{
-                                            __html: (selectedFile.content || '').replace(/<span style="color:(red|blue|emerald|orange|yellow)">/g, '<span class="text-$1-500 font-bold">')
+                                            __html: selectedFile.content || ''
                                         }} />
                                     </div>
                                 )}
