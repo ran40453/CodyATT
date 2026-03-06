@@ -573,7 +573,7 @@ function InfoPage() {
                                     <div className="w-px h-4 bg-gray-400/30 mx-1"></div>
                                     {isEditing ? (
                                         <>
-                                            <button onClick={() => setIsEditing(false)} className={cn("px-3 py-1.5 rounded-md text-xs font-bold transition-colors", isDark ? "text-gray-400 hover:bg-gray-800" : "text-gray-500 hover:bg-gray-100")}>Cancel</button>
+                                            <button onClick={() => { setIsEditing(false); setEditContent(selectedFile.content); if (editorRef.current) { editorRef.current.innerHTML = selectedFile.content; } }} className={cn("px-3 py-1.5 rounded-md text-xs font-bold transition-colors", isDark ? "text-gray-400 hover:bg-gray-800" : "text-gray-500 hover:bg-gray-100")}>Cancel</button>
                                             <button
                                                 onClick={handleSave}
                                                 disabled={isSaving}
