@@ -373,7 +373,7 @@ function InfoPage() {
                     className={cn(
                         "flex flex-col w-full md:w-1/3 min-w-[260px] max-w-sm border-r z-10 absolute md:relative h-full transition-all duration-300",
                         isMobileListVisible ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-                        isDark ? "bg-[#1A202A] border-white/5" : "bg-[#D6DCE5] border-white/50"
+                        isDark ? "bg-transparent border-white/5" : "bg-transparent border-white/50"
                     )}
                 >
                     {/* Sidebar Header / Actions */}
@@ -574,7 +574,7 @@ function InfoPage() {
                                 </div>
                             </div>
 
-                            <div className="flex-1 flex flex-col overflow-y-auto relative nice-scrollbar bg-white dark:bg-[#202731]">
+                            <div className="flex-1 flex flex-col overflow-y-auto relative nice-scrollbar">
                                 {isEditing ? (
                                     <div className="w-full flex-1 flex flex-col EditorWrapper h-full pb-20 md:pb-0">
                                         <style>{`
@@ -597,6 +597,9 @@ function InfoPage() {
                                                 font-family: inherit !important;
                                                 font-size: 14px;
                                                 line-height: 1.8;
+                                                height: 100% !important;
+                                                flex: 1;
+                                                min-height: calc(100vh - 200px);
                                             }
                                             .sun-editor .se-btn-tray {
                                                 display: flex;
