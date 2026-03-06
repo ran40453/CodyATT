@@ -27,6 +27,7 @@ function InfoPage() {
     const [activeFolder, setActiveFolder] = useState(null) // currently selected folder for placing new files
     const [isFolderModalOpen, setIsFolderModalOpen] = useState(false)
     const [draggedFile, setDraggedFile] = useState(null)
+    const [dragOverFolder, setDragOverFolder] = useState(null)
 
     // Toolbar / Edit Metadata
     const [editFilename, setEditFilename] = useState('')
@@ -337,12 +338,23 @@ function InfoPage() {
             console.error("Drop error", err);
         }
         setDraggedFile(null);
+        setDragOverFolder(null);
     }
 
-    const handleDragOver = (e) => {
+    const handleDragOver = (e, folderName) => {
         e.preventDefault();
         e.stopPropagation();
         e.dataTransfer.dropEffect = 'move';
+        // Only highlight if dragging a folder over another folder (prevent self-highlight)
+        if (draggedFile && draggedFile.type === 'folder' && draggedFile.name !== folderName) {
+            setDragOverFolder(folderName);
+        }
+    }
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragOverFolder(null);
     }
 
     const renderFileList = (fileList) => {
@@ -458,12 +470,17 @@ function InfoPage() {
                                 {Object.keys(folders).map(folderName => (
                                     <div
                                         key={folderName}
-                                        onDragOver={handleDragOver}
+                                        onDragEnter={(e) => handleDragOver(e, folderName)}
+                                        onDragOver={(e) => handleDragOver(e, folderName)}
+                                        onDragLeave={handleDragLeave}
                                         onDrop={(e) => {
                                             e.stopPropagation();
                                             handleDrop(e, folderName);
                                         }}
-                                        className="space-y-1 group relative"
+                                        className={cn(
+                                            "space-y-1 group relative rounded-md transition-all duration-200 border-2",
+                                            dragOverFolder === folderName ? "border-dashed border-yellow-500 bg-yellow-500/10" : "border-transparent"
+                                        )}
                                     >
                                         <div className="flex items-center gap-1 group/folder rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors pl-1">
                                             <button
@@ -515,9 +532,14 @@ function InfoPage() {
 
                                 {/* Uncategorized */}
                                 <div
-                                    onDragOver={handleDragOver}
+                                    onDragEnter={(e) => handleDragOver(e, 'uncategorized')}
+                                    onDragOver={(e) => handleDragOver(e, 'uncategorized')}
+                                    onDragLeave={handleDragLeave}
                                     onDrop={(e) => handleDrop(e, 'uncategorized')}
-                                    className="pt-2"
+                                    className={cn(
+                                        "pt-2 rounded-md transition-all duration-200 border-2 mt-4",
+                                        dragOverFolder === 'uncategorized' ? "border-dashed border-gray-400 bg-gray-500/10" : "border-transparent"
+                                    )}
                                 >
                                     <div className="px-2 py-1 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
                                         Uncategorized
