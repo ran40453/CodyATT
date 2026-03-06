@@ -341,32 +341,32 @@ function InfoPage() {
                     return;
                 }
 
-                const newFolders = { ...folders };
-                // Using a standardized path format
+                const currentFolders = { ...folders };
                 const targetPrefix = targetFolderName === 'uncategorized' ? '' : `${targetFolderName}/`;
                 const baseName = name.split('/').pop();
                 const newPath = `${targetPrefix}${baseName}`;
                 console.log('New Path Calculated:', newPath);
 
-                const updatedFolders = {};
+                const nextFolders = {};
 
-                Object.keys(newFolders).forEach(k => {
-                    if (k === name) {
-                        // Rename the dragged folder itself
-                        updatedFolders[newPath] = newFolders[k];
-                    } else if (k.startsWith(name + '/')) {
-                        // Rename all subfolders of the dragged folder
-                        const subPath = k.slice(name.length); // get remainder like "/sublist"
-                        updatedFolders[newPath + subPath] = newFolders[k];
+                // We need to migrate the dragging folder and all its descendants
+                Object.keys(currentFolders).forEach(oldKey => {
+                    if (oldKey === name) {
+                        // The folder itself
+                        nextFolders[newPath] = currentFolders[oldKey];
+                    } else if (oldKey.startsWith(name + '/')) {
+                        // Descendants
+                        const relativePath = oldKey.slice(name.length);
+                        nextFolders[newPath + relativePath] = currentFolders[oldKey];
                     } else {
-                        // Keep other folders untouched
-                        updatedFolders[k] = newFolders[k];
+                        // Unrelated folders
+                        nextFolders[oldKey] = currentFolders[oldKey];
                     }
                 });
 
-                setFolders(updatedFolders);
-                saveSettings({ ...loadSettings(), infoPageFolders: updatedFolders });
-                syncSettingsToGist({ ...loadSettings(), infoPageFolders: updatedFolders });
+                setFolders(nextFolders);
+                saveSettings({ ...loadSettings(), infoPageFolders: nextFolders });
+                syncSettingsToGist({ ...loadSettings(), infoPageFolders: nextFolders });
             }
         } catch (err) {
             console.error("Drop error", err);
@@ -501,7 +501,7 @@ function InfoPage() {
                         ) : (
                             <>
                                 {/* Folders */}
-                                {Object.keys(folders).map(folderName => (
+                                {Object.keys(folders).sort().map(folderName => (
                                     <div
                                         key={folderName}
                                         onDragEnter={(e) => handleDragOver(e, folderName)}
