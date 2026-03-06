@@ -857,8 +857,8 @@ export const loadSettings = () => {
         const parsed = JSON.parse(settings);
         // console.log('Storage: Loaded settings:', { ...parsed, githubToken: parsed.githubToken ? '***' : 'missing' });
 
-        // Deep merge for specific sections to ensure new defaults (like standardStartTime) apply to existing users
-        return {
+        // Deep merge for specific sections to ensure new defaults apply to existing users
+        const merged = {
             ...defaultSettings,
             ...parsed,
             allowance: { ...defaultSettings.allowance, ...(parsed.allowance || {}) },
@@ -866,6 +866,13 @@ export const loadSettings = () => {
             rules: { ...defaultSettings.rules, ...(parsed.rules || {}) },
             leaveRules: { ...defaultSettings.leaveRules, ...(parsed.leaveRules || {}) }
         };
+
+        // Ensure infoPageFolders is explicitly preserved as it's not in defaultSettings
+        if (parsed.infoPageFolders) {
+            merged.infoPageFolders = parsed.infoPageFolders;
+        }
+
+        return merged;
     } catch (e) {
         console.error('Storage: Failed to load settings', e);
         return defaultSettings;

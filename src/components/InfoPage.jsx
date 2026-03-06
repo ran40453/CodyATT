@@ -319,54 +319,49 @@ function InfoPage() {
             if (!name || (type !== 'folder' && type !== 'file')) return;
 
             if (type === 'file') {
-                // Remove from old folder if exists
-                const newFolders = { ...folders };
-                Object.keys(newFolders).forEach(key => {
-                    newFolders[key] = newFolders[key].filter(f => f !== name);
+                setFolders(prev => {
+                    const newFolders = { ...prev };
+                    Object.keys(newFolders).forEach(key => {
+                        newFolders[key] = newFolders[key].filter(f => f !== name);
+                    });
+
+                    if (targetFolderName !== 'uncategorized') {
+                        if (!newFolders[targetFolderName]) newFolders[targetFolderName] = [];
+                        newFolders[targetFolderName].push(name);
+                    }
+
+                    saveSettings({ ...loadSettings(), infoPageFolders: newFolders });
+                    syncSettingsToGist({ ...loadSettings(), infoPageFolders: newFolders });
+                    return newFolders;
                 });
-
-                // Add to new folder
-                if (targetFolderName !== 'uncategorized') {
-                    if (!newFolders[targetFolderName]) newFolders[targetFolderName] = [];
-                    newFolders[targetFolderName].push(name);
-                }
-
-                setFolders(newFolders);
-                saveSettings({ ...loadSettings(), infoPageFolders: newFolders });
-                syncSettingsToGist({ ...loadSettings(), infoPageFolders: newFolders });
             } else if (type === 'folder') {
-                console.log('Processing Folder Nesting:', { name, targetFolderName });
                 if (name === targetFolderName || targetFolderName.startsWith(name + '/')) {
-                    console.log('Nesting blocked: self or child');
                     return;
                 }
 
-                const currentFolders = { ...folders };
-                const targetPrefix = targetFolderName === 'uncategorized' ? '' : `${targetFolderName}/`;
-                const baseName = name.split('/').pop();
-                const newPath = `${targetPrefix}${baseName}`;
-                console.log('New Path Calculated:', newPath);
+                setFolders(currentFolders => {
+                    const targetPrefix = targetFolderName === 'uncategorized' ? '' : `${targetFolderName}/`;
+                    const baseName = name.split('/').pop();
+                    const newPath = `${targetPrefix}${baseName}`;
 
-                const nextFolders = {};
+                    const nextFolders = {};
 
-                // We need to migrate the dragging folder and all its descendants
-                Object.keys(currentFolders).forEach(oldKey => {
-                    if (oldKey === name) {
-                        // The folder itself
-                        nextFolders[newPath] = currentFolders[oldKey];
-                    } else if (oldKey.startsWith(name + '/')) {
-                        // Descendants
-                        const relativePath = oldKey.slice(name.length);
-                        nextFolders[newPath + relativePath] = currentFolders[oldKey];
-                    } else {
-                        // Unrelated folders
-                        nextFolders[oldKey] = currentFolders[oldKey];
-                    }
+                    Object.keys(currentFolders).forEach(oldKey => {
+                        if (oldKey === name) {
+                            nextFolders[newPath] = currentFolders[oldKey];
+                        } else if (oldKey.startsWith(name + '/')) {
+                            const relativePath = oldKey.slice(name.length);
+                            nextFolders[newPath + relativePath] = currentFolders[oldKey];
+                        } else {
+                            nextFolders[oldKey] = currentFolders[oldKey];
+                        }
+                    });
+
+                    saveSettings({ ...loadSettings(), infoPageFolders: nextFolders });
+                    syncSettingsToGist({ ...loadSettings(), infoPageFolders: nextFolders });
+
+                    return nextFolders;
                 });
-
-                setFolders(nextFolders);
-                saveSettings({ ...loadSettings(), infoPageFolders: nextFolders });
-                syncSettingsToGist({ ...loadSettings(), infoPageFolders: nextFolders });
             }
         } catch (err) {
             console.error("Drop error", err);
