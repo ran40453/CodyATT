@@ -276,6 +276,7 @@ function InfoPage() {
 
     // Drag and Drop Logic (Files and Folders)
     const handleDragStart = (e, name, type = 'file') => {
+        e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData("application/json", JSON.stringify({ name, type }));
         setDraggedFile({ name, type });
     }
@@ -307,16 +308,23 @@ function InfoPage() {
                 if (name === targetFolderName || targetFolderName.startsWith(name + '/')) return; // Prevent self-nesting
 
                 const newFolders = { ...folders };
-                const targetPrefix = targetFolderName === 'uncategorized' ? '' : targetFolderName + '/';
+                // Using a standardized path format
+                const targetPrefix = targetFolderName === 'uncategorized' ? '' : `${targetFolderName}/`;
                 const baseName = name.split('/').pop();
-                const newPath = targetPrefix + baseName;
+                const newPath = `${targetPrefix}${baseName}`;
 
                 const updatedFolders = {};
+
                 Object.keys(newFolders).forEach(k => {
-                    if (k === name || k.startsWith(name + '/')) {
-                        const renamedKey = k.replace(name, newPath);
-                        updatedFolders[renamedKey] = newFolders[k];
+                    if (k === name) {
+                        // Rename the dragged folder itself
+                        updatedFolders[newPath] = newFolders[k];
+                    } else if (k.startsWith(name + '/')) {
+                        // Rename all subfolders of the dragged folder
+                        const subPath = k.slice(name.length); // get remainder like "/sublist"
+                        updatedFolders[newPath + subPath] = newFolders[k];
                     } else {
+                        // Keep other folders untouched
                         updatedFolders[k] = newFolders[k];
                     }
                 });
@@ -334,6 +342,7 @@ function InfoPage() {
     const handleDragOver = (e) => {
         e.preventDefault();
         e.stopPropagation();
+        e.dataTransfer.dropEffect = 'move';
     }
 
     const renderFileList = (fileList) => {
@@ -456,14 +465,14 @@ function InfoPage() {
                                         }}
                                         className="space-y-1 group relative"
                                     >
-                                        <div className="flex items-center gap-1">
+                                        <div className="flex items-center gap-1 group/folder rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors pl-1">
                                             <button
                                                 draggable
                                                 onDragStart={(e) => handleDragStart(e, folderName, 'folder')}
                                                 onClick={() => toggleFolder(folderName)}
                                                 className={cn(
-                                                    "flex items-center gap-1.5 flex-1 text-left px-2 py-1.5 rounded-md text-xs font-bold transition-colors cursor-grab active:cursor-grabbing",
-                                                    activeFolder === folderName ? (isDark ? "bg-white/10 text-white" : "bg-black/10 text-gray-900") : (isDark ? "text-gray-400 hover:text-white hover:bg-white/5" : "text-gray-600 hover:text-gray-900 hover:bg-black/5")
+                                                    "flex items-center gap-1.5 flex-1 text-left px-1 py-1.5 text-xs font-bold transition-colors cursor-grab active:cursor-grabbing",
+                                                    activeFolder === folderName ? (isDark ? "text-yellow-400" : "text-yellow-600") : (isDark ? "text-gray-400" : "text-gray-600")
                                                 )}
                                             >
                                                 {openFolders[folderName] ? <ChevronRight size={14} className="rotate-90 transition-transform" /> : <ChevronRight size={14} className="transition-transform" />}
