@@ -284,10 +284,21 @@ function InfoPage() {
 
     const handleDrop = (e, targetFolderName) => {
         e.preventDefault();
+        e.stopPropagation();
         try {
+            let name, type;
             const dataStr = e.dataTransfer.getData("application/json");
-            if (!dataStr) return;
-            const { name, type } = JSON.parse(dataStr);
+            if (dataStr) {
+                const parsed = JSON.parse(dataStr);
+                name = parsed.name;
+                type = parsed.type;
+            } else if (draggedFile) {
+                name = draggedFile.name;
+                type = draggedFile.type;
+            } else {
+                setDragOverFolder(null);
+                return;
+            }
 
             if (type === 'file') {
                 // Remove from old folder if exists

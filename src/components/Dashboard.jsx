@@ -20,6 +20,7 @@ import {
 } from 'chart.js'
 import { Bar, Doughnut } from 'react-chartjs-2'
 import { loadSettings, fetchExchangeRate, standardizeCountry, calculateDailySalary, calculateCompLeaveUnits, calculateOTHours } from '../lib/storage'
+import { isTaiwanHoliday } from '../lib/holidays'
 import { cn } from '../lib/utils'
 
 // Register ChartJS components
@@ -311,7 +312,20 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
         const dayStr = format(day, 'yyyy-MM-dd');
         const record = data.find(r => format(parse(r.date), 'yyyy-MM-dd') === dayStr);
         let type = 'none';
-        if (record) type = record.isLeave ? 'leave' : 'attendance';
+
+        if (record) {
+            type = record.isLeave ? 'leave' : 'attendance';
+        } else {
+            // Apply implicit weekday attendance assumption (mirroring Calendar logic)
+            const isHoliday = isTaiwanHoliday(day);
+            const isPastOrToday = day <= today || isSameDay(day, today);
+            const dayOfWeek = day.getDay();
+            const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+            if (!isHoliday && isPastOrToday && isWeekday) {
+                type = 'attendance';
+            }
+        }
+
         return { day, type };
     });
     const attendedCount = attendanceBoxes.filter(b => b.type === 'attendance').length;
