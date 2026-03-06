@@ -95,12 +95,13 @@ function InfoPage() {
         setShowEmojiPicker(false)
     }
 
-    // Initialize contentEditable sync
+    // Initialize contentEditable sync only when entering edit mode
     useEffect(() => {
         if (isEditing && editorRef.current) {
             editorRef.current.innerHTML = editContent || '';
         }
-    }, [isEditing, editContent]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isEditing]);
 
     const handleBackToList = () => {
         setIsMobileListVisible(true)
