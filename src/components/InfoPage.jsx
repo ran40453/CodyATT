@@ -277,6 +277,7 @@ function InfoPage() {
 
     // Drag and Drop Logic (Files and Folders)
     const handleDragStart = (e, name, type = 'file') => {
+        console.log('Drag Start:', { name, type });
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData("application/json", JSON.stringify({ name, type }));
         e.dataTransfer.setData("text/plain", `${name}::${type}`); // Fallback for strict browsers
@@ -287,6 +288,7 @@ function InfoPage() {
         e.preventDefault();
         e.stopPropagation();
         setDragOverFolder(null); // Clear visual state immediately
+        console.log('Drop Target:', targetFolderName);
         try {
             let name, type;
 
@@ -294,10 +296,12 @@ function InfoPage() {
             if (draggedFile) {
                 name = draggedFile.name;
                 type = draggedFile.type;
+                console.log('Drop Source (State):', { name, type });
             } else {
                 // 2. Fallback to API payloads
                 const dataStr = e.dataTransfer.getData("application/json");
                 const fallbackStr = e.dataTransfer.getData("text/plain");
+                console.log('Drop Source (DataTransfer):', { dataStr, fallbackStr });
 
                 if (dataStr) {
                     const parsed = JSON.parse(dataStr);
@@ -331,13 +335,18 @@ function InfoPage() {
                 saveSettings({ ...loadSettings(), infoPageFolders: newFolders });
                 syncSettingsToGist({ ...loadSettings(), infoPageFolders: newFolders });
             } else if (type === 'folder') {
-                if (name === targetFolderName || targetFolderName.startsWith(name + '/')) return; // Prevent self-nesting
+                console.log('Processing Folder Nesting:', { name, targetFolderName });
+                if (name === targetFolderName || targetFolderName.startsWith(name + '/')) {
+                    console.log('Nesting blocked: self or child');
+                    return;
+                }
 
                 const newFolders = { ...folders };
                 // Using a standardized path format
                 const targetPrefix = targetFolderName === 'uncategorized' ? '' : `${targetFolderName}/`;
                 const baseName = name.split('/').pop();
                 const newPath = `${targetPrefix}${baseName}`;
+                console.log('New Path Calculated:', newPath);
 
                 const updatedFolders = {};
 
