@@ -276,33 +276,66 @@ function InfoPage() {
                 }
 
                 const s = loadSettings();
-                saveSettings({ ...s, infoPageFolders: newFolders });
-                syncSettingsToGist({ ...s, infoPageFolders: newFolders });
+                const updatedSettings = { ...s, infoPageFolders: newFolders };
+                saveSettings(updatedSettings);
+                syncSettingsToGist(updatedSettings);
+
+                // Auto-open target folder
+                if (targetFolderName !== 'uncategorized') {
+                    setOpenFolders(prev => ({ ...prev, [targetFolderName]: true }));
+                }
+
                 return newFolders;
             });
         } else if (type === 'folder') {
             if (name === targetFolderName || targetFolderName.startsWith(name + '/')) return;
 
             setFolders(currentFolders => {
-                const targetPrefix = targetFolderName === 'uncategorized' ? '' : `${targetFolderName}/`;
                 const baseName = name.split('/').pop();
-                const newPath = `${targetPrefix}${baseName}`;
+                let newPath;
+                if (targetFolderName === 'uncategorized') {
+                    newPath = baseName;
+                } else {
+                    newPath = `${targetFolderName}/${baseName}`;
+                }
+
+                if (currentFolders[newPath] !== undefined && newPath !== name) {
+                    // Avoid overwriting existing folder with same name
+                    if (!window.confirm(`A folder named "${newPath}" already exists. Merge contents?`)) return currentFolders;
+                }
 
                 const nextFolders = {};
+                // Handle the folder itself and its descendants
                 Object.keys(currentFolders).forEach(oldKey => {
                     if (oldKey === name) {
                         nextFolders[newPath] = currentFolders[oldKey];
                     } else if (oldKey.startsWith(name + '/')) {
-                        const relativePath = oldKey.slice(name.length);
+                        const relativePath = oldKey.substring(name.length);
                         nextFolders[newPath + relativePath] = currentFolders[oldKey];
                     } else {
                         nextFolders[oldKey] = currentFolders[oldKey];
                     }
                 });
 
+                // Ensure the target parent exists in the tree
+                if (targetFolderName !== 'uncategorized' && !nextFolders[targetFolderName]) {
+                    nextFolders[targetFolderName] = [];
+                }
+
+                // If it's a new path entirely (not just remapping)
+                if (!nextFolders[newPath]) nextFolders[newPath] = [];
+
+                // Pass the updated object directly to avoid race conditions with loadSettings()
                 const s = loadSettings();
-                saveSettings({ ...s, infoPageFolders: nextFolders });
-                syncSettingsToGist({ ...s, infoPageFolders: nextFolders });
+                const updatedSettings = { ...s, infoPageFolders: nextFolders };
+                saveSettings(updatedSettings);
+                syncSettingsToGist(updatedSettings);
+
+                // Auto-open target folder
+                if (targetFolderName !== 'uncategorized') {
+                    setOpenFolders(prev => ({ ...prev, [targetFolderName]: true, [newPath]: true }));
+                }
+
                 return nextFolders;
             });
         }
@@ -383,10 +416,10 @@ function InfoPage() {
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            const target = prompt("Target folder (name or 'uncategorized'):", folderPath);
-                            if (target) performMove(file.filename, 'file', target);
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setMovingItem({ name: file.filename, type: 'file', anchorEl: { top: rect.top, left: rect.left } });
                         }}
-                        className="p-1 rounded hover:bg-black/20 text-gray-400"
+                        className={cn("p-1.5 rounded-md", isDark ? "hover:bg-gray-700 text-gray-500" : "hover:bg-gray-200 text-gray-400")}
                         title="Move..."
                     >
                         <MoreVertical size={12} />
@@ -471,62 +504,105 @@ function InfoPage() {
                             </div>
                         ) : (
                             <>
-                                {Object.keys(folders).sort().map(folderName => {
-                                    const depth = folderName.split('/').length - 1;
-                                    return (
-                                        <div
-                                            key={folderName}
-                                            onDragEnter={(e) => handleDragOver(e, folderName)}
-                                            onDragOver={(e) => handleDragOver(e, folderName)}
-                                            onDragLeave={handleDragLeave}
-                                            onDrop={(e) => { e.stopPropagation(); handleDrop(e, folderName); }}
-                                            className={cn(
-                                                "space-y-1 group relative rounded-md transition-all duration-200 border-2",
-                                                dragOverFolder === folderName ? "border-dashed border-yellow-500 bg-yellow-500/10" : "border-transparent"
-                                            )}
-                                        >
-                                            <div className="flex items-center gap-1 group/folder rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors pl-1">
-                                                <button
-                                                    draggable
-                                                    onDragStart={(e) => handleDragStart(e, folderName, 'folder')}
-                                                    onDragEnd={handleDragEnd}
-                                                    onClick={() => toggleFolder(folderName)}
+                                {(() => {
+                                    const buildTree = () => {
+                                        const tree = {};
+                                        Object.keys(folders).forEach(path => {
+                                            const parts = path.split('/');
+                                            let current = tree;
+                                            parts.forEach((part, i) => {
+                                                const currentPath = parts.slice(0, i + 1).join('/');
+                                                if (!current[part]) {
+                                                    current[part] = { _path: currentPath, children: {} };
+                                                }
+                                                // CRITICAL: move to children of the current part
+                                                current = current[part].children;
+                                            });
+                                        });
+                                        console.log('INFO_PAGE_TREE:', tree);
+                                        return tree;
+                                    };
+                                    const tree = buildTree();
+
+                                    const renderFolder = (node, name, depth = 0) => {
+                                        const path = node._path;
+                                        const hasSubfolders = Object.keys(node.children).length > 0;
+                                        const folderFiles = folders[path] || [];
+
+                                        return (
+                                            <div key={path} className="space-y-1">
+                                                <div
+                                                    onDragEnter={(e) => handleDragOver(e, path)}
+                                                    onDragOver={(e) => handleDragOver(e, path)}
+                                                    onDragLeave={handleDragLeave}
+                                                    onDrop={(e) => { e.stopPropagation(); handleDrop(e, path); }}
                                                     className={cn(
-                                                        "flex items-center gap-1.5 flex-1 text-left px-1 py-1.5 text-xs font-bold transition-colors cursor-grab active:cursor-grabbing",
-                                                        activeFolder === folderName ? (isDark ? "text-yellow-400" : "text-yellow-600") : (isDark ? "text-gray-400" : "text-gray-600"),
-                                                        draggedFile?.name === folderName ? "opacity-30" : "opacity-100"
+                                                        "group relative rounded-md transition-all duration-200 border-2",
+                                                        dragOverFolder === path ? "border-dashed border-yellow-500 bg-yellow-500/10" : "border-transparent"
                                                     )}
                                                 >
-                                                    {openFolders[folderName] ? <ChevronRight size={14} className="rotate-90 transition-transform" /> : <ChevronRight size={14} className="transition-transform" />}
-                                                    <Folder size={14} className={cn(activeFolder === folderName ? "text-yellow-500" : (isDark ? "text-blue-400" : "text-blue-500"))} />
-                                                    <span style={{ paddingLeft: `${depth * 8}px` }} className="truncate">
-                                                        {folderName.split('/').pop()}
-                                                    </span>
-                                                </button>
+                                                    <div className="flex items-center gap-1 group/folder rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors pl-1">
+                                                        <button
+                                                            draggable
+                                                            onDragStart={(e) => handleDragStart(e, path, 'folder')}
+                                                            onDragEnd={handleDragEnd}
+                                                            onClick={() => toggleFolder(path)}
+                                                            className={cn(
+                                                                "flex items-center gap-1.5 flex-1 text-left px-1 py-1.5 text-xs font-bold transition-colors cursor-grab active:cursor-grabbing",
+                                                                activeFolder === path ? (isDark ? "text-yellow-400" : "text-yellow-600") : (isDark ? "text-gray-400" : "text-gray-600"),
+                                                                draggedFile?.name === path ? "opacity-30" : "opacity-100"
+                                                            )}
+                                                        >
+                                                            {openFolders[path] ? <ChevronRight size={14} className="rotate-90 transition-transform" /> : <ChevronRight size={14} className="transition-transform" />}
+                                                            <Folder size={14} className={cn(activeFolder === path ? "text-yellow-500" : (isDark ? "text-blue-400" : "text-blue-500"))} />
+                                                            <span className="truncate">{name}</span>
+                                                        </button>
 
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); deleteFolder(folderName); }}
-                                                    className={cn("p-1.5 rounded-md opacity-0 group-hover/folder:opacity-100 transition-all", isDark ? "hover:bg-red-500/20 text-gray-500 hover:text-red-400" : "hover:bg-red-100 text-gray-400 hover:text-red-600")}
-                                                >
-                                                    <Trash2 size={12} />
-                                                </button>
+                                                        <div className="flex items-center opacity-0 group-hover/folder:opacity-100 transition-all px-1">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                                    setMovingItem({ name: path, type: 'folder', anchorEl: { top: rect.top, left: rect.left } });
+                                                                }}
+                                                                className={cn("p-1.5 rounded-md", isDark ? "hover:bg-gray-700 text-gray-500" : "hover:bg-gray-200 text-gray-400")}
+                                                                title="Move folder..."
+                                                            >
+                                                                <MoreVertical size={12} />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); deleteFolder(path); }}
+                                                                className={cn("p-1.5 rounded-md", isDark ? "hover:bg-red-500/20 text-gray-500 hover:text-red-400" : "hover:bg-red-100 text-gray-400 hover:text-red-600")}
+                                                                title="Delete folder"
+                                                            >
+                                                                <Trash2 size={12} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <AnimatePresence>
+                                                    {openFolders[path] && (
+                                                        <motion.div
+                                                            initial={{ height: 0, opacity: 0 }}
+                                                            animate={{ height: 'auto', opacity: 1 }}
+                                                            exit={{ height: 0, opacity: 0 }}
+                                                            className={cn("overflow-hidden ml-3 pl-2 border-l", isDark ? "border-white/10" : "border-gray-300")}
+                                                        >
+                                                            {/* Render Subfolders */}
+                                                            {Object.entries(node.children).sort().map(([subName, subNode]) => renderFolder(subNode, subName, depth + 1))}
+
+                                                            {/* Render Files */}
+                                                            {renderFileList(files.filter(f => folderFiles.includes(f.filename)), path)}
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
                                             </div>
+                                        );
+                                    };
 
-                                            <AnimatePresence>
-                                                {openFolders[folderName] && (
-                                                    <motion.div
-                                                        initial={{ height: 0, opacity: 0 }}
-                                                        animate={{ height: 'auto', opacity: 1 }}
-                                                        exit={{ height: 0, opacity: 0 }}
-                                                        className={cn("overflow-hidden ml-3 pl-2 border-l", isDark ? "border-white/10" : "border-gray-300")}
-                                                    >
-                                                        {renderFileList(files.filter(f => folders[folderName].includes(f.filename)), folderName)}
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </div>
-                                    );
-                                })}
+                                    return Object.entries(tree).sort().map(([name, node]) => renderFolder(node, name));
+                                })()}
 
                                 <div
                                     onDragEnter={(e) => handleDragOver(e, 'uncategorized')}
@@ -646,6 +722,56 @@ function InfoPage() {
             </div>
 
             <AnimatePresence>
+                {movingItem && (
+                    <div
+                        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-[2px]"
+                        onClick={() => setMovingItem(null)}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className={cn(
+                                "p-4 rounded-2xl shadow-2xl w-64 max-h-[70vh] flex flex-col space-y-3 border neumo-raised",
+                                isDark ? "bg-[#202731] border-white/10" : "bg-[#E0E5EC] border-white/50"
+                            )}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex justify-between items-center mb-1">
+                                <h3 className={cn("text-[10px] font-black uppercase tracking-widest", isDark ? "text-gray-400" : "text-gray-500")}>
+                                    Move {movingItem.type}
+                                </h3>
+                                <button onClick={() => setMovingItem(null)} className="text-gray-500 hover:text-red-500"><X size={14} /></button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto space-y-1 nice-scrollbar pr-1">
+                                <button
+                                    onClick={() => { performMove(movingItem.name, movingItem.type, 'uncategorized'); setMovingItem(null); }}
+                                    className={cn("w-full text-left p-2 rounded-lg text-xs font-bold transition-colors", isDark ? "hover:bg-white/5 text-gray-300" : "hover:bg-black/5 text-gray-700")}
+                                >
+                                    Uncategorized
+                                </button>
+                                {Object.keys(folders).sort().map(folderName => {
+                                    // Prevent moving a folder into itself or its descendants
+                                    if (movingItem.type === 'folder') {
+                                        if (folderName === movingItem.name || folderName.startsWith(movingItem.name + '/')) return null;
+                                    }
+                                    return (
+                                        <button
+                                            key={folderName}
+                                            onClick={() => { performMove(movingItem.name, movingItem.type, folderName); setMovingItem(null); }}
+                                            className={cn("w-full text-left p-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-2", isDark ? "hover:bg-white/5 text-gray-300" : "hover:bg-black/5 text-gray-700")}
+                                        >
+                                            <Folder size={12} className="text-blue-400" />
+                                            <span className="truncate">{folderName}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+
                 {isFolderModalOpen && (
                     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className={cn("p-5 rounded-2xl shadow-2xl w-72 space-y-4 border neumo-raised", isDark ? "bg-[#202731] border-white/10" : "bg-[#E0E5EC] border-white/50")}>
