@@ -66,51 +66,47 @@ export default function InteractiveAttendanceBar({ attendanceBoxes, today, class
                         style={{ minWidth: 0, touchAction: 'none' }}
                     >
                         <motion.div
-                            initial={false}
+                            initial="initial"
                             animate={{
                                 backgroundColor: hexBg,
                             }}
                             variants={{
+                                initial: {
+                                    borderRadius: 2,
+                                    height: '100%',
+                                    width: '100%',
+                                    scale: 1,
+                                    y: 0,
+                                    zIndex: 10,
+                                    aspectRatio: 'auto'
+                                },
                                 hovered: {
-                                    scale: 1.2,
+                                    borderRadius: '999px',
+                                    height: 'auto',
+                                    aspectRatio: '1 / 1',
+                                    scale: 2,
+                                    zIndex: 50,
+                                    y: '-50%',
+                                    top: '50%',
                                     backgroundColor: "#a855f7",
-                                    zIndex: 50
+                                    boxShadow: '0 4px 12px rgba(168, 85, 247, 0.3)',
+                                    border: '1.5px solid white'
                                 }
                             }}
                             className={cn(
-                                "absolute w-full h-full pointer-events-none",
+                                "absolute top-0 left-0 w-full flex items-center justify-center pointer-events-none transition-colors duration-300",
                                 isPastOrToday && box.type === 'attendance' ? "shadow-sm" : ""
                             )}
-                            style={{
-                                top: 0,
-                                left: 0,
-                                borderRadius: 2
-                            }}
-                        />
-                        
-                        {/* Hover indicator point */}
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0 }}
-                            variants={{
-                                hovered: { opacity: 1, scale: 1 }
-                            }}
-                            className="absolute z-50 pointer-events-none flex items-center justify-center"
-                            style={{
-                                top: '50%',
-                                left: '50%',
-                                x: '-50%',
-                                y: '-50%',
-                                width: 16,
-                                height: 16,
-                                borderRadius: '50%',
-                                backgroundColor: '#a855f7',
-                                border: '2px solid white',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                            }}
                         >
-                            <span className="text-[8px] font-black text-white pointer-events-none">
+                            <motion.span 
+                                variants={{
+                                    initial: { opacity: 0, scale: 0 },
+                                    hovered: { opacity: 1, scale: 0.8 }
+                                }}
+                                className="text-[10px] font-black text-white pointer-events-none"
+                            >
                                 {format(box.day, 'dd')}
-                            </span>
+                            </motion.span>
                         </motion.div>
                     </motion.div>
                 )

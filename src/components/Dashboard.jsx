@@ -365,12 +365,12 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
             <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="neumo-card p-1 bg-purple-500 overflow-hidden relative group" // Group for hover
+                className="neumo-card p-1 bg-purple-500 overflow-visible relative group" // Changed to overflow-visible for morphing
             >
                 {/* Background Pattern */}
-                <div className="absolute inset-0 bg-purple-500 z-0 transition-all duration-500 group-hover:brightness-105" />
+                <div className="absolute inset-0 bg-purple-500 z-0 transition-all duration-500 group-hover:brightness-105 rounded-xl" />
 
-                <div className="relative z-10 w-full h-24 flex flex-col justify-between p-4">
+                <div className="relative z-10 w-full h-24 flex flex-col justify-between p-4 overflow-visible">
                     {/* Header Text (White) */}
                     <div className="flex justify-between items-start">
                         <div className="flex flex-col">
@@ -387,11 +387,11 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
                     </div>
 
                     {/* Bottom Grid of Squares (Light Gray Internal BG) */}
-                    <div className="mt-2 flex-1 rounded-xl bg-gray-100/90 backdrop-blur-sm p-1.5 flex shadow-inner group-hover:shadow-lg transition-all duration-300 relative z-20">
+                    <div className="mt-2 flex-1 rounded-xl bg-gray-100/90 backdrop-blur-sm p-1.5 flex shadow-inner group-hover:shadow-lg transition-all duration-300 relative z-20 overflow-visible">
                         <InteractiveAttendanceBar
                             attendanceBoxes={attendanceBoxes}
                             today={today}
-                            className="w-full h-full gap-1"
+                            className="w-full h-full gap-1 overflow-visible"
                         />
                     </div>
                 </div>

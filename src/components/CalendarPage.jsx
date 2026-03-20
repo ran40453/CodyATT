@@ -185,8 +185,8 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
                                 </span>
                             </div>
                         </div>
-                        <div className="h-10 rounded-md bg-gray-100/90 p-1 flex items-center shadow-inner">
-                            <InteractiveAttendanceBar attendanceBoxes={attendanceBoxes} today={new Date()} className="w-full h-1.5 gap-[2px]" />
+                        <div className="h-10 rounded-md bg-gray-100/90 p-1 flex items-center shadow-inner overflow-visible">
+                            <InteractiveAttendanceBar attendanceBoxes={attendanceBoxes} today={new Date()} className="w-full h-1.5 gap-[2px] overflow-visible" />
                         </div>
                     </div>
                 </motion.div>
