@@ -276,7 +276,7 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
 
     const textVariants = useMemo(() => ({
         initial: { y: 30, opacity: 0, filter: 'blur(4px)' },
-        hover: { y: -8, opacity: 1, filter: 'blur(0px)', transition: { duration: 0.2, delay: 0.05 } }
+        hover: { y: 0, opacity: 1, filter: 'blur(0px)', transition: { duration: 0.2, delay: 0.05 } }
     }), []);
 
     return (

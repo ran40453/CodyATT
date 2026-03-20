@@ -404,7 +404,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
                 <motion.div
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="neumo-card p-6 flex flex-col gap-6"
+                    className="neumo-card p-6 flex flex-col gap-4"
                 >
                     <div className="flex justify-between items-start">
                         <div className="flex items-center gap-2 text-gray-400">
@@ -413,19 +413,10 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
                             </div>
                             <h2 className="text-xs font-black uppercase tracking-widest">本月薪資分布</h2>
                         </div>
-                        {/* Big Amount */}
-                        <div className="text-right">
-                            <div
-                                onClick={() => setShowSalary(!showSalary)}
-                                className="text-4xl lg:text-5xl font-black text-[#202731] tracking-tighter cursor-pointer hover:opacity-80 transition-opacity select-none leading-none"
-                            >
-                                {(isPrivacy || !showSalary) ? '••••' : '$' + Math.round(monthMetrics.estimatedTotal).toLocaleString()}
-                            </div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1 block">Total Estimated</span>
-                        </div>
                     </div>
 
-                        <div className="mt-14 h-24 w-full flex gap-1 rounded-2xl overflow-visible neumo-pressed p-1.5 bg-gray-100/50 relative z-10">
+                    <div className="flex items-center gap-4 mt-6">
+                        <div className="flex-1 h-24 flex gap-1 rounded-2xl overflow-visible neumo-pressed p-1.5 bg-gray-100/50 relative z-10">
                             {!isPrivacy ? (
                                 <div className="absolute inset-x-0 -top-12 flex w-full h-10 px-2">
                                     <SalaryLabel label="底薪" value={monthMetrics.baseMonthly} total={monthMetrics.estimatedTotal} color="bg-sky-400" mask={mask} />
@@ -448,7 +439,17 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
                             )}
                         </div>
 
-                    {/* Legend removed in favor of floating labels */}
+                        {/* Big Amount moved here */}
+                        <div className="shrink-0 text-right min-w-[100px] lg:min-w-[140px]">
+                            <div
+                                onClick={() => setShowSalary(!showSalary)}
+                                className="text-3xl lg:text-4xl font-black text-[#202731] tracking-tighter cursor-pointer hover:opacity-80 transition-opacity select-none leading-none"
+                            >
+                                {(isPrivacy || !showSalary) ? '••••' : '$' + Math.round(monthMetrics.estimatedTotal).toLocaleString()}
+                            </div>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1 block">Total Estimated</span>
+                        </div>
+                    </div>
                 </motion.div>
 
                 {/* 2. Secondary Grid: OT, Toolbox, Battery (Redesigned Blocks) */}

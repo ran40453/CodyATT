@@ -59,9 +59,10 @@ export default function InteractiveAttendanceBar({ attendanceBoxes, today, class
                 }
 
                 return (
-                    <div
+                    <motion.div
                         key={idx}
-                        className="flex-1 h-full relative group cursor-pointer overflow-visible"
+                        whileHover="hovered"
+                        className="flex-1 h-full relative cursor-pointer overflow-visible"
                         style={{ minWidth: 0, touchAction: 'none' }}
                     >
                         <motion.div
@@ -69,10 +70,12 @@ export default function InteractiveAttendanceBar({ attendanceBoxes, today, class
                             animate={{
                                 backgroundColor: hexBg,
                             }}
-                            whileHover={{
-                                scale: 1.2,
-                                backgroundColor: "#a855f7",
-                                zIndex: 50
+                            variants={{
+                                hovered: {
+                                    scale: 1.2,
+                                    backgroundColor: "#a855f7",
+                                    zIndex: 50
+                                }
                             }}
                             className={cn(
                                 "absolute w-full h-full pointer-events-none",
@@ -88,7 +91,9 @@ export default function InteractiveAttendanceBar({ attendanceBoxes, today, class
                         {/* Hover indicator point */}
                         <motion.div
                             initial={{ opacity: 0, scale: 0 }}
-                            whileHover={{ opacity: 1, scale: 1 }}
+                            variants={{
+                                hovered: { opacity: 1, scale: 1 }
+                            }}
                             className="absolute z-50 pointer-events-none flex items-center justify-center"
                             style={{
                                 top: '50%',
@@ -107,7 +112,7 @@ export default function InteractiveAttendanceBar({ attendanceBoxes, today, class
                                 {format(box.day, 'dd')}
                             </span>
                         </motion.div>
-                    </div>
+                    </motion.div>
                 )
             })}
         </div>
