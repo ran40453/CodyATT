@@ -386,12 +386,12 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
                         </div>
                     </div>
 
-                    {/* Bottom Grid of Squares (Light Gray Internal BG) */}
-                    <div className="mt-2 flex-1 rounded-xl bg-gray-100/90 backdrop-blur-sm p-1.5 flex shadow-inner group-hover:shadow-lg transition-all duration-300 relative z-20 overflow-visible">
+                    {/* Bottom Grid of Squares (Track) */}
+                    <div className="mt-2 h-5 rounded-lg bg-gray-100/90 backdrop-blur-sm p-1 flex items-center shadow-inner group-hover:shadow-lg transition-all duration-300 relative z-20 overflow-visible">
                         <InteractiveAttendanceBar
                             attendanceBoxes={attendanceBoxes}
                             today={today}
-                            className="w-full h-full gap-1 overflow-visible"
+                            className="w-full h-1.5 gap-1 overflow-visible"
                         />
                     </div>
                 </div>

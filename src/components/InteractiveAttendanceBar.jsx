@@ -29,7 +29,7 @@ export default function InteractiveAttendanceBar({ attendanceBoxes, today, class
 
     return (
         <div
-            className={cn("flex items-center justify-between relative select-none h-1.5 overflow-visible", className)}
+            className={cn("flex items-center justify-between relative select-none h-1.5 gap-[1px] overflow-visible", className)}
             style={{
                 touchAction: 'none',
                 WebkitTouchCallout: 'none',
@@ -66,10 +66,6 @@ export default function InteractiveAttendanceBar({ attendanceBoxes, today, class
                         style={{ minWidth: 0, touchAction: 'none' }}
                     >
                         <motion.div
-                            initial="initial"
-                            animate={{
-                                backgroundColor: hexBg,
-                            }}
                             variants={{
                                 initial: {
                                     borderRadius: 2,
@@ -78,34 +74,34 @@ export default function InteractiveAttendanceBar({ attendanceBoxes, today, class
                                     scale: 1,
                                     y: 0,
                                     zIndex: 10,
-                                    aspectRatio: 'auto'
+                                    backgroundColor: hexBg,
                                 },
                                 hovered: {
-                                    borderRadius: '999px',
-                                    height: 'auto',
+                                    borderRadius: '50%',
+                                    // Use a trick to ensure height matches width for a perfect circle
                                     aspectRatio: '1 / 1',
-                                    scale: 2,
+                                    height: 'auto',
+                                    scale: 2.2, // Slightly larger for clarity
                                     zIndex: 50,
                                     y: '-50%',
                                     top: '50%',
                                     backgroundColor: "#a855f7",
-                                    boxShadow: '0 4px 12px rgba(168, 85, 247, 0.3)',
+                                    boxShadow: '0 8px 16px rgba(168, 85, 247, 0.4)',
                                     border: '1.5px solid white'
                                 }
                             }}
-                            className={cn(
-                                "absolute top-0 left-0 w-full flex items-center justify-center pointer-events-none transition-colors duration-300",
-                                isPastOrToday && box.type === 'attendance' ? "shadow-sm" : ""
-                            )}
+                            initial="initial"
+                            animate="initial" // Force initial state to clear any stuck animations
+                            className="absolute top-0 left-0 w-full flex items-center justify-center pointer-events-none"
                         >
                             <motion.span 
                                 variants={{
                                     initial: { opacity: 0, scale: 0 },
-                                    hovered: { opacity: 1, scale: 0.8 }
+                                    hovered: { opacity: 1, scale: 0.7 }
                                 }}
-                                className="text-[10px] font-black text-white pointer-events-none"
+                                className="text-[10px] font-black text-white pointer-events-none select-none"
                             >
-                                {format(box.day, 'dd')}
+                                {format(boxDay, 'dd')}
                             </motion.span>
                         </motion.div>
                     </motion.div>
