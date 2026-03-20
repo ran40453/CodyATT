@@ -425,22 +425,28 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
                         </div>
                     </div>
 
-                    {/* Custom Block Chart (CSS Grid) with Floated Guide Labels */}
-                    {/* Added mt-8 to give space for floating labels above */}
-                    <div className="mt-8 h-16 w-full flex gap-1 rounded-2xl overflow-visible neumo-pressed p-1.5 bg-gray-100/50 relative z-10">
-                        {(!isPrivacy && showSalary) ? (
-                            <>
-                                <BlockBar label="底薪" value={monthMetrics.baseMonthly} total={monthMetrics.estimatedTotal} color="bg-sky-400" mask={mask} />
-                                <BlockBar label="加班" value={monthMetrics.otPay} total={monthMetrics.estimatedTotal} color="bg-orange-500" mask={mask} />
-                                <BlockBar label="津貼" value={monthMetrics.travelAllowance} total={monthMetrics.estimatedTotal} color="bg-emerald-500" mask={mask} />
-                                <BlockBar label="獎金" value={monthMetrics.bonus} total={monthMetrics.estimatedTotal} color="bg-amber-500" mask={mask} />
-                            </>
-                        ) : (
-                            <div className="w-full h-full bg-gray-200/50 rounded-xl flex items-center justify-center animate-pulse">
-                                <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Hidden</span>
-                            </div>
-                        )}
-                    </div>
+                        <div className="mt-14 h-24 w-full flex gap-1 rounded-2xl overflow-visible neumo-pressed p-1.5 bg-gray-100/50 relative z-10">
+                            {!isPrivacy ? (
+                                <div className="absolute inset-x-0 -top-12 flex w-full h-10 px-2">
+                                    <SalaryLabel label="底薪" value={monthMetrics.baseMonthly} total={monthMetrics.estimatedTotal} color="bg-sky-400" mask={mask} />
+                                    <SalaryLabel label="加班" value={monthMetrics.otPay} total={monthMetrics.estimatedTotal} color="bg-orange-500" mask={mask} />
+                                    <SalaryLabel label="津貼" value={monthMetrics.travelAllowance} total={monthMetrics.estimatedTotal} color="bg-emerald-500" mask={mask} />
+                                    <SalaryLabel label="獎金" value={monthMetrics.bonus} total={monthMetrics.estimatedTotal} color="bg-amber-500" mask={mask} />
+                                </div>
+                            ) : null}
+                            {!isPrivacy ? (
+                                <>
+                                    <BlockBar value={monthMetrics.baseMonthly} total={monthMetrics.estimatedTotal} color="bg-sky-400" />
+                                    <BlockBar value={monthMetrics.otPay} total={monthMetrics.estimatedTotal} color="bg-orange-500" />
+                                    <BlockBar value={monthMetrics.travelAllowance} total={monthMetrics.estimatedTotal} color="bg-emerald-500" />
+                                    <BlockBar value={monthMetrics.bonus} total={monthMetrics.estimatedTotal} color="bg-amber-500" />
+                                </>
+                            ) : (
+                                <div className="w-full h-full bg-gray-200/50 rounded-xl flex items-center justify-center animate-pulse">
+                                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Hidden</span>
+                                </div>
+                            )}
+                        </div>
 
                     {/* Legend removed in favor of floating labels */}
                 </motion.div>
@@ -532,7 +538,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
 }
 
 // Helper Components for Redesign
-function BlockBar({ label, value, total, color, mask }) {
+function BlockBar({ value, total, color }) {
     const percent = total > 0 ? (value / total) * 100 : 0;
     if (percent === 0) return null;
 
@@ -540,25 +546,38 @@ function BlockBar({ label, value, total, color, mask }) {
         <motion.div
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: `${percent}%`, opacity: 1 }}
-            transition={{ duration: 1, ease: "easeOut" }}
-            className={cn("h-full rounded-xl relative group", color)}
+            transition={{ type: "spring", stiffness: 350, damping: 30, mass: 0.5 }}
+            className={cn("h-full rounded-xl relative group flex-shrink-0", color)}
         >
             <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
-
-            {/* Guide Line & Label (Floating) */}
-            <div className="absolute bottom-full right-0 mb-1 flex flex-col items-end z-20 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity duration-300 origin-bottom scale-y-90 group-hover:scale-y-100">
-                {/* Label Container */}
-                <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-md px-2 py-1 rounded-lg shadow-sm border border-gray-100 mb-0.5 whitespace-nowrap">
-                    <div className={cn("w-1.5 h-1.5 rounded-full", color)} />
-                    <span className="text-[9px] font-black text-gray-500 uppercase tracking-wide">{label}</span>
-                    <span className="text-[10px] font-black text-gray-800">{mask('$' + Math.round(value / 1000) + 'k')}</span>
-                </div>
-                {/* Line */}
-                <div className={cn("w-0.5 h-3 rounded-full opacity-50", color)}></div>
-            </div>
         </motion.div>
     )
+}
+
+function SalaryLabel({ label, value, total, color, mask }) {
+    const percent = total > 0 ? (value / total) * 100 : 0;
+    if (percent === 0 || value < 100) return null; // Hide if too small
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3, type: "spring", stiffness: 300, damping: 30 }}
+            style={{ width: `${percent}%` }}
+            className="h-full flex flex-col items-center justify-end relative group relative flex-shrink-0"
+        >
+            <div className="flex flex-col items-center whitespace-nowrap -mb-1">
+                <div className="flex items-center gap-1 bg-white/95 backdrop-blur-md px-1.5 py-0.5 rounded-lg shadow-sm border border-gray-100 mb-0.5">
+                    <div className={cn("w-1.5 h-1.5 rounded-full", color)} />
+                    <span className="text-[8px] font-black text-gray-500 uppercase">{label}</span>
+                    <span className="text-[9px] font-black text-gray-800">{mask('$' + Math.round(value / 1000) + 'k')}</span>
+                </div>
+                {/* Precise connecting line */}
+                <div className={cn("w-0.5 h-2.5 rounded-full opacity-40", color)}></div>
+            </div>
+        </motion.div>
+    );
 }
 
 function LegendBlock({ label, value, color, privacy, mask }) {
@@ -599,7 +618,7 @@ function FilledStatsBlock({ label, icon: Icon, value, total, used, unit, color, 
                 <motion.div
                     initial={{ height: 0 }}
                     animate={{ height: `${percent}%` }}
-                    transition={{ duration: 1.2, type: "spring", bounce: 0.2 }}
+                    transition={{ delay: 0.1, type: "spring", stiffness: 300, damping: 30, mass: 0.5 }}
                     className={cn("absolute bottom-0 left-0 right-0 w-full opacity-90 shadow-[0_0_20px_rgba(0,0,0,0.1)] transition-all duration-300 group-hover:brightness-110 group-hover:saturate-110", color)}
                 />
 

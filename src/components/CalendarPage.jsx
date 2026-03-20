@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, subMonths, isSameDay, startOfWeek, endOfWeek, setMonth, setYear, getDay, eachMonthOfInterval, isToday, parseISO } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, subMonths, isSameDay, startOfWeek, endOfWeek, setMonth, setYear, isToday, parseISO } from 'date-fns'
 import { ChevronLeft, ChevronRight, Calendar, Grid3X3 } from 'lucide-react'
-import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion'
-import { loadData, addOrUpdateRecord, fetchRecordsFromGist, deleteRecord, loadSettings, fetchExchangeRate } from '../lib/storage'
+import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion'
+import { loadSettings, fetchExchangeRate } from '../lib/storage'
 import { isTaiwanHoliday } from '../lib/holidays'
-import { cn } from '../lib/utils'
-import CalendarMonthGrid from './CalendarMonthGrid'
+import CalendarMonthGrid, { CalendarOverlay } from './CalendarMonthGrid'
 import InteractiveAttendanceBar from './InteractiveAttendanceBar'
-
 import HeaderActions from './HeaderActions'
 
 function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsClick }) {
@@ -16,6 +14,8 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
     const [isYearView, setIsYearView] = useState(false)
     const [settings, setSettings] = useState(null)
     const [liveRate, setLiveRate] = useState(null)
+    const [modalTop, setModalTop] = useState('140px')
+    const bannerRef = useRef(null)
 
     useEffect(() => {
         const init = async () => {
@@ -39,7 +39,6 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
         return new Date(d);
     }
 
-    // Hash Map for O(1) Record Lookups
     const dataMap = useMemo(() => {
         const map = new Map();
         data.forEach(r => {
@@ -51,42 +50,39 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
         return map;
     }, [data]);
 
-    // Swipe Logic
     const x = useMotionValue(0);
     const containerRef = useRef(null);
     const [containerWidth, setContainerWidth] = useState(0);
 
     useEffect(() => {
-        if (containerRef.current) {
-            setContainerWidth(containerRef.current.offsetWidth);
-        }
-        const handleResize = () => {
+        const updatePos = () => {
             if (containerRef.current) setContainerWidth(containerRef.current.offsetWidth);
+            if (bannerRef.current) {
+                const rect = bannerRef.current.getBoundingClientRect();
+                setModalTop(`${rect.bottom}px`);
+            }
         };
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        updatePos();
+        window.addEventListener('resize', updatePos);
+        return () => window.removeEventListener('resize', updatePos);
     }, []);
 
-    // Snap to center (-100%) initially and after reset
     useEffect(() => {
         if (containerWidth > 0) {
             x.set(-containerWidth);
         }
-    }, [containerWidth, currentDate]); // Reset on currentDate change
+    }, [containerWidth, currentDate]);
 
     const handleDragEnd = (e, { offset, velocity }) => {
         const threshold = containerWidth * 0.25;
         const swipe = offset.x;
-
-        let targetX = -containerWidth; // Back to center
+        let targetX = -containerWidth;
         let newDate = currentDate;
 
         if (swipe > threshold || velocity.x > 500) {
-            // Swipe Right -> Prev Month
             targetX = 0;
             newDate = subMonths(currentDate, 1);
         } else if (swipe < -threshold || velocity.x < -500) {
-            // Swipe Left -> Next Month
             targetX = -containerWidth * 2;
             newDate = addMonths(currentDate, 1);
         }
@@ -96,47 +92,19 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
             stiffness: 300,
             damping: 30,
             onComplete: () => {
-                if (newDate !== currentDate) {
-                    setCurrentDate(newDate);
-                    setFocusedDay(null); // Close overlay on swipe
-                    // x will be reset by useEffect logic or we can force it here
-                    // actually useEffect [currentDate] will reset it.
-                    // But to avoid flicker, we should rely on React render cycle.
-                    // When currentDate changes, the component re-renders. 
-                    // The useEffect [currentDate] sets x to -width. 
-                    // Since it's 'motion value' it might not trigger react render but framer handles it.
-                }
+                if (newDate !== currentDate) setCurrentDate(newDate);
             }
         });
     };
-
-    // Prevent default touch actions (scrolling) when dragging horizontally?
-    // Actually we want vertical scrolling.
-    // framer-motion drag="x" handles this usually.
-
-    const handleUpdateRecord = (updatedRecord) => {
-        onUpdate(updatedRecord)
-    }
-
-    // Selectors Data
-    const today = new Date()
-    const currentYear = today.getFullYear()
-    const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i)
-    const months = Array.from({ length: 12 }, (_, i) => i)
 
     const handleMonthChange = (e) => {
         setCurrentDate(setMonth(currentDate, parseInt(e.target.value)))
     }
 
-    // Helper to get record (passed to YearView for legacy if needed, but we'll adapt it)
-    const getRecordForDay = (day) => {
-        const dayStr = format(day, 'yyyy-MM-dd')
-        return dataMap.get(dayStr)
-    }
+    // handleSelectDate removed to decouple components
 
     const mask = (val) => isPrivacy ? '••••' : val;
 
-    // Attendance Grid Data for currentDate
     const currentMonthInterval = { start: startOfMonth(currentDate), end: endOfMonth(currentDate) };
     const currentMonthDays = eachDayOfInterval(currentMonthInterval);
 
@@ -144,18 +112,13 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
         const dayStr = format(day, 'yyyy-MM-dd');
         const record = dataMap.get(dayStr);
         let type = 'none';
-
         if (record) {
             type = record.isLeave ? 'leave' : 'attendance';
         } else {
-            // Apply implicit weekday attendance assumption
             const isHoliday = isTaiwanHoliday(day);
             const isWeekday = day.getDay() >= 1 && day.getDay() <= 5;
-            const isPastOrToday = day <= today || isSameDay(day, today);
-
-            if (!isHoliday && isWeekday && isPastOrToday) {
-                type = 'attendance';
-            }
+            const isPastOrToday = day <= new Date() || isSameDay(day, new Date());
+            if (!isHoliday && isWeekday && isPastOrToday) type = 'attendance';
         }
         return { day, type };
     });
@@ -164,10 +127,15 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
     const totalDaysCount = attendanceBoxes.length;
     const attendedPercent = totalDaysCount > 0 ? Math.round((attendedCount / totalDaysCount) * 100) : 0;
 
+    const years = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
+    const months = Array.from({ length: 12 }, (_, i) => i);
+
+    const prevMonth = subMonths(currentDate, 1);
+    const nextMonth = addMonths(currentDate, 1);
+
     return (
-        <div className="space-y-4 relative">
-            {/* Month Header */}
-            <header className="flex justify-between items-end px-1 mb-2">
+        <div className="relative bg-[#E0E5EC] min-h-screen">
+            <header className="flex justify-between items-end px-4 pt-4 mb-2">
                 <div className="space-y-1">
                     <h1 className="text-3xl font-black tracking-tight text-[#202731]">Calendar</h1>
                     <p className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-400">Monthly View</p>
@@ -178,194 +146,108 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
                     togglePrivacy={togglePrivacy || setIsPrivacy}
                     onSettingsClick={onSettingsClick}
                 >
-                    {/* Header Controls for Calendar */}
-                    <button
-                        onClick={() => { setCurrentDate(new Date()); setIsYearView(false); }}
-                        className="neumo-button p-2 text-neumo-brand hover:bg-gray-100/50"
-                        title="跳至本月"
-                    >
+                    <button onClick={() => { setCurrentDate(new Date()); setIsYearView(false); }} className="neumo-button p-2 text-neumo-brand hover:bg-gray-100/50">
                         <Calendar size={18} />
                     </button>
-                    <button
-                        onClick={() => setIsYearView(!isYearView)}
-                        className={`neumo-button p-2 hidden md:flex hover:bg-gray-100/50 ${isYearView ? 'text-neumo-brand' : 'text-gray-400'}`}
-                        title="年曆模式"
-                    >
+                    <button onClick={() => setIsYearView(!isYearView)} className={`neumo-button p-2 hidden md:flex hover:bg-gray-100/50 ${isYearView ? 'text-neumo-brand' : 'text-gray-400'}`}>
                         <Grid3X3 size={18} />
                     </button>
                 </HeaderActions>
             </header>
 
-            {/* Compact Attendance Block */}
             {!isYearView && (
-                <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="neumo-card p-1 bg-purple-500 overflow-hidden relative group"
-                >
-                    <div className="absolute inset-0 bg-purple-500 z-0 transition-all duration-500 group-hover:brightness-105" />
-                    <div className="relative z-10 w-full h-14 flex flex-col justify-between p-2.5">
+                <motion.div ref={bannerRef} className="mx-4 neumo-card p-1 bg-purple-500 overflow-hidden relative group">
+                    <div className="absolute inset-0 bg-purple-500 z-0" />
+                    <div className="relative z-10 w-full flex flex-col justify-between p-2.5">
                         <div className="flex justify-between items-center mb-1">
                             <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-black text-white/90 uppercase tracking-widest drop-shadow-sm">本月出勤</span>
-                                <span className="text-[10px] font-black text-white drop-shadow-sm">{mask(format(currentDate, 'yyyy / MM'))}</span>
+                                <span className="text-[9px] font-black text-white/90 uppercase tracking-widest">本月出勤</span>
+                                <span className="text-[10px] font-black text-white">{mask(format(currentDate, 'yyyy / MM'))}</span>
                             </div>
-                            <span className="text-xl font-black text-white drop-shadow-md tracking-tighter leading-none">
-                                {mask(String(attendedPercent))}<span className="text-xs align-top">%</span>
-                            </span>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-1 bg-white/20 backdrop-blur-md rounded-xl p-0.5 px-1.5 shadow-sm">
+                                    <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-1 hover:scale-110 text-white">
+                                        <ChevronLeft size={16} strokeWidth={3} />
+                                    </button>
+                                    <select value={currentDate.getFullYear()} onChange={(e) => setCurrentDate(setYear(currentDate, parseInt(e.target.value)))} className="bg-transparent text-[11px] font-black text-white focus:outline-none appearance-none px-1">
+                                        {years.map(y => <option key={y} value={y} className="text-gray-800">{y}</option>)}
+                                    </select>
+                                    <span className="text-white/40 text-[10px] font-bold">/</span>
+                                    <select value={currentDate.getMonth()} onChange={handleMonthChange} className="bg-transparent text-[11px] font-black text-white focus:outline-none appearance-none px-1">
+                                        {months.map(m => <option key={m} value={m} className="text-gray-800">{format(new Date(2024, m), 'MM')}</option>)}
+                                    </select>
+                                    <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-1 hover:scale-110 text-white">
+                                        <ChevronRight size={16} strokeWidth={3} />
+                                    </button>
+                                </div>
+                                <span className="text-xl font-black text-white drop-shadow-md">
+                                    {mask(String(attendedPercent))}<span className="text-xs align-top">%</span>
+                                </span>
+                            </div>
                         </div>
-                        <div className="flex-1 rounded-md bg-gray-100/90 p-1 flex shadow-inner group-hover:shadow-lg transition-all duration-300 relative z-20">
-                            <InteractiveAttendanceBar attendanceBoxes={attendanceBoxes} today={today} className="w-full h-full gap-[2px]" />
+                        <div className="h-10 rounded-md bg-gray-100/90 p-1 flex shadow-inner">
+                            <InteractiveAttendanceBar attendanceBoxes={attendanceBoxes} today={new Date()} className="w-full h-full gap-[2px]" />
                         </div>
                     </div>
                 </motion.div>
             )}
 
-            <div className="flex justify-between items-center bg-[#E0E5EC] neumo-raised rounded-3xl p-4 z-20 relative">
-                <div className="flex items-center gap-2">
-                    <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="neumo-button p-2">
-                        <ChevronLeft size={20} />
-                    </button>
-                    <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="neumo-button p-2">
-                        <ChevronRight size={20} />
-                    </button>
-                    <div className="w-px h-6 bg-gray-300 mx-2"></div>
-                    <div className="relative">
-                        <select value={currentDate.getFullYear()} onChange={(e) => setCurrentDate(setYear(currentDate, parseInt(e.target.value)))}
-                            className="appearance-none bg-transparent font-extrabold uppercase tracking-widest text-[#202731] py-1 px-4 neumo-pressed rounded-xl focus:outline-none cursor-pointer text-sm">
-                            {years.map(y => <option key={y} value={y}>{y}</option>)}
-                        </select>
-                    </div>
-                    <span className="text-gray-300 font-black">/</span>
-                    <div className="relative">
-                        <select value={currentDate.getMonth()} onChange={handleMonthChange}
-                            className="appearance-none bg-transparent font-extrabold uppercase tracking-widest text-[#202731] py-1 px-4 neumo-pressed rounded-xl focus:outline-none cursor-pointer text-sm">
-                            {months.map(m => <option key={m} value={m}>{format(new Date(2024, m), 'MM')}</option>)}
-                        </select>
-                    </div>
-                </div>
-            </div>
-
             {isYearView ? (
-                <YearView
-                    year={currentDate.getFullYear()}
-                    dataMap={dataMap}
-                    onSelectMonth={(m) => { setCurrentDate(setMonth(setYear(new Date(), currentDate.getFullYear()), m)); setIsYearView(false); }}
-                />
+                <YearView year={currentDate.getFullYear()} dataMap={dataMap} onSelectMonth={(m) => { setCurrentDate(setMonth(setYear(new Date(), currentDate.getFullYear()), m)); setIsYearView(false); }} />
             ) : (
-                <div ref={containerRef} className="relative overflow-hidden w-full">
-                    {/* Swipe Container */}
-                    <motion.div
-                        style={{ x, width: '300%', display: 'flex' }}
-                        drag="x"
-                        dragConstraints={{ left: -containerWidth * 2, right: 0 }} // Constraints roughly
-                        dragElastic={0.2} // Magnetic feel
-                        onDragEnd={handleDragEnd}
-                        className="touch-pan-y" // Allow vertical scroll, handle horizontal in JS
-                    >
-                        {/* Prev Month */}
-                        <div className="w-1/3 flex-shrink-0 px-1">
-                            {containerWidth > 0 && (
-                                <CalendarMonthGrid
-                                    monthDate={subMonths(currentDate, 1)}
-                                    dataMap={dataMap}
-                                    settings={{ ...settings, liveRate }}
-                                    onUpdate={handleUpdateRecord}
-                                    onDelete={onDelete}
-                                    isPrivacy={isPrivacy}
-                                    focusedDay={null} // Don't focus off-screen
-                                    setFocusedDay={() => { }}
-                                />
-                            )}
+                <div ref={containerRef} className="relative overflow-hidden w-full h-full">
+                    <motion.div style={{ x, width: '300%', display: 'flex' }} drag="x" dragConstraints={{ left: -containerWidth * 2, right: 0 }} dragElastic={0.2} onDragEnd={handleDragEnd}>
+                        <div style={{ width: containerWidth }} className="shrink-0 px-4">
+                            <CalendarMonthGrid monthDate={prevMonth} dataMap={dataMap} settings={settings} onUpdate={onUpdate} onDelete={onUpdate} isPrivacy={isPrivacy} onDayClick={setFocusedDay} modalTop={modalTop} />
                         </div>
-
-                        {/* Current Month */}
-                        <div className="w-1/3 flex-shrink-0 px-1">
-                            <CalendarMonthGrid
-                                monthDate={currentDate}
-                                dataMap={dataMap}
-                                settings={{ ...settings, liveRate }}
-                                onUpdate={handleUpdateRecord}
-                                onDelete={onDelete}
-                                isPrivacy={isPrivacy}
-                                focusedDay={focusedDay}
-                                setFocusedDay={setFocusedDay}
-                            />
+                        <div style={{ width: containerWidth }} className="shrink-0 px-4">
+                            <CalendarMonthGrid monthDate={currentDate} dataMap={dataMap} settings={settings} onUpdate={onUpdate} onDelete={onUpdate} isPrivacy={isPrivacy} onDayClick={setFocusedDay} modalTop={modalTop} />
                         </div>
-
-                        {/* Next Month */}
-                        <div className="w-1/3 flex-shrink-0 px-1">
-                            {containerWidth > 0 && (
-                                <CalendarMonthGrid
-                                    monthDate={addMonths(currentDate, 1)}
-                                    dataMap={dataMap}
-                                    settings={{ ...settings, liveRate }}
-                                    onUpdate={handleUpdateRecord}
-                                    onDelete={onDelete}
-                                    isPrivacy={isPrivacy}
-                                    focusedDay={null}
-                                    setFocusedDay={() => { }}
-                                />
-                            )}
+                        <div style={{ width: containerWidth }} className="shrink-0 px-4">
+                            <CalendarMonthGrid monthDate={nextMonth} dataMap={dataMap} settings={settings} onUpdate={onUpdate} onDelete={onUpdate} isPrivacy={isPrivacy} onDayClick={setFocusedDay} modalTop={modalTop} />
                         </div>
                     </motion.div>
                 </div>
             )}
+
+            <AnimatePresence>
+                {focusedDay && (
+                    <CalendarOverlay
+                        day={focusedDay}
+                        record={dataMap.get(format(focusedDay, 'yyyy-MM-dd'))}
+                        onUpdate={onUpdate}
+                        onDelete={onDelete}
+                        onClose={() => setFocusedDay(null)}
+                        settings={settings}
+                        modalTop={modalTop}
+                        isPrivacy={isPrivacy}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     )
 }
 
 function YearView({ year, dataMap, onSelectMonth }) {
     const yearMonths = Array.from({ length: 12 }, (_, i) => new Date(year, i, 1));
-
-    const getRecordForDate = (date) => {
-        const dayStr = format(date, 'yyyy-MM-dd');
-        return dataMap.get(dayStr);
-    };
-
+    const getRecord = (date) => dataMap.get(format(date, 'yyyy-MM-dd'));
     return (
-        <div className="grid grid-cols-4 gap-4 mt-4">
-            {yearMonths.map((monthDate, mi) => {
-                const mStart = startOfMonth(monthDate);
-                const mEnd = endOfMonth(monthDate);
-                const wStart = startOfWeek(mStart);
-                const wEnd = endOfWeek(mEnd);
-                const mDays = eachDayOfInterval({ start: wStart, end: wEnd });
-
-                return (
-                    <div
-                        key={mi}
-                        className="neumo-card p-3 cursor-pointer hover:shadow-lg transition-shadow"
-                        onClick={() => onSelectMonth(mi)}
-                    >
-                        <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest text-center mb-2">
-                            {format(monthDate, 'MMM')}
-                        </div>
-                        <div className="grid grid-cols-7 gap-[2px]">
-                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                                <div key={i} className="text-[6px] font-bold text-gray-300 text-center">{d}</div>
-                            ))}
-                            {mDays.map((day, di) => {
-                                const inMonth = isSameMonth(day, mStart);
-                                const record = inMonth ? getRecordForDate(day) : null;
-                                const todayMatch = isToday(day);
-                                let bg = 'bg-transparent';
-                                if (record && record.isLeave) bg = 'bg-rose-400';
-                                else if (record) bg = 'bg-green-400';
-                                else if (isTaiwanHoliday(day) && inMonth) bg = 'bg-orange-200';
-
-                                return (
-                                    <div key={di} className={`text-[7px] text-center rounded-sm leading-4 ${inMonth ? 'text-gray-600' : 'text-gray-200'} ${bg} ${todayMatch && inMonth ? 'ring-1 ring-blue-500 font-black' : ''}`}>
-                                        {format(day, 'd')}
-                                    </div>
-                                );
-                            })}
-                        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-4">
+            {yearMonths.map((m, mi) => (
+                <div key={mi} className="neumo-card p-3 cursor-pointer" onClick={() => onSelectMonth(mi)}>
+                    <div className="text-center font-black text-gray-500 uppercase text-[10px] mb-2">{format(m, 'MMM')}</div>
+                    <div className="grid grid-cols-7 gap-1">
+                        {eachDayOfInterval({ start: startOfWeek(startOfMonth(m)), end: endOfWeek(endOfMonth(m)) }).map((d, di) => {
+                            const record = isSameMonth(d, m) ? getRecord(d) : null;
+                            let bg = 'bg-transparent';
+                            if (record) bg = record.isLeave ? 'bg-rose-400' : 'bg-green-400';
+                            return <div key={di} className={`w-2 h-2 rounded-full ${bg}`} />
+                        })}
                     </div>
-                );
-            })}
+                </div>
+            ))}
         </div>
-    );
+    )
 }
 
 export default CalendarPage

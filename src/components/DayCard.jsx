@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { format, isToday, getDay, isAfter, startOfDay } from 'date-fns'
+import React from 'react'
+import { format, isToday, getDay, isAfter, startOfDay, isSameDay } from 'date-fns'
 import { motion } from 'framer-motion'
 import { Palmtree, Moon, DollarSign, Coffee, MessageSquare } from 'lucide-react'
 import { cn } from '../lib/utils'
@@ -57,14 +57,13 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy, setti
         <motion.div
             layout
             onClick={() => onClick && onClick(day)}
+            whileHover={{ backgroundColor: "#f3e8ff", scale: 0.98 }}
             className={cn(
-                "neumo-card transition-all flex flex-col p-2 md:p-3 relative h-20 md:h-28", // Fixed height for predictability
+                "neumo-card rounded-xl md:rounded-3xl transition-all flex flex-col p-2 md:p-3 relative h-20 md:h-28", 
                 isToday(day) && "ring-2 ring-neumo-brand/40",
-                isHoliday && "bg-rose-50/10",
                 isLeave && "opacity-60",
-                isSunday && "bg-[#e0f2fe]/40 text-sky-900",
                 !isSunday && isAfter(startOfDay(day), startOfDay(new Date())) && "bg-gray-100/50 grayscale-[0.5]",
-                "cursor-pointer overflow-hidden hover:scale-[0.98] active:scale-95 group",
+                "cursor-pointer overflow-hidden active:scale-95 group",
                 !isCurrentMonth && "opacity-10 pointer-events-none scale-95"
             )}
         >
@@ -89,15 +88,10 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy, setti
                 {/* Right Top: Desktop Price Pill */}
                 <div className="hidden md:flex flex-col items-end gap-1">
                     {dailySalary > 0 && !isLeave && (!isSunday && !isSaturday || isWorkDay || otHours > 0 || travelCountry) && (
-                        <div className={cn(
-                            "backdrop-blur-sm px-2 py-0.5 rounded-full border shadow-sm",
-                            (salaryMetrics?.bonus > 0 || record?.bonus > 0)
-                                ? "bg-yellow-100/80 border-yellow-200"
-                                : "bg-white/80 border-gray-100"
-                        )}>
+                        <div className="px-1 items-end flex flex-col">
                             <span className={cn(
                                 "text-[10px] font-black tabular-nums",
-                                (salaryMetrics?.bonus > 0 || record?.bonus > 0) ? "text-yellow-700" : "text-gray-500"
+                                (salaryMetrics?.bonus > 0 || record?.bonus > 0) ? "text-yellow-600" : "text-gray-400"
                             )}>
                                 {mask('$' + Math.round(dailySalary).toLocaleString())}
                             </span>

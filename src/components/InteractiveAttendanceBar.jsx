@@ -3,13 +3,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
 
-export default function InteractiveAttendanceBar({ attendanceBoxes, today, className }) {
+export default function InteractiveAttendanceBar({ attendanceBoxes, today, className, onSelectDate }) {
     const [activeIdx, setActiveIdx] = useState(null);
     const timeoutRef = useRef(null);
 
     const activateNode = (idx) => {
         if (idx !== null && idx >= 0 && idx < attendanceBoxes.length) {
             setActiveIdx(idx);
+            
+            // Trigger highlight in parent
+            if (onSelectDate) {
+                onSelectDate(attendanceBoxes[idx].day);
+            }
+
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
             timeoutRef.current = setTimeout(() => {
                 setActiveIdx(null);
@@ -19,21 +25,11 @@ export default function InteractiveAttendanceBar({ attendanceBoxes, today, class
         }
     };
 
-    const handlePointerMove = (e) => {
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-        const el = document.elementFromPoint(clientX, clientY);
-        const node = el?.closest('[data-idx]');
-        if (node) {
-            activateNode(parseInt(node.dataset.idx, 10));
-        }
-    };
+    // Pure CSS/Motion hover effects below
 
     return (
         <div
-            className={cn("flex items-center justify-between relative select-none", className)}
-            onPointerMove={handlePointerMove}
+            className={cn("flex items-center justify-between relative select-none h-1.5 overflow-visible", className)}
             style={{
                 touchAction: 'none',
                 WebkitTouchCallout: 'none',
@@ -50,7 +46,6 @@ export default function InteractiveAttendanceBar({ attendanceBoxes, today, class
                 const isPast = boxDay < compareToday;
                 const isToday = boxDay.getTime() === compareToday.getTime();
                 const isPastOrToday = isPast || isToday;
-                const isActive = activeIdx === idx;
 
                 let hexBg = "#f3f4f6"; // default future/none (gray-100)
                 if (isPastOrToday) {
@@ -66,44 +61,51 @@ export default function InteractiveAttendanceBar({ attendanceBoxes, today, class
                 return (
                     <div
                         key={idx}
-                        data-idx={idx}
-                        onPointerDown={() => activateNode(idx)}
-                        onMouseEnter={() => activateNode(idx)}
-                        className="flex-1 h-full relative"
+                        className="flex-1 h-full relative group cursor-pointer overflow-visible"
                         style={{ minWidth: 0, touchAction: 'none' }}
                     >
                         <motion.div
                             initial={false}
                             animate={{
-                                width: isActive ? 24 : "100%",
-                                height: isActive ? 24 : "100%",
-                                borderRadius: isActive ? 12 : 2,
-                                x: "-50%",
-                                y: "-50%",
-                                backgroundColor: isActive ? "#a855f7" : hexBg,
+                                backgroundColor: hexBg,
+                            }}
+                            whileHover={{
+                                scale: 1.2,
+                                backgroundColor: "#a855f7",
+                                zIndex: 50
                             }}
                             className={cn(
-                                "absolute pointer-events-none",
+                                "absolute w-full h-full pointer-events-none",
                                 isPastOrToday && box.type === 'attendance' ? "shadow-sm" : ""
                             )}
                             style={{
-                                zIndex: isActive ? 50 : 1,
-                                top: "50%",
-                                left: "50%",
+                                top: 0,
+                                left: 0,
+                                borderRadius: 2
+                            }}
+                        />
+                        
+                        {/* Hover indicator point */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0 }}
+                            whileHover={{ opacity: 1, scale: 1 }}
+                            className="absolute z-50 pointer-events-none flex items-center justify-center"
+                            style={{
+                                top: '50%',
+                                left: '50%',
+                                x: '-50%',
+                                y: '-50%',
+                                width: 16,
+                                height: 16,
+                                borderRadius: '50%',
+                                backgroundColor: '#a855f7',
+                                border: '2px solid white',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                             }}
                         >
-                            <AnimatePresence>
-                                {isActive && (
-                                    <motion.span
-                                        initial={{ opacity: 0, scale: 0 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0 }}
-                                        className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white pointer-events-none drop-shadow-md"
-                                    >
-                                        {format(box.day, 'dd')}
-                                    </motion.span>
-                                )}
-                            </AnimatePresence>
+                            <span className="text-[8px] font-black text-white pointer-events-none">
+                                {format(box.day, 'dd')}
+                            </span>
                         </motion.div>
                     </div>
                 )

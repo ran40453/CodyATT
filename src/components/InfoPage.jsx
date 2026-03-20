@@ -14,7 +14,10 @@ function InfoPage() {
     const [selectedFile, setSelectedFile] = useState(null)
     const [loading, setLoading] = useState(true)
     const [isMobileListVisible, setIsMobileListVisible] = useState(true)
-    const [theme, setTheme] = useState('dark') // 'light' | 'dark'
+    const [theme, setTheme] = useState(() => {
+        const settings = loadSettings();
+        return settings.infoPageTheme || 'light';
+    }) // Initialized from settings to prevent FOUC
 
     // Editing State
     const [isEditing, setIsEditing] = useState(false)
@@ -55,11 +58,6 @@ function InfoPage() {
         const settings = loadSettings();
         const savedFolders = settings.infoPageFolders || {};
         setFolders(savedFolders);
-
-        // Load theme from settings
-        if (settings.infoPageTheme) {
-            setTheme(settings.infoPageTheme);
-        }
 
         // Default open all folders if first load
         const defaultOpen = Object.keys(savedFolders).reduce((acc, key) => ({ ...acc, [key]: true }), {});

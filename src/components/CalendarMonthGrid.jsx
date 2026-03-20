@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay } from 'date-fns'
-import { AnimatePresence } from 'framer-motion'
 import { isTaiwanHoliday } from '../lib/holidays'
 import DayCard from './DayCard'
 import DayCardExpanded from './DayCardExpanded'
@@ -14,20 +13,15 @@ function CalendarMonthGrid({
     onUpdate,
     onDelete,
     isPrivacy,
-    focusedDay,
-    setFocusedDay
+    modalTop,
+    onDayClick
 }) {
     const monthStart = startOfMonth(monthDate);
     const monthEnd = endOfMonth(monthStart);
     const calendarStart = startOfWeek(monthStart);
     const calendarEnd = endOfWeek(monthEnd);
 
-    // Flattened list of days for Grid
     const days = useMemo(() => eachDayOfInterval({ start: calendarStart, end: calendarEnd }), [calendarStart, calendarEnd]);
-
-    // Calculate Grid Rows
-    const totalDays = days.length;
-    const totalRows = Math.ceil(totalDays / 7);
 
     const getRecordForDay = (day) => {
         const dayStr = format(day, 'yyyy-MM-dd')
@@ -41,85 +35,27 @@ function CalendarMonthGrid({
         }
 
         const isHoliday = isTaiwanHoliday(day);
-
-        if (isHoliday) {
-            return { date: dayStr, isHoliday: true, _isAutoHoliday: true }
-        }
-
         const today = new Date();
         const isPastOrToday = day <= today || isSameDay(day, today);
         const dayOfWeek = day.getDay();
         const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
 
-        // Auto-fill implicit past/current weekdays as standard workdays
-        if (isPastOrToday && isWeekday) {
+        if (isPastOrToday && isWeekday && !isHoliday) {
             return {
                 date: dayStr,
                 isHoliday: false,
-                isAutoFilled: true, // Visual flag
+                isAutoFilled: true,
                 startTime: '08:30',
                 endTime: '17:30',
                 isWorkDay: true
             }
         }
-
+        if (isHoliday) return { date: dayStr, isHoliday: true, _isAutoHoliday: true };
         return null;
     }
 
-    // Overlay Logic Calculation
-    const getOverlayGeometry = (day) => {
-        if (!day) return null;
-
-        const dayIndex = days.findIndex(d => isSameDay(d, day));
-        if (dayIndex === -1) return null;
-
-        // Responsive Grid Config
-        const isMobile = window.innerWidth < 768; // Tailwind md breakpoint
-        const cols = 7;
-        const row = Math.floor(dayIndex / cols);
-        const col = dayIndex % cols;
-
-        // Overlay Dimensions
-        const overlayWidth = isMobile ? 3 : 2; // Spans 3 cols on mobile, 2 on desktop
-        const overlayHeight = isMobile ? 4 : 3; // Spans 4 rows on mobile, 3 on desktop
-
-        // Vertical Logic: Cover the clicked cell if possible
-        let targetStartRow = Math.max(0, Math.min(row, totalRows - overlayHeight));
-
-        // Horizontal Logic: 
-        // Default: Expand Right [Col, ... , Col + width - 1]
-        // Boundary Check: If too close to right edge, shift left
-        let targetStartCol = col;
-        if (col + overlayWidth > cols) {
-            targetStartCol = cols - overlayWidth;
-        }
-
-        // Is clicked cell inside the block?
-        const isRowInside = row >= targetStartRow && row < targetStartRow + overlayHeight;
-        const isColInside = col >= targetStartCol && col < targetStartCol + overlayWidth;
-        const isInside = isRowInside && isColInside;
-
-        return {
-            row, col,
-            targetStartRow,
-            targetStartCol,
-            overlayWidth,
-            overlayHeight,
-            isInside
-        };
-    }
-
-    const overlayGeo = useMemo(() => getOverlayGeometry(focusedDay), [focusedDay, days]);
-
-    const handleDayClick = React.useCallback((day) => {
-        window.requestAnimationFrame(() => {
-            setFocusedDay(isSameDay(day, focusedDay) ? null : day);
-        });
-    }, [focusedDay, setFocusedDay]);
-
     return (
         <div className="relative pb-4">
-            {/* Weekday Labels */}
             <div className="grid grid-cols-7 gap-1 md:gap-3 mb-1">
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                     <div key={day} className="text-center text-[7px] md:text-[9px] font-black text-gray-400 uppercase tracking-widest">
@@ -128,16 +64,7 @@ function CalendarMonthGrid({
                 ))}
             </div>
 
-            {/* Main Grid */}
-            <div
-                className={cn(
-                    "grid grid-cols-7 gap-1 md:gap-3 lg:min-h-[600px] relative transition-all duration-300",
-                    focusedDay ? "pb-[400px]" : "pb-4"
-                )}
-                style={{
-                    gridAutoRows: 'minmax(80px, 1fr)'
-                }}
-            >
+            <div className="grid grid-cols-7 gap-1 md:gap-3 lg:min-h-[600px] relative transition-all duration-300" style={{ gridAutoRows: 'minmax(80px, 1fr)' }}>
                 {days.map((day) => {
                     return (
                         <div key={format(day, 'yyyy-MM-dd')}>
@@ -145,130 +72,67 @@ function CalendarMonthGrid({
                                 day={day}
                                 isCurrentMonth={isSameMonth(day, monthStart)}
                                 record={getRecordForDay(day)}
-                                onClick={() => handleDayClick(day)}
+                                onClick={() => onDayClick(day)}
                                 isPrivacy={isPrivacy}
                                 settings={settings}
                             />
                         </div>
                     )
                 })}
-
-                {/* Overlay Layer */}
-                <AnimatePresence>
-                    {focusedDay && overlayGeo && (
-                        <CalendarOverlay
-                            day={focusedDay}
-                            record={getRecordForDay(focusedDay)}
-                            geometry={overlayGeo}
-                            onUpdate={onUpdate}
-                            onClose={() => setFocusedDay(null)}
-                            isPrivacy={isPrivacy}
-                            settings={settings}
-                        />
-                    )}
-                </AnimatePresence>
             </div>
         </div>
     )
 }
 
-function CalendarOverlay({ day, record, geometry, onUpdate, onDelete, onClose, isPrivacy, settings }) {
-    const { row, col, targetStartRow, targetStartCol, overlayWidth, overlayHeight, isInside } = geometry;
-
+export function CalendarOverlay({ day, record, onUpdate, onDelete, onClose, isPrivacy, settings, modalTop }) {
     const isMobile = window.innerWidth < 768;
     const blockStyle = {
-        gridColumn: `${targetStartCol + 1} / span ${overlayWidth}`,
-        gridRowStart: targetStartRow + 1,
-        position: 'absolute',
-        width: '100%',
-        minHeight: isMobile ? '320px' : '280px',
+        position: 'fixed',
+        top: modalTop || '140px', 
+        left: '50%',
+        margin: 0,
+        width: isMobile ? '95%' : '800px',
+        maxWidth: '95vw',
         height: 'auto',
-        zIndex: 50
+        maxHeight: 'calc(100vh - 160px)',
+        zIndex: 2000,
+        pointerEvents: 'auto'
     };
-
-    const cellStyle = {
-        gridColumn: `${col + 1} / span 1`,
-        gridRow: `${row + 1} / span 1`,
-        position: 'absolute',
-        width: '100%',
-        height: '100%',
-        zIndex: 51
-    };
-
-    let stickDir = null;
-    if (row < targetStartRow) stickDir = 'top';
-    else if (row >= targetStartRow + overlayHeight) stickDir = 'bottom';
-
-    const attachCol = (col === targetStartCol) ? 'left' : 'right';
 
     return (
         <>
             <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="absolute inset-0 z-40 bg-transparent"
-                onClick={onClose}
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0 }}
+                className="fixed inset-0 z-[1998] bg-black/5 backdrop-blur-[1px] pointer-events-auto"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                }}
             />
 
             <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                initial={{ opacity: 0, scale: 0.95, y: 10, x: "-50%" }}
+                animate={{ opacity: 1, scale: 1, y: 0, x: "-50%" }}
+                exit={{ opacity: 0, scale: 0.95, y: 10, x: "-50%" }}
+                transition={{ duration: 0 }}
                 style={blockStyle}
-                className="relative pointer-events-auto"
+                className="z-[1999] pointer-events-auto"
             >
-                <div className="h-full w-full bg-[#E0E5EC] neumo-raised rounded-2xl md:rounded-3xl shadow-2xl relative overflow-visible">
+                <div className="h-full w-full bg-[#E0E5EC] neumo-raised rounded-3xl shadow-xl relative overflow-hidden flex flex-col">
                     <DayCardExpanded
                         day={day}
                         record={record}
                         onUpdate={onUpdate}
                         onDelete={onDelete}
                         onClose={onClose}
-                        hideHeader={!isInside}
                         settings={settings}
-                        className="h-full w-full shadow-none bg-transparent"
-                        style={{
-                            borderTopLeftRadius: stickDir === 'top' && attachCol === 'left' ? 0 : undefined,
-                            borderTopRightRadius: stickDir === 'top' && attachCol === 'right' ? 0 : undefined,
-                            borderBottomLeftRadius: stickDir === 'bottom' && attachCol === 'left' ? 0 : undefined,
-                            borderBottomRightRadius: stickDir === 'bottom' && attachCol === 'right' ? 0 : undefined,
-                        }}
+                        className="h-full w-full shadow-none bg-transparent overflow-y-auto"
                     />
                 </div>
             </motion.div>
-
-            {!isInside && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    style={cellStyle}
-                    className="relative pointer-events-none"
-                >
-                    <div
-                        className="h-full w-full bg-[#E0E5EC] neumo-raised p-2 flex flex-col items-center justify-start relative shadow-none"
-                        style={{
-                            borderBottomLeftRadius: stickDir === 'top' ? 0 : undefined,
-                            borderBottomRightRadius: stickDir === 'top' ? 0 : undefined,
-                            borderTopLeftRadius: stickDir === 'bottom' ? 0 : undefined,
-                            borderTopRightRadius: stickDir === 'bottom' ? 0 : undefined,
-                            zIndex: 52
-                        }}
-                    >
-                        <span className="text-xl md:text-2xl font-black text-neumo-brand">{format(day, 'dd')}</span>
-                        <div
-                            className="absolute bg-[#E0E5EC] z-50"
-                            style={{
-                                width: '100%',
-                                height: '20px',
-                                left: 0,
-                                bottom: stickDir === 'top' ? '-10px' : undefined,
-                                top: stickDir === 'bottom' ? '-10px' : undefined,
-                            }}
-                        />
-                    </div>
-                </motion.div>
-            )}
         </>
     )
 }

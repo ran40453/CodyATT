@@ -1,31 +1,35 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { format, getDay, isAfter } from 'date-fns' // Added getDay, isAfter
+import React, { useState, useRef, useEffect, useMemo } from 'react'
+import { format, getDay, isAfter } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MapPin, Clock, Check, Palmtree, Moon, DollarSign, Coffee, Trash2, MessageSquare, Calendar as CalendarIcon, FileText } from 'lucide-react'
 import { cn } from '../lib/utils'
-import { loadSettings, calculateOTHours, calculateDuration, calculateDailySalary, calculateCompLeaveUnits, fetchExchangeRate, standardizeCountry } from '../lib/storage' // Added calculateDuration
+import { calculateOTHours, calculateDuration, calculateDailySalary, calculateCompLeaveUnits, standardizeCountry } from '../lib/storage'
 import { isTaiwanHoliday, getHolidayName } from '../lib/holidays'
 import { playTick } from '../lib/audio'
 
 function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, className, hideHeader = false, settings }) {
-    const [endTime, setEndTime] = useState(record?.endTime || '17:30')
+    const isWeekend = getDay(day) === 0 || getDay(day) === 6;
+    const defaultTime = isWeekend ? '08:00' : '17:30';
+
+    const [endTime, setEndTime] = useState(record?.endTime || defaultTime)
     const [travelCountry, setTravelCountry] = useState(record?.travelCountry || '')
     const [isHoliday, setIsHoliday] = useState(record?.isHoliday || false)
     const [isWorkDay, setIsWorkDay] = useState(record?.isWorkDay || false)
     const [isLeave, setIsLeave] = useState(record?.isLeave || false)
     const [otType, setOtType] = useState(record?.otType || 'pay')
+    
     // Leave States
     const [leaveDuration, setLeaveDuration] = useState(record?.leaveDuration || 8);
     const [isFullDay, setIsFullDay] = useState(record?.leaveDuration === 8 || (record?.isLeave && !record?.leaveDuration) || false);
     const [leaveStartTime, setLeaveStartTime] = useState(record?.leaveStartTime || settings?.rules?.standardStartTime || "08:30");
-    const [leaveEndTime, setLeaveEndTime] = useState(record?.leaveEndTime || settings?.rules?.standardEndTime || "17:30");
+    const [leaveEndTime, setLeaveEndTime] = useState(record?.leaveEndTime || record?.endTime || defaultTime);
     const [leaveType, setLeaveType] = useState(record?.leaveType || '特休');
     const [isLeaveTypePickerOpen, setIsLeaveTypePickerOpen] = useState(false);
 
     // Remarks
     const [remarks, setRemarks] = useState(record?.remarks || '');
-    const [bonus, setBonus] = useState(record?.bonus || 0); // New Bonus State
-    const [activeTab, setActiveTab] = useState('schedule'); // 'schedule', 'remarks'
+    const [bonus, setBonus] = useState(record?.bonus || 0); 
+    const [activeTab, setActiveTab] = useState('schedule'); 
 
     // Auto-calculate duration (Partial Day)
     useEffect(() => {
@@ -37,21 +41,13 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
         }
     }, [leaveStartTime, leaveEndTime, isFullDay, isLeave, settings]);
 
-    const [isDragging, setIsDragging] = useState(false)
     const [isSaved, setIsSaved] = useState(false)
-
-    const dragStartY = useRef(0)
-    const startMinutes = useRef(0)
-    const currentEndTimeRef = useRef(endTime)
-
-    useEffect(() => { currentEndTimeRef.current = endTime }, [endTime])
 
     const handleSave = (e) => {
         if (e) e.stopPropagation();
 
-        // Future Date Check
         if (isAfter(day, new Date())) {
-            const confirmed = window.confirm("此日期尚未發生。確定要儲存嗎？ (Date is in the future)");
+            const confirmed = window.confirm("此日期尚未發生。確定要儲存嗎？");
             if (!confirmed) return;
         }
 
@@ -63,7 +59,6 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
         }, 800);
     }
 
-    // Sync state if record changes externally
     useEffect(() => {
         if (record) {
             let rawTime = record.endTime || '17:30';
@@ -79,13 +74,13 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
             setIsLeave(record.isLeave || false)
             setOtType(record.otType || 'pay')
             setRemarks(record.remarks || '')
-            setBonus(record.bonus || 0) // Sync bonus
+            setBonus(record.bonus || 0) 
         }
     }, [record?.date, record?.endTime, record?.travelCountry, record?.isHoliday, record?.isWorkDay, record?.isLeave, record?.otType, record?.remarks, record?.bonus])
 
     const handleDragStart = (e, type = 'endTime') => {
         if (e.cancelable) e.preventDefault();
-        // setIsDragging(true) // Assuming this state exists elsewhere
+        if (e.stopPropagation) e.stopPropagation();
         const startY = e.clientY || (e.touches && e.touches[0].clientY)
 
         let initialTime = endTime;
@@ -96,9 +91,11 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
         const startMins = h * 60 + m
 
         const handleMove = (moveEvent) => {
+            if (moveEvent.stopPropagation) moveEvent.stopPropagation();
             const currentY = moveEvent.clientY || (moveEvent.touches && moveEvent.touches[0].clientY)
             const diff = startY - currentY
-            const minuteDiff = Math.round(diff / 5) * 15
+            // Sensitivity Divider: 20 (Threshold)
+            const minuteDiff = Math.round(diff / 20) * 15
             const totalMins = Math.max(0, Math.min(23 * 60 + 45, startMins + minuteDiff))
             const nh = Math.floor(totalMins / 60)
             const nm = totalMins % 60
@@ -106,13 +103,10 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
 
             if (type === 'endTime') {
                 if (nextTime !== endTime) {
-                    // Sound Fix: only play if HOUR changes
                     const [prevH] = endTime.split(':');
                     const [currH] = nextTime.split(':');
                     if (prevH !== currH) playTick();
-
                     setEndTime(nextTime)
-                    // currentEndTimeRef.current = nextTime // Assuming currentEndTimeRef exists elsewhere
                 }
             } else if (type === 'leaveStart') {
                 if (nextTime !== leaveStartTime) {
@@ -132,7 +126,6 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
         }
 
         const handleEnd = () => {
-            // setIsDragging(false) // Assuming this state exists elsewhere
             window.removeEventListener('mousemove', handleMove)
             window.removeEventListener('mouseup', handleEnd)
             window.removeEventListener('touchmove', handleMove)
@@ -146,14 +139,13 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
     }
 
     const handleDelete = (e) => {
-        e.stopPropagation();
+        if (e && e.stopPropagation) e.stopPropagation();
         const confirmed = window.confirm('確定要清除此日所有資料嗎？');
         if (!confirmed) return;
 
         if (onDelete) {
             onDelete(day);
         } else {
-            // Fallback: Clear data via update if onDelete is not provided
             onUpdate({
                 date: day,
                 endTime: '17:30',
@@ -171,8 +163,6 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
                 bonus: 0
             });
         }
-
-        // Use a small timeout to prevent race conditions during unmount/update
         if (onClose) setTimeout(() => onClose(), 50);
     }
 
@@ -186,11 +176,7 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
         const finalLeave = overrides.isLeave !== undefined ? overrides.isLeave : isLeave;
         const finalType = overrides.otType !== undefined ? overrides.otType : otType;
 
-        // Leave values from state (or overrides)
         const finalLeaveType = overrides.leaveType !== undefined ? overrides.leaveType : leaveType;
-        // For simplicity, we grab current state if not passed.
-        // We generally don't pass leave vars in overrides except maybe type.
-
         const finalRemarks = overrides.remarks !== undefined ? overrides.remarks : remarks;
         const finalBonus = overrides.bonus !== undefined ? overrides.bonus : bonus;
 
@@ -199,20 +185,14 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
         const isRestDay = (d === 0 || d === 6 || finalHoliday) && !finalWorkDay;
 
         if (!finalLeave) {
-            // Priority: isWorkDay overrides everything to be a 'Weekday'.
-            // Then check isRestDay (Sat/Sun/Holiday).
             if (finalWorkDay) {
-                // Treated as Normal Weekday
-                // If endTime <= standardEndTime, OT is 0.
                 const stdEnd = settings?.rules?.standardEndTime || "17:30";
                 otHours = calculateOTHours(finalEndTime, stdEnd);
             } else if (isRestDay) {
-                // Full day OT: (End - Start) - Break
                 const start = settings?.rules?.standardStartTime || "08:00";
                 const breakTime = settings?.rules?.lunchBreak || 1.5;
                 otHours = calculateDuration(start, finalEndTime, breakTime);
             } else {
-                // Normal Weekday (Mon-Fri non-holiday)
                 const stdEnd = settings?.rules?.standardEndTime || "17:30";
                 otHours = calculateOTHours(finalEndTime, stdEnd);
             }
@@ -227,13 +207,12 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
             isWorkDay: finalWorkDay,
             isLeave: finalLeave,
             otType: finalType,
-            // Leave Persist
             leaveType: finalLeaveType,
             leaveDuration: finalLeave ? (isFullDay ? 8 : leaveDuration) : 0,
             leaveStartTime: finalLeave && !isFullDay ? leaveStartTime : null,
             leaveEndTime: finalLeave && !isFullDay ? leaveEndTime : null,
             remarks: finalRemarks,
-            bonus: finalBonus // Included in update
+            bonus: finalBonus
         })
     }
 
@@ -244,7 +223,6 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
         syncUpdate({ otType: next });
     };
 
-    // --- Derived Values for Display ---
     let otHours = 0;
     const d = getDay(day);
     const effectiveIsHoliday = isHoliday || isTaiwanHoliday(day);
@@ -264,12 +242,7 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
         }
     }
 
-    // Calculate Comp Units (if implemented)
-    // Fix: Pass object as expected by storage.js
     const compUnits = calculateCompLeaveUnits ? calculateCompLeaveUnits({ otType, otHours }) : 0;
-
-    // Calculate Salary Preview
-    // We need to construct a temporary 'record' object to pass to calculateDailySalary
     const tempRecord = {
         date: day,
         endTime: endTime,
@@ -283,17 +256,33 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
         leaveStartTime: leaveStartTime,
         leaveEndTime: leaveEndTime,
         bonus: bonus,
-        otHours: otHours // Critical: pass calculated hours
+        otHours: otHours 
     };
 
-    const salaryMetrics = calculateDailySalary(tempRecord, settings);
-    const dailySalary = salaryMetrics?.total || 0;
+    const salaryMetrics = useMemo(() => {
+        if (!settings) return null;
+        return calculateDailySalary(tempRecord, settings);
+    }, [tempRecord, settings]);
+
+    const dailySalary = useMemo(() => {
+        let base = settings?.salary?.baseMonthly !== undefined ? Number(settings.salary.baseMonthly) : 50000;
+        return base / (settings?.rules?.daysPerMonth || 30);
+    }, [settings]);
+
+    const iconVariants = useMemo(() => ({
+        initial: { y: 0, opacity: 1, filter: 'blur(0px)' },
+        hover: { y: -30, opacity: 0, filter: 'blur(4px)', transition: { duration: 0.2 } }
+    }), []);
+
+    const textVariants = useMemo(() => ({
+        initial: { y: 30, opacity: 0, filter: 'blur(4px)' },
+        hover: { y: -8, opacity: 1, filter: 'blur(0px)', transition: { duration: 0.2, delay: 0.05 } }
+    }), []);
 
     return (
-        <div style={style} className={cn("neumo-card p-4 flex flex-col gap-4 relative z-50 bg-[#E0E5EC] shadow-2xl", className)} onClick={e => e.stopPropagation()}>
-            {/* Header Section with Date (if needed) or just Close button */}
+        <div style={style} className={cn("p-6 flex flex-col gap-4 relative z-50 bg-[#E0E5EC] h-full w-full", className)} onClick={e => e.stopPropagation()}>
             {!hideHeader && (
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start px-4">
                     <div className="flex flex-col">
                         <h3 className={cn("text-xl font-black", isHoliday ? "text-rose-500" : "text-neumo-brand")}>
                             {format(day, 'MMM dd')}
@@ -311,10 +300,6 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
                 </div>
             )}
 
-            {/* ... rest of render ... */}
-
-
-            {/* Toggle Tabs */}
             <div className="flex p-1 bg-gray-200/50 rounded-xl mb-2">
                 <button
                     onClick={() => setActiveTab('schedule')}
@@ -338,47 +323,56 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
             </div>
 
             {activeTab === 'schedule' ? (
-                <>
-
-                    {/* Status Grid */}
-                    <div className="grid grid-cols-4 gap-2">
-                        <button
+                <div className="flex-1 flex flex-col gap-4">
+                    <div className="grid grid-cols-4 gap-2 px-4">
+                        <ModeButton
                             onClick={() => {
                                 setIsWorkDay(!isWorkDay);
                                 if (!isWorkDay) setIsHoliday(false);
                             }}
-                            className={cn("py-3 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase transition-all", isWorkDay ? "neumo-pressed text-blue-600" : "neumo-raised text-gray-400")}
-                        >
-                            <Check size={16} />
-                            <span>平日</span>
-                        </button>
-                        <button
+                            active={isWorkDay}
+                            activeClass="neumo-pressed text-blue-600"
+                            inactiveClass="neumo-raised text-gray-400"
+                            label="平日"
+                            icon={<Check size={16} />}
+                            iconVariants={iconVariants}
+                            textVariants={textVariants}
+                        />
+                        <ModeButton
                             onClick={() => {
                                 setIsHoliday(!isHoliday);
                                 if (!isHoliday) setIsWorkDay(false);
                             }}
-                            className={cn("py-3 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase transition-all", isHoliday ? "neumo-pressed text-orange-500" : "neumo-raised text-gray-400")}
-                        >
-                            <Palmtree size={16} />
-                            <span>假日</span>
-                        </button>
-                        <button
+                            active={isHoliday}
+                            activeClass="neumo-pressed text-orange-500"
+                            inactiveClass="neumo-raised text-gray-400"
+                            label="假日"
+                            icon={<Palmtree size={16} />}
+                            iconVariants={iconVariants}
+                            textVariants={textVariants}
+                        />
+                        <ModeButton
                             onClick={() => setIsLeave(!isLeave)}
-                            className={cn("py-3 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase transition-all", isLeave ? "neumo-pressed text-indigo-500" : "neumo-raised text-gray-400")}
-                        >
-                            <Moon size={16} />
-                            <span>請假</span>
-                        </button>
-                        <button
+                            active={isLeave}
+                            activeClass="neumo-pressed text-indigo-500"
+                            inactiveClass="neumo-raised text-gray-400"
+                            label="請假"
+                            icon={<Moon size={16} />}
+                            iconVariants={iconVariants}
+                            textVariants={textVariants}
+                        />
+                        <ModeButton
                             onClick={() => { const seq = ['', 'VN', 'IN', 'CN']; setTravelCountry(seq[(seq.indexOf(travelCountry) + 1) % seq.length]); }}
-                            className={cn("py-3 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase transition-all", travelCountry ? "neumo-pressed text-green-600" : "neumo-raised text-gray-400")}
-                        >
-                            <MapPin size={16} />
-                            <span>{travelCountry || '出差'}</span>
-                        </button>
+                            active={!!travelCountry}
+                            activeClass="neumo-pressed text-green-600"
+                            inactiveClass="neumo-raised text-gray-400"
+                            label={travelCountry || '出差'}
+                            icon={<MapPin size={16} />}
+                            iconVariants={iconVariants}
+                            textVariants={textVariants}
+                        />
                     </div>
 
-                    {/* Content Area: Leave vs OT */}
                     {isLeave ? (
                         <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
                             <div className="space-y-2 relative">
@@ -471,7 +465,6 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
                                 </div>
                             )}
 
-                            {/* Leave Cost Estimate */}
                             <div className="flex items-center justify-between px-2 pt-2 border-t border-gray-200/50">
                                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">扣薪預估</span>
                                 <div className="flex items-baseline gap-1">
@@ -481,8 +474,71 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
                                     <span className="text-[9px] font-bold text-gray-400 uppercase">TWD</span>
                                 </div>
                             </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <div
+                                className="h-24 neumo-pressed rounded-3xl flex flex-col items-center justify-center relative cursor-ns-resize overflow-hidden shrink-0 touch-action-none"
+                                style={{ touchAction: 'none' }}
+                                onMouseDown={handleDragStart}
+                                onTouchStart={handleDragStart}
+                            >
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-4xl font-black text-[#202731]">{endTime}</span>
+                                    <Clock size={14} className="text-gray-300" />
+                                </div>
+                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">拖曳調整下班</p>
+                            </div>
 
-                            {/* Bonus Input for Leave Days (if needed, though usually bonus is separate) */}
+                            {otHours >= 0.5 ? (
+                                <div className="flex items-center gap-4 bg-gray-100/50 p-3 rounded-2xl shadow-inner animate-in fade-in duration-300 w-full">
+                                    <div className="flex-1 flex items-center gap-3 border-r border-gray-200/50 pr-3">
+                                        <div className="shrink-0">
+                                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">加班 / 類型</p>
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-2xl font-black text-neumo-brand leading-none">{otHours.toFixed(1)}</span>
+                                                <span className="text-[8px] font-bold text-gray-400 uppercase">H</span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={toggleOtType}
+                                            className={cn(
+                                                "w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0",
+                                                otType === 'pay' ? "bg-green-500 text-white shadow-lg" :
+                                                    otType === 'leave' ? "bg-indigo-500 text-white shadow-lg" :
+                                                        "bg-purple-600 text-white shadow-lg"
+                                            )}
+                                        >
+                                            {otType === 'pay' ? <DollarSign size={14} /> : <Coffee size={14} />}
+                                        </button>
+                                    </div>
+
+                                    <div className="flex-1">
+                                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 text-right md:text-left">
+                                            預估 {otType === 'pay' ? '薪資' : otType === 'leave' ? '公司補休' : '部門補休'}
+                                        </p>
+                                        <div className="flex items-baseline gap-1 justify-end md:justify-start">
+                                            <span className={cn(
+                                                "text-2xl font-black tabular-nums leading-none",
+                                                otType === 'pay' ? "text-green-600" :
+                                                    otType === 'leave' ? "text-indigo-600" :
+                                                        "text-purple-600"
+                                            )}>
+                                                {otType === 'pay' ? `\$${Math.round(dailySalary).toLocaleString()}` : compUnits.toFixed(0)}
+                                            </span>
+                                            <span className="text-[9px] font-bold text-gray-400 uppercase">
+                                                {otType === 'pay' ? 'TWD' : '單'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="neumo-pressed p-4 rounded-2xl flex justify-center items-center gap-2 opacity-40 grayscale h-[60px] shrink-0">
+                                    <Clock size={14} className="text-gray-400" />
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">時數不足 0.5H 不計入加班</span>
+                                </div>
+                            )}
+
                             <div className="flex items-center justify-between px-2 pt-2 border-t border-gray-200/50">
                                 <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">額外獎金</label>
                                 <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-100">
@@ -501,114 +557,8 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
                                 </div>
                             </div>
                         </div>
-                    ) : (
-                        <>
-                            {/* Time Picker */}
-                            <div
-                                className="h-24 neumo-pressed rounded-3xl flex flex-col items-center justify-center relative cursor-ns-resize overflow-hidden shrink-0 touch-action-none"
-                                style={{ touchAction: 'none' }}
-                                onMouseDown={handleDragStart}
-                                onTouchStart={handleDragStart}
-                            >
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-4xl font-black text-[#202731]">{endTime}</span>
-                                    <Clock size={14} className="text-gray-300" />
-                                </div>
-                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">拖曳調整下班</p>
-                            </div>
-
-                            {/* OT Details */}
-                            {otHours >= 0.5 ? (
-                                <div className="space-y-3 px-2">
-                                    {/* Row 1: OT hours + type */}
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div>
-                                                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">加班時數 / 類型</p>
-                                                <span className="text-3xl font-black text-neumo-brand leading-none">{otHours.toFixed(1)}h</span>
-                                            </div>
-                                            <button
-                                                onClick={toggleOtType}
-                                                className={cn(
-                                                    "w-8 h-8 rounded-full flex items-center justify-center transition-all",
-                                                    otType === 'pay' ? "bg-green-500 text-white shadow-lg" :
-                                                        otType === 'leave' ? "bg-indigo-500 text-white shadow-lg" :
-                                                            "bg-purple-600 text-white shadow-lg"
-                                                )}
-                                            >
-                                                {otType === 'pay' ? <DollarSign size={14} /> : <Coffee size={14} />}
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {/* Row 2: Estimated salary/comp */}
-                                    <div className="flex items-baseline justify-between px-1 pt-1 border-t border-gray-200/50">
-                                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
-                                            預估 {otType === 'pay' ? '薪資' : otType === 'leave' ? '公司補休' : '部門補休'}
-                                        </p>
-                                        <div className="flex items-baseline gap-1">
-                                            <span className={cn(
-                                                "text-2xl font-black tabular-nums",
-                                                otType === 'pay' ? "text-green-600" :
-                                                    otType === 'leave' ? "text-indigo-600" :
-                                                        "text-purple-600"
-                                            )}>
-                                                {otType === 'pay' ? `\$${Math.round(dailySalary).toLocaleString()}` : compUnits.toFixed(0)}
-                                            </span>
-                                            <span className="text-[9px] font-bold text-gray-400 uppercase">
-                                                {otType === 'pay' ? 'TWD' : '單'}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Bonus Input for Work Days */}
-                                    <div className="flex items-center justify-between px-2 pt-2 border-t border-gray-200/50">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">額外獎金</label>
-                                        <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-100">
-                                            <span className="text-yellow-600 font-bold text-xs">$</span>
-                                            <input
-                                                type="number"
-                                                value={bonus}
-                                                onChange={(e) => {
-                                                    const val = e.target.value === '' ? '' : parseFloat(e.target.value);
-                                                    setBonus(val);
-                                                    syncUpdate({ bonus: val === '' ? 0 : val });
-                                                }}
-                                                placeholder="0"
-                                                className="w-16 bg-transparent text-right text-sm font-black text-yellow-700 focus:outline-none placeholder:text-yellow-300"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="space-y-3 px-2">
-                                    <div className="neumo-pressed p-4 rounded-2xl flex justify-center items-center gap-2 opacity-40 grayscale h-[60px] shrink-0">
-                                        <Clock size={14} className="text-gray-400" />
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">時數不足 0.5H 不計入加班</span>
-                                    </div>
-
-                                    {/* Bonus Input even if no OT */}
-                                    <div className="flex items-center justify-between px-2 pt-2 border-t border-gray-200/50">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">額外獎金</label>
-                                        <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-100">
-                                            <span className="text-yellow-600 font-bold text-xs">$</span>
-                                            <input
-                                                type="number"
-                                                value={bonus}
-                                                onChange={(e) => {
-                                                    const val = e.target.value === '' ? '' : parseFloat(e.target.value);
-                                                    setBonus(val);
-                                                    syncUpdate({ bonus: val === '' ? 0 : val });
-                                                }}
-                                                placeholder="0"
-                                                className="w-16 bg-transparent text-right text-sm font-black text-yellow-700 focus:outline-none placeholder:text-yellow-300"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </>
                     )}
-                </>
+                </div>
             ) : (
                 <div className="flex-1 flex flex-col gap-2 min-h-[300px] animate-in fade-in slide-in-from-right-4 duration-200">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1 mt-2">備註事項 (Remarks)</label>
@@ -643,6 +593,24 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
             </button>
         </div>
     )
+}
+
+function ModeButton({ onClick, active, activeClass, inactiveClass, label, icon, iconVariants, textVariants }) {
+    return (
+        <motion.button
+            onClick={onClick}
+            whileHover="hover"
+            initial="initial"
+            className={cn("py-2 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase transition-all overflow-hidden relative", active ? activeClass : inactiveClass)}
+        >
+            <motion.div variants={iconVariants} className="flex flex-col items-center justify-center">
+                {icon}
+            </motion.div>
+            <motion.span variants={textVariants} className="absolute inset-0 flex items-center justify-center text-[10px] font-black pointer-events-none">
+                {label}
+            </motion.span>
+        </motion.button>
+    );
 }
 
 export default DayCardExpanded

@@ -221,7 +221,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                     initial={{ scale: 0.9, opacity: 0, y: 20 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                    className="relative w-full max-w-sm neumo-card p-6 overflow-hidden"
+                    className="relative w-full max-w-2xl neumo-card p-6 overflow-hidden"
                 >
                     {/* Confirm Overlay */}
                     {showConfirm && (
@@ -284,36 +284,36 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                     </div>
 
                     <div className="space-y-6">
-                        {/* Date Input */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                                <Calendar size={12} /> {isBatchMode ? '日期範圍' : '日期'}
-                            </label>
-                            <div className="flex gap-2">
-                                <input
-                                    type="date"
-                                    value={date}
-                                    onChange={(e) => setDate(e.target.value)}
-                                    className="neumo-input w-full h-12 font-bold px-4 flex-1"
-                                />
-                                {isBatchMode && (
-                                    <>
-                                        <span className="flex items-center text-gray-400 font-black">to</span>
-                                        <input
-                                            type="date"
-                                            value={endDate}
-                                            onChange={(e) => setEndDate(e.target.value)}
-                                            className="neumo-input w-full h-12 font-bold px-4 flex-1"
-                                        />
-                                    </>
-                                )}
+                        {/* Date & Country in one row */}
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* Date Input */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                                    <Calendar size={12} /> {isBatchMode ? '日期範圍' : '日期'}
+                                </label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="date"
+                                        value={date}
+                                        onChange={(e) => setDate(e.target.value)}
+                                        className="neumo-input w-full h-12 font-bold px-4 flex-1"
+                                    />
+                                    {isBatchMode && (
+                                        <>
+                                            <span className="flex items-center text-gray-400 font-black">to</span>
+                                            <input
+                                                type="date"
+                                                value={endDate}
+                                                onChange={(e) => setEndDate(e.target.value)}
+                                                className="neumo-input w-full h-12 font-bold px-4 flex-1"
+                                            />
+                                        </>
+                                    )}
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Attendance Mode Fields */}
-                        {mode === 'attendance' && (
-                            <>
-                                {/* Country Select */}
+                            {/* Attendance Mode Country Select */}
+                            {mode === 'attendance' && (
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
                                         <Globe size={12} /> 出差國家
@@ -329,7 +329,14 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                         <option value="大陸">大陸 (CN)</option>
                                     </select>
                                 </div>
+                            )}
 
+                            {/* Bonus Mode fields placeholder (to keep grid items aligned if needed) or just skip */}
+                        </div>
+
+                        {/* Attendance Mode Fields - Rest */}
+                        {mode === 'attendance' && (
+                            <>
                                 {/* Time Picker and Type */}
                                 {!isLeave && (
                                     <div className="space-y-4 pt-2">
@@ -389,12 +396,12 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                             setIsWorkDay(!isWorkDay);
                                             if (!isWorkDay) setIsHoliday(false);
                                         }}
-                                        className={cn(
-                                            "h-12 rounded-2xl flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-all",
-                                            isWorkDay ? "neumo-pressed text-blue-600" : "neumo-raised text-gray-400"
-                                        )}
+                                        className={cn("py-2 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase transition-all group", isWorkDay ? "neumo-pressed text-blue-600" : "neumo-raised text-gray-400")}
                                     >
-                                        <Check size={14} /> 平日
+                                        <motion.div initial={false} whileHover={{ scale: 0 }} transition={{ duration: 0.1 }} className="flex flex-col items-center">
+                                            <Check size={16} />
+                                        </motion.div>
+                                        <motion.span initial={{ opacity: 0, height: 0 }} whileHover={{ opacity: 1, height: 'auto' }} className="text-[10px] font-black">平日</motion.span>
                                     </button>
                                     <button
                                         onClick={() => {
