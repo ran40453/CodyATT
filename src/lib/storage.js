@@ -543,29 +543,36 @@ export const fetchRecordsFromGist = async (tokenOverride, gistIdOverride) => {
 
         const response = await fetch(GET_GIST_URL(gistId), { headers });
         const gist = await response.json();
-        const recordsFile = gist.files['records.json'] || gist.files['ot_records.json'] || gist.files['otcal_records.json'];
+        let allRecords = [];
+        const possibleFiles = ['records.json', 'ot_records.json', 'otcal_records.json', 'record.json', 'record'];
+        
+        possibleFiles.forEach(fileName => {
+            const file = gist.files[fileName];
+            if (file && file.content) {
+                try {
+                    const parsed = JSON.parse(file.content);
+                    if (Array.isArray(parsed)) {
+                        allRecords = [...allRecords, ...parsed];
+                        console.log(`Gist Sync: Found ${parsed.length} records in ${fileName}`);
+                    }
+                } catch (e) {
+                    console.error(`Gist Sync: Failed to parse ${fileName}`, e);
+                }
+            }
+        });
 
-        if (recordsFile) {
-            const recordsContent = recordsFile.content;
-            if (!recordsContent) throw new Error('Gist content is empty');
-
-            const records = JSON.parse(recordsContent);
-            if (!Array.isArray(records)) throw new Error('Gist data is not an array');
-
-            const standardized = standardizeRecords(records);
-            console.log(`Gist Sync: Fetched ${standardized.length} records.`);
+        if (allRecords.length > 0) {
+            const standardized = standardizeRecords(allRecords);
+            console.log(`Gist Sync: Total standardized records: ${standardized.length}`);
 
             // CRITICAL: Check race condition
-            // If the user saved data locally WHILE we were fetching, 'last-local-update' will be > fetchStartTime
-            // In that case, we should IGNORE the Gist data to prevent overwriting user's recent changes
             const lastLocalUpdate = parseInt(localStorage.getItem('last-local-update') || '0');
-
             if (lastLocalUpdate > fetchStartTime) {
-                console.warn('Gist Sync: Local data is newer (saved during fetch). Aborting overwrite.');
-                return loadData(); // Return local data instead
+                console.warn('Gist Sync: Local data is newer. Aborting overwrite.');
+                return loadData();
             }
 
-            saveData(standardized, false); // false = not dirty, because it came from cloud
+            saveData(standardized, false); // not dirty
             return standardized;
         }
     } catch (error) {
@@ -598,7 +605,12 @@ export const syncRecordsToGist = async (records) => {
                 files: {
                     'records.json': {
                         content: recordsToGistFormat(records)
-                    }
+                    },
+                    // Consolidation: Clean up legacy filenames so they don't get merged again
+                    'record.json': null,
+                    'record': null,
+                    'ot_records.json': null,
+                    'otcal_records.json': null
                 }
             })
         });
@@ -941,8 +953,8 @@ export const saveSettings = (settings) => {
 
 export const deleteRecord = (date) => {
     const data = loadData();
-    const dateStr = format(new Date(date), 'yyyy-MM-dd');
-    const filtered = data.filter(r => format(new Date(r.date), 'yyyy-MM-dd') !== dateStr);
+    const dateStr = normalizeDate(date);
+    const filtered = data.filter(r => normalizeDate(r.date) !== dateStr);
     saveData(filtered);
     syncRecordsToSheets(filtered);
     return filtered;
