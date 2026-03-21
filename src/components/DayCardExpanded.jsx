@@ -518,16 +518,11 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
                                             預估 {otType === 'pay' ? '薪資' : otType === 'leave' ? '公司補休' : '部門補休'}
                                         </p>
                                         <div className="flex items-baseline gap-1 justify-end md:justify-start">
-                                            <span className={cn(
-                                                "text-2xl font-black tabular-nums leading-none",
-                                                otType === 'pay' ? "text-green-600" :
-                                                    otType === 'leave' ? "text-indigo-600" :
-                                                        "text-purple-600"
-                                            )}>
-                                                {otType === 'pay' ? `\$${Math.round(dailySalary).toLocaleString()}` : compUnits.toFixed(0)}
+                                            <span className="text-2xl font-black tabular-nums leading-none text-green-600">
+                                                {`\$${Math.round(salaryMetrics?.total || 0).toLocaleString()}`}
                                             </span>
                                             <span className="text-[9px] font-bold text-gray-400 uppercase">
-                                                {otType === 'pay' ? 'TWD' : '單'}
+                                                TWD
                                             </span>
                                         </div>
                                     </div>

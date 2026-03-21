@@ -185,13 +185,26 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
     const travelByMonth = incomeChartMonths.map(m => getMonthlyStat(m, r => calculateDailySalary(r, { ...settings, liveRate }).travelAllowance));
     const totalIncomeByMonth = incomeChartMonths.map((m, i) => baseByMonth[i] + bonusByMonth[i] + otPayByMonth[i] + travelByMonth[i]);
 
+    // Cumulative Annual Income (Jan to month X) for each year in the view
+    const cumulativeIncomeByMonth = incomeChartMonths.map((m, i) => {
+        const year = m.getFullYear();
+        let sum = 0;
+        incomeChartMonths.forEach((otherM, otherIdx) => {
+            if (otherM.getFullYear() === year && otherM <= m) {
+                sum += totalIncomeByMonth[otherIdx];
+            }
+        });
+        return sum;
+    });
+
     const incomeData = {
         labels: incomeChartMonths.map(m => format(m, incomeRange === 'year' ? 'MMM' : 'yy/MM')),
         datasets: [
-            { label: '總收入', data: totalIncomeByMonth, borderColor: 'rgb(253, 224, 71)', backgroundColor: 'rgba(253, 224, 71, 0.4)', fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0, order: 1 },
-            { label: '底薪', data: baseByMonth, borderColor: 'rgb(56, 189, 248)', backgroundColor: 'rgba(56, 189, 248, 0.1)', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.4, hidden: false },
-            { label: '獎金', data: bonusByMonth, borderColor: 'rgb(245, 158, 11)', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.4, hidden: false },
-            { label: '加班費', data: otPayByMonth, borderColor: 'rgb(255, 69, 0)', backgroundColor: 'rgba(255, 69, 0, 0.1)', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.4, hidden: false },
+            { label: '年度累計收入', data: cumulativeIncomeByMonth, borderColor: 'rgb(34, 197, 94)', backgroundColor: 'rgb(34, 197, 94)', fill: false, tension: 0.4, borderWidth: 2, pointRadius: 4, order: 0, yAxisID: 'yCumulative', pointStyle: 'circle' },
+            { label: '單月總收入', data: totalIncomeByMonth, borderColor: 'rgb(253, 224, 71)', backgroundColor: 'rgba(253, 224, 71, 0.4)', fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0, order: 1 },
+            { label: '底薪', data: baseByMonth, borderColor: 'rgb(56, 189, 248)', backgroundColor: 'rgb(56, 189, 248)', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.4, hidden: false, order: 2, pointStyle: 'circle' },
+            { label: '獎金', data: bonusByMonth, borderColor: 'rgb(245, 158, 11)', backgroundColor: 'rgb(245, 158, 11)', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.4, hidden: false, order: 3, pointStyle: 'circle' },
+            { label: '加班費', data: otPayByMonth, borderColor: 'rgb(255, 69, 0)', backgroundColor: 'rgb(255, 69, 0)', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.4, hidden: false, order: 4, pointStyle: 'circle' },
         ]
     };
 
@@ -206,9 +219,9 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
         labels: workloadChartMonths.map(m => format(m, workloadRange === 'year' ? 'MMM' : 'yy/MM')),
         datasets: [
             { type: 'bar', label: '加班時數', data: otByMonth, backgroundColor: 'rgba(99, 102, 241, 0.4)', borderColor: 'rgb(99, 102, 241)', borderWidth: 1, borderRadius: 4, yAxisID: 'y', order: 3 },
-            { type: 'line', label: '補休單位', data: compByMonth, borderColor: 'rgb(79, 70, 229)', fill: false, tension: 0.4, yAxisID: 'y1', order: 4 },
-            { type: 'line', label: '請假天數', data: leaveDaysByMonth, borderColor: 'rgb(244, 63, 94)', backgroundColor: 'rgba(244, 63, 94, 0.1)', borderWidth: 2, pointRadius: 3, fill: false, tension: 0.3, yAxisID: 'y1', order: 1 },
-            { type: 'line', label: '出差天數', data: travelDaysByMonth, borderColor: 'rgb(16, 185, 129)', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderWidth: 2, pointRadius: 3, fill: false, tension: 0.3, yAxisID: 'y1', order: 2 }
+            { type: 'line', label: '補休單位', data: compByMonth, borderColor: 'rgb(79, 70, 229)', backgroundColor: 'rgb(79, 70, 229)', fill: false, tension: 0.4, yAxisID: 'y1', order: 4, pointStyle: 'circle', pointRadius: 3 },
+            { type: 'line', label: '請假天數', data: leaveDaysByMonth, borderColor: 'rgb(244, 63, 94)', backgroundColor: 'rgb(244, 63, 94)', borderWidth: 2, pointRadius: 3, fill: false, tension: 0.3, yAxisID: 'y1', order: 1, pointStyle: 'circle' },
+            { type: 'line', label: '出差天數', data: travelDaysByMonth, borderColor: 'rgb(16, 185, 129)', backgroundColor: 'rgb(16, 185, 129)', borderWidth: 2, pointRadius: 3, fill: false, tension: 0.3, yAxisID: 'y1', order: 2, pointStyle: 'circle' }
         ]
     };
 
@@ -231,11 +244,15 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
         maintainAspectRatio: false,
         plugins: {
             legend: {
-                display: true, // Enable legend for toggling
-                labels: { boxWidth: 8, font: { size: 9 }, usePointStyle: true }
+                display: true,
+                labels: { boxWidth: 8, font: { size: 9 }, usePointStyle: true, pointStyle: 'circle' }
             }
         },
-        scales: { x: { grid: { display: false }, ticks: { font: { size: 9 } } }, y: { display: false } }
+        scales: { 
+            x: { grid: { display: false }, ticks: { font: { size: 9 } } }, 
+            y: { display: false },
+            yCumulative: { display: false, position: 'right' }
+        }
     };
 
     const travelOptions = {
@@ -254,30 +271,67 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
         }
     }
 
-    // Custom Plugin to draw text values on Workload Chart
+    // Custom Plugin to draw text values on Charts
     const valuePlugin = {
         id: 'valuePlugin',
         afterDatasetsDraw(chart) {
             const { ctx, data } = chart;
             ctx.save();
             ctx.font = 'bold 9px sans-serif';
-            ctx.fillStyle = '#6b7280'; // gray-500
             ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
+            ctx.textBaseline = 'middle';
 
-            chart.data.datasets.forEach((dataset, i) => {
+            const isStacked = chart.options.scales?.x?.stacked || false;
+            const totals = new Array(data.labels.length).fill(0);
+
+            data.datasets.forEach((dataset, i) => {
                 const meta = chart.getDatasetMeta(i);
                 if (!meta.hidden) {
                     meta.data.forEach((element, index) => {
                         const value = dataset.data[index];
                         if (value > 0) {
                             const position = element.tooltipPosition();
-                            ctx.fillStyle = dataset.type === 'line' ? '#4f46e5' : '#6366f1';
-                            ctx.fillText(value.toFixed(0), position.x, position.y - 2);
+                            
+                            if (isStacked && dataset.type !== 'line') {
+                                // Accumulate totals for stacked bar top label
+                                totals[index] += value;
+                                // Draw value INSIDE the segment
+                                ctx.fillStyle = '#ffffff';
+                                ctx.fillText('$' + (value / 1000).toFixed(1) + 'k', position.x, position.y);
+                            } else if (dataset.type === 'line' || chart.config.type === 'line') {
+                                // Line chart or non-stacked bar
+                                ctx.fillStyle = dataset.borderColor || '#6366f1';
+                                ctx.textBaseline = 'bottom';
+                                ctx.fillText(value >= 1000 ? '$' + (value / 1000).toFixed(1) + 'k' : value.toFixed(0), position.x, position.y - 5);
+                            }
                         }
                     });
                 }
             });
+
+            // Draw Totals at the top of stacked bars
+            if (isStacked) {
+                chart.data.labels.forEach((label, index) => {
+                    const meta = chart.getDatasetMeta(0); // Use first dataset for x coord
+                    if (totals[index] > 0) {
+                        const x = meta.data[index].x;
+                        const y = chart.getDatasetMeta(data.datasets.length - 1).data[index].y; // Approx top
+                        // Actually better to find the highest Y among the stacks
+                        let topY = chart.chartArea.bottom;
+                        data.datasets.forEach((_, datasetIndex) => {
+                            const m = chart.getDatasetMeta(datasetIndex);
+                            if (!m.hidden && m.data[index]) {
+                                topY = Math.min(topY, m.data[index].y);
+                            }
+                        });
+
+                        ctx.fillStyle = '#374151'; // gray-700
+                        ctx.font = 'black 10px sans-serif';
+                        ctx.textBaseline = 'bottom';
+                        ctx.fillText('$' + (totals[index] / 1000).toFixed(0) + 'k', x, topY - 5);
+                    }
+                });
+            }
             ctx.restore();
         }
     }
