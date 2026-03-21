@@ -26,6 +26,8 @@ import { cn } from '../lib/utils'
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend)
 
+export const START_DATE = new Date('2024-09-09');
+
 function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsClick }) {
     const [settings, setSettings] = useState(null)
     const [liveRate, setLiveRate] = useState(null)
@@ -320,8 +322,9 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
             const isHoliday = isTaiwanHoliday(day);
             const isWeekday = day.getDay() >= 1 && day.getDay() <= 5;
             const isPastOrToday = day <= today || isSameDay(day, today);
+            const isEmployed = day >= START_DATE || isSameDay(day, START_DATE);
 
-            if (!isHoliday && isWeekday && isPastOrToday) {
+            if (!isHoliday && isWeekday && isPastOrToday && isEmployed) {
                 type = 'attendance';
             }
         }
@@ -365,10 +368,10 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
             <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="neumo-card p-1 bg-purple-500 overflow-visible relative group" // Changed to overflow-visible for morphing
+                className="neumo-card p-1 bg-purple-500 overflow-visible relative group rounded-3xl" // Changed to overflow-visible for morphing
             >
                 {/* Background Pattern */}
-                <div className="absolute inset-0 bg-purple-500 z-0 transition-all duration-500 group-hover:brightness-105 rounded-xl" />
+                <div className="absolute inset-0 bg-purple-500 z-0 transition-all duration-500 group-hover:brightness-105 rounded-3xl" />
 
                 <div className="relative z-10 w-full h-24 flex flex-col justify-between p-4 overflow-visible">
                     {/* Header Text (White) */}
@@ -406,19 +409,28 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
                     animate={{ opacity: 1, y: 0 }}
                     className="neumo-card p-6 flex flex-col gap-4"
                 >
-                    <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-2 text-gray-400">
-                            <div className="p-2 rounded-xl neumo-pressed text-purple-500">
-                                <TrendingUp size={20} />
+                    <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                        {/* Left: Title and Amount */}
+                        <div className="shrink-0 min-w-[140px] flex flex-col gap-1">
+                            <div className="flex items-center gap-2 text-gray-400 mb-1">
+                                <div className="p-1.5 rounded-lg neumo-pressed text-purple-500">
+                                    <TrendingUp size={16} />
+                                </div>
+                                <h2 className="text-[10px] font-black uppercase tracking-widest">本月薪資分布</h2>
                             </div>
-                            <h2 className="text-xs font-black uppercase tracking-widest">本月薪資分布</h2>
+                            <div
+                                onClick={() => setShowSalary(!showSalary)}
+                                className="text-3xl lg:text-4xl font-black text-[#202731] tracking-tighter cursor-pointer hover:opacity-80 transition-opacity select-none leading-tight"
+                            >
+                                {(isPrivacy || !showSalary) ? '••••' : '$' + Math.round(monthMetrics.estimatedTotal).toLocaleString()}
+                            </div>
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none">Total Estimated</span>
                         </div>
-                    </div>
 
-                    <div className="flex items-center gap-4 mt-6">
-                        <div className="flex-1 h-24 flex gap-1 rounded-2xl overflow-visible neumo-pressed p-1.5 bg-gray-100/50 relative z-10">
+                        {/* Right: Bar Grid */}
+                        <div className="flex-1 w-full h-16 flex gap-1 rounded-2xl overflow-visible neumo-pressed p-1.5 bg-gray-100/50 relative z-10 mt-8 md:mt-2">
                             {!isPrivacy ? (
-                                <div className="absolute inset-x-0 -top-12 flex w-full h-10 px-2">
+                                <div className="absolute inset-x-0 -top-12 flex w-full h-10 px-2 pointer-events-none">
                                     <SalaryLabel label="底薪" value={monthMetrics.baseMonthly} total={monthMetrics.estimatedTotal} color="bg-sky-400" mask={mask} />
                                     <SalaryLabel label="加班" value={monthMetrics.otPay} total={monthMetrics.estimatedTotal} color="bg-orange-500" mask={mask} />
                                     <SalaryLabel label="津貼" value={monthMetrics.travelAllowance} total={monthMetrics.estimatedTotal} color="bg-emerald-500" mask={mask} />
@@ -437,17 +449,6 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
                                     <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Hidden</span>
                                 </div>
                             )}
-                        </div>
-
-                        {/* Big Amount moved here */}
-                        <div className="shrink-0 text-right min-w-[100px] lg:min-w-[140px]">
-                            <div
-                                onClick={() => setShowSalary(!showSalary)}
-                                className="text-3xl lg:text-4xl font-black text-[#202731] tracking-tighter cursor-pointer hover:opacity-80 transition-opacity select-none leading-none"
-                            >
-                                {(isPrivacy || !showSalary) ? '••••' : '$' + Math.round(monthMetrics.estimatedTotal).toLocaleString()}
-                            </div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1 block">Total Estimated</span>
                         </div>
                     </div>
                 </motion.div>

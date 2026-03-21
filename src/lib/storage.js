@@ -511,9 +511,10 @@ export const addOrUpdateRecord = async (input) => {
         }
     }
 
-    saveData(newData);
-    const syncResult = await syncRecordsToSheets(newData);
-    return { records: newData, sync: syncResult };
+    const finalizedData = standardizeRecords(newData);
+    saveData(finalizedData);
+    const syncResult = await syncRecordsToSheets(finalizedData);
+    return { records: finalizedData, sync: syncResult };
 };
 
 /**
@@ -628,11 +629,18 @@ export const syncRecordsToGist = async (records) => {
             console.log('Sync: Records successfully pushed to Gist.');
             localStorage.setItem('ot-data-dirty', 'false'); // Sync success, clear dirty flag
         } else {
-            const errData = await response.json();
-            console.error('Sync ERROR: Gist update failed:', response.status, errData.message);
+            const errData = await response.json().catch(() => ({}));
+            console.error('Sync ERROR: Gist update failed:', response.status, errData.message || response.statusText);
+            // If it's a 404, maybe the Gist ID is wrong
+            if (response.status === 404) {
+                return { ok: false, error: 'Gist not found (404)' };
+            }
+            if (response.status === 401 || response.status === 403) {
+                return { ok: false, error: 'Auth failed (401/403)' };
+            }
         }
 
-        return { ok: response.ok };
+        return { ok: response.ok, error: response.status !== 200 ? `HTTP ${response.status}` : null };
     } catch (error) {
         console.error('Sync ERROR: Network failure during Gist sync:', error.message);
         return { ok: false, error: 'Network error' };

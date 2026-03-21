@@ -218,7 +218,7 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
 
     const toggleOtType = (e) => {
         if (e && e.stopPropagation) e.stopPropagation();
-        const next = otType === 'pay' ? 'leave' : otType === 'leave' ? 'internal' : 'pay';
+        const next = otType === 'pay' ? 'leave' : 'pay';
         setOtType(next);
         syncUpdate({ otType: next });
     };
@@ -504,9 +504,7 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
                                             onClick={toggleOtType}
                                             className={cn(
                                                 "w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0",
-                                                otType === 'pay' ? "bg-green-500 text-white shadow-lg" :
-                                                    otType === 'leave' ? "bg-indigo-500 text-white shadow-lg" :
-                                                        "bg-purple-600 text-white shadow-lg"
+                                                otType === 'pay' ? "bg-green-500 text-white shadow-lg" : "bg-purple-600 text-white shadow-lg"
                                             )}
                                         >
                                             {otType === 'pay' ? <DollarSign size={14} /> : <Coffee size={14} />}
@@ -515,11 +513,11 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
 
                                     <div className="flex-1">
                                         <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 text-right md:text-left">
-                                            預估 {otType === 'pay' ? '薪資' : otType === 'leave' ? '公司補休' : '部門補休'}
+                                            預估 {otType === 'pay' ? '薪資' : '部門補休'}
                                         </p>
                                         <div className="flex items-baseline gap-1 justify-end md:justify-start">
                                             <span className="text-2xl font-black tabular-nums leading-none text-green-600">
-                                                {`\$${Math.round(salaryMetrics?.total || 0).toLocaleString()}`}
+                                                {`$${Math.round(salaryMetrics?.total || 0).toLocaleString()}`}
                                             </span>
                                             <span className="text-[9px] font-bold text-gray-400 uppercase">
                                                 TWD

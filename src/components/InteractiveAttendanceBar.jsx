@@ -79,7 +79,7 @@ export default function InteractiveAttendanceBar({ attendanceBoxes, today, class
                                 isPastOrToday ? "bg-gray-300" : "bg-gray-100"
                             )}
                             style={{ 
-                                borderRadius: activeIdx === idx ? '50%' : '2px',
+                                borderRadius: activeIdx === idx ? '50%' : '9999px',
                                 backgroundColor: activeIdx === idx ? '#a855f7' : undefined 
                             }}
                         >

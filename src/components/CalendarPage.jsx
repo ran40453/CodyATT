@@ -8,6 +8,8 @@ import CalendarMonthGrid, { CalendarOverlay } from './CalendarMonthGrid'
 import InteractiveAttendanceBar from './InteractiveAttendanceBar'
 import HeaderActions from './HeaderActions'
 
+export const START_DATE = new Date('2024-09-09');
+
 function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsClick }) {
     const [currentDate, setCurrentDate] = useState(new Date())
     const [focusedDay, setFocusedDay] = useState(null)
@@ -124,7 +126,9 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
             const isHoliday = isTaiwanHoliday(day);
             const isWeekday = day.getDay() >= 1 && day.getDay() <= 5;
             const isPastOrToday = day <= new Date() || isSameDay(day, new Date());
-            if (!isHoliday && isWeekday && isPastOrToday) type = 'attendance';
+            const isEmployed = day >= START_DATE || isSameDay(day, START_DATE);
+
+            if (!isHoliday && isWeekday && isPastOrToday && isEmployed) type = 'attendance';
         }
         return { day, type };
     });
@@ -161,48 +165,51 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
                 </HeaderActions>
             </header>
 
-            {!isYearView && (
-                <motion.div ref={bannerRef} className="mx-4 neumo-card p-1 bg-purple-500 overflow-visible relative group">
-                    <div className="absolute inset-0 bg-purple-500 z-0" />
-                    <div className="relative z-10 w-full flex flex-col justify-between p-2.5">
-                        <div className="flex justify-between items-center mb-1">
-                            <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-black text-white/90 uppercase tracking-widest">本月出勤</span>
-                                <span className="text-[10px] font-black text-white">{mask(format(currentDate, 'yyyy / MM'))}</span>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-1 bg-white/20 backdrop-blur-md rounded-xl p-0.5 px-1.5 shadow-sm">
-                                    <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-1 hover:scale-110 text-white">
-                                        <ChevronLeft size={16} strokeWidth={3} />
-                                    </button>
-                                    <select value={currentDate.getFullYear()} onChange={(e) => setCurrentDate(setYear(currentDate, parseInt(e.target.value)))} className="bg-transparent text-[11px] font-black text-white focus:outline-none appearance-none px-1">
-                                        {years.map(y => <option key={y} value={y} className="text-gray-800">{y}</option>)}
-                                    </select>
-                                    <span className="text-white/40 text-[10px] font-bold">/</span>
-                                    <select value={currentDate.getMonth()} onChange={handleMonthChange} className="bg-transparent text-[11px] font-black text-white focus:outline-none appearance-none px-1">
-                                        {months.map(m => <option key={m} value={m} className="text-gray-800">{format(new Date(2024, m), 'MM')}</option>)}
-                                    </select>
-                                    <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-1 hover:scale-110 text-white">
-                                        <ChevronRight size={16} strokeWidth={3} />
-                                    </button>
-                                </div>
-                                <span className="text-xl font-black text-white drop-shadow-md">
-                                    {mask(String(attendedPercent))}<span className="text-xs align-top">%</span>
-                                </span>
+            <div className="mx-4 neumo-card p-1 bg-purple-500 overflow-visible relative group rounded-3xl">
+                <div className="absolute inset-0 bg-purple-500 z-0 rounded-3xl" />
+                <div className="relative z-10 w-full flex flex-col justify-between p-2.5">
+                    <div className="flex justify-between items-center mb-1">
+                        <div className="flex items-center gap-3">
+                            <span className="text-[9px] font-black text-white/90 uppercase tracking-widest">本月出勤</span>
+                            {/* Navigation Buttons moved here */}
+                            <div className="flex items-center gap-1 bg-white/20 backdrop-blur-md rounded-xl p-0.5 px-1.5 shadow-sm">
+                                <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-1 hover:scale-110 text-white">
+                                    <ChevronLeft size={16} strokeWidth={3} />
+                                </button>
+                                <select value={currentDate.getFullYear()} onChange={(e) => setCurrentDate(setYear(currentDate, parseInt(e.target.value)))} className="bg-transparent text-[11px] font-black text-white focus:outline-none appearance-none px-1">
+                                    {years.map(y => <option key={y} value={y} className="text-gray-800">{y}</option>)}
+                                </select>
+                                <span className="text-white/40 text-[10px] font-bold">/</span>
+                                <select value={currentDate.getMonth()} onChange={handleMonthChange} className="bg-transparent text-[11px] font-black text-white focus:outline-none appearance-none px-1">
+                                    {months.map(m => <option key={m} value={m} className="text-gray-800">{format(new Date(2024, m), 'MM')}</option>)}
+                                </select>
+                                <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-1 hover:scale-110 text-white">
+                                    <ChevronRight size={16} strokeWidth={3} />
+                                </button>
                             </div>
                         </div>
-                        <div className="h-6 rounded-md bg-gray-100/90 p-1 flex items-center shadow-inner overflow-visible">
-                            <InteractiveAttendanceBar attendanceBoxes={attendanceBoxes} today={new Date()} className="w-full h-1.5 gap-[2px] overflow-visible" />
-                        </div>
+                        <span className="text-xl font-black text-white drop-shadow-md">
+                            {mask(String(attendedPercent))}<span className="text-xs align-top">%</span>
+                        </span>
                     </div>
-                </motion.div>
-            )}
+                    <div className="h-6 rounded-lg bg-gray-100/90 p-1 flex items-center shadow-inner overflow-visible">
+                        <InteractiveAttendanceBar attendanceBoxes={attendanceBoxes} today={new Date()} className="w-full h-1.5 gap-[2px] overflow-visible" />
+                    </div>
+                </div>
+            </div>
 
             {isYearView ? (
                 <YearView year={currentDate.getFullYear()} dataMap={dataMap} onSelectMonth={(m) => { setCurrentDate(setMonth(setYear(new Date(), currentDate.getFullYear()), m)); setIsYearView(false); }} />
             ) : (
-                <div ref={containerRef} className="relative overflow-hidden w-full h-full">
-                    <motion.div style={{ x, width: '300%', display: 'flex' }} drag="x" dragConstraints={{ left: -containerWidth * 2, right: 0 }} dragElastic={0.2} onDragEnd={handleDragEnd}>
+                <div ref={containerRef} className="relative overflow-hidden w-full h-full min-h-[600px]">
+                    <motion.div 
+                        initial={false}
+                        style={{ x, width: '300%' }}
+                        drag="x"
+                        dragConstraints={{ left: -containerWidth * 2, right: 0 }}
+                        onDragEnd={handleDragEnd}
+                        className="flex"
+                    >
                         <div style={{ width: containerWidth }} className="shrink-0 px-4">
                             {isNeighborsLoaded ? (
                                 <CalendarMonthGrid monthDate={prevMonth} dataMap={dataMap} settings={settings} onUpdate={onUpdate} onDelete={onUpdate} isPrivacy={isPrivacy} onDayClick={setFocusedDay} modalTop={modalTop} />

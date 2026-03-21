@@ -64,7 +64,7 @@ function CalendarMonthGrid({
                 ))}
             </div>
 
-            <div className="grid grid-cols-7 gap-1 md:gap-3 lg:min-h-[600px] relative transition-all duration-300" style={{ gridAutoRows: 'minmax(80px, 1fr)' }}>
+            <div className="grid grid-cols-7 gap-1 md:gap-3 lg:min-h-[600px] relative" style={{ gridAutoRows: 'minmax(80px, 1fr)' }}>
                 {days.map((day) => {
                     return (
                         <div key={format(day, 'yyyy-MM-dd')}>
@@ -117,7 +117,7 @@ export function CalendarOverlay({ day, record, onUpdate, onDelete, onClose, isPr
                 initial={{ opacity: 0, scale: 0.95, y: 10, x: "-50%" }}
                 animate={{ opacity: 1, scale: 1, y: 0, x: "-50%" }}
                 exit={{ opacity: 0, scale: 0.95, y: 10, x: "-50%" }}
-                transition={{ duration: 0 }}
+                transition={{ type: "spring", stiffness: 400, damping: 22, mass: 1 }}
                 style={blockStyle}
                 className="z-[1999] pointer-events-auto"
             >

@@ -21,6 +21,8 @@ import { Bar, Line, Chart, Doughnut } from 'react-chartjs-2'
 import { cn } from '../lib/utils'
 import { loadSettings, calculateDailySalary, fetchExchangeRate, calculateCompLeaveUnits, calculateOTHours, standardizeCountry, saveData, syncRecordsToGist } from '../lib/storage'
 import HeaderActions from './HeaderActions'
+import { isTaiwanHoliday } from '../lib/holidays'
+import { START_DATE } from './CalendarPage'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, BarController, LineController, Title, Tooltip, Legend, Filler, ArcElement)
 
@@ -242,7 +244,16 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
         const dayStr = format(day, 'yyyy-MM-dd');
         const record = data.find(r => format(parse(r.date), 'yyyy-MM-dd') === dayStr);
         let type = 'none';
-        if (record) type = record.isLeave ? 'leave' : 'attendance';
+        if (record) {
+            type = record.isLeave ? 'leave' : 'attendance';
+        } else {
+            const isHoliday = isTaiwanHoliday(day);
+            const isWeekday = day.getDay() >= 1 && day.getDay() <= 5;
+            const isPastOrToday = day <= new Date() || isSameDay(day, new Date());
+            const isEmployed = day >= START_DATE || isSameDay(day, START_DATE);
+
+            if (!isHoliday && isWeekday && isPastOrToday && isEmployed) type = 'attendance';
+        }
         return { day, type };
     });
 
@@ -253,6 +264,10 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
     const options = {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
         plugins: {
             legend: {
                 display: true,
@@ -261,8 +276,8 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
         },
         scales: { 
             x: { grid: { display: false }, ticks: { font: { size: 9 } } }, 
-            y: { display: false },
-            yCumulative: { display: false, position: 'right' }
+            y: { display: true, ticks: { font: { size: 9 }, color: '#9ca3af' }, grid: { color: 'rgba(0,0,0,0.03)' } },
+            yCumulative: { display: true, position: 'right', ticks: { font: { size: 9 }, color: '#9ca3af' }, grid: { display: false } }
         }
     };
 

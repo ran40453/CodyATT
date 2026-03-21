@@ -376,10 +376,10 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                                 </button>
                                                 <button
                                                     disabled={otHours < 0.5}
-                                                    onClick={() => setOtType('internal')}
+                                                    onClick={() => setOtType('leave')}
                                                     className={cn(
                                                         "flex-1 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-1.5",
-                                                        otType === 'internal' ? "bg-purple-600 text-white shadow-lg" : "text-gray-400"
+                                                        otType === 'leave' ? "bg-purple-600 text-white shadow-lg" : "text-gray-400"
                                                     )}
                                                 >
                                                     <Coffee size={14} /> 部門補休
