@@ -252,7 +252,12 @@ export const standardizeRecords = (records) => {
             // Merge strategy:
             // - Prioritize data from record with isLeave: true if available
             // - Always keep whichever has an endTime if one is missing
+            // - Sum OT hours if they are different (to prevent data loss from separate shifts)
             // - Sum bonuses and combine bonusEntries
+            const mergedOT = (standardized.otHours !== existing.otHours) 
+                ? (standardized.otHours + existing.otHours) 
+                : standardized.otHours;
+
             recordMap.set(dateStr, {
                 ...existing,
                 ...standardized,
@@ -260,7 +265,7 @@ export const standardizeRecords = (records) => {
                 leaveType: standardized.isLeave ? standardized.leaveType : existing.leaveType,
                 leaveDuration: standardized.isLeave ? standardized.leaveDuration : existing.leaveDuration,
                 endTime: standardized.endTime || existing.endTime,
-                otHours: standardized.otHours || existing.otHours,
+                otHours: mergedOT,
                 bonus: existing.bonus + standardized.bonus,
                 bonusEntries: [...(existing.bonusEntries || []), ...(standardized.bonusEntries || [])]
             });
@@ -562,17 +567,21 @@ export const fetchRecordsFromGist = async (tokenOverride, gistIdOverride) => {
         });
 
         if (allRecords.length > 0) {
+            console.log(`Gist Sync: Merged ${allRecords.length} records from Gist files.`);
             const standardized = standardizeRecords(allRecords);
-            console.log(`Gist Sync: Total standardized records: ${standardized.length}`);
-
-            // CRITICAL: Check race condition
-            const lastLocalUpdate = parseInt(localStorage.getItem('last-local-update') || '0');
-            if (lastLocalUpdate > fetchStartTime) {
-                console.warn('Gist Sync: Local data is newer. Aborting overwrite.');
-                return loadData();
+            
+            // If we found legacy files, trigger a one-time consolidation sync
+            const legacyFound = possibleFiles.slice(1).some(f => gist.files[f]);
+            if (legacyFound) {
+                console.log('Gist Sync: Legacy files detected. Triggering consolidation/cleanup...');
+                syncRecordsToGist(standardized); // Push to records.json and delete legacy
             }
 
-            saveData(standardized, false); // not dirty
+            // ... rest of the logic ...
+            const lastLocalUpdate = parseInt(localStorage.getItem('last-local-update') || '0');
+            if (lastLocalUpdate > fetchStartTime) return loadData();
+
+            saveData(standardized, false);
             return standardized;
         }
     } catch (error) {
