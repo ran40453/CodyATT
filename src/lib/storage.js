@@ -164,41 +164,68 @@ export const calculateCompLeaveUnits = (record) => {
 };
 
 /**
- * Standardizes record format from historical or different schemas
+ * Normalizes any date input (String, ISO, or Date object) to a strict 'yyyy-MM-dd' local date string.
+ * This prevents timezone shifts (e.g., ISO UTC vs local) from creating duplicate records.
+ */
+export const normalizeDate = (dateInput) => {
+    if (!dateInput) return format(new Date(), 'yyyy-MM-dd');
+    
+    // If it's already a simple YYYY-MM-DD string, return it as-is
+    if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+        return dateInput;
+    }
+
+    try {
+        const d = new Date(dateInput);
+        if (isNaN(d.getTime())) return format(new Date(), 'yyyy-MM-dd');
+        
+        // Use date-fns format which uses local time by default.
+        // This ensures "2025-09-29T16:00:00.000Z" (4pm UTC) becomes "2025-09-30" in Taiwan (UTC+8).
+        return format(d, 'yyyy-MM-dd');
+    } catch (e) {
+        return format(new Date(), 'yyyy-MM-dd');
+    }
+};
+
+/**
+ * Standardizes record format from historical or different schemas and merges duplicates.
  */
 export const standardizeRecords = (records) => {
     if (!Array.isArray(records)) return [];
-    return records.map(r => {
+    
+    // Use a Map to deduplicate by normalized date string
+    const recordMap = new Map();
+    
+    records.forEach(r => {
         const nr = { ...r };
+        const dateStr = normalizeDate(nr.date);
+        
+        if (!dateStr) return;
 
-        // 1. Handle tiered OT hours (Historical format: { "1.34": 2, "1.67": 2 })
+        // 1. Handle tiered OT hours (Historical format)
         const h134 = parseFloat(nr['1.34']) || 0;
         const h167 = parseFloat(nr['1.67']) || 0;
         const h267 = parseFloat(nr['2.67']) || 0;
         const h2 = parseFloat(nr['2']) || 0;
         const tieredSum = h134 + h167 + h267 + h2;
 
-        // Use either existing otHours or calculate from tiers
         let otHours = parseFloat(nr.otHours);
         if (isNaN(otHours) || otHours === 0) {
             otHours = tieredSum;
         }
 
-        // 2. Handle Bonus & Record Type (User added logic)
         const bonus = parseFloat(nr.bonus) || 0;
         const recordType = nr.recordType || (bonus > 0 ? 'bonus' : 'attendance');
-
-        // 3. Map property names (Historical or snake_case variants)
         const travelCountry = nr.travelCountry || nr.travel_country || '';
-        // If isHoliday is not explicitly false, check if it's a Taiwan holiday
-        const isHoliday = nr.isHoliday !== undefined ? !!nr.isHoliday : isTaiwanHoliday(new Date(nr.date));
+        const isHoliday = nr.isHoliday !== undefined ? !!nr.isHoliday : isTaiwanHoliday(new Date(dateStr));
         const isLeave = !!(nr.isLeave || nr.is_leave);
         const isRestDay = !!(nr.isRestDay || nr.is_rest_day);
         const endTime = nr.endTime || nr.end_time || '';
         const otType = nr.otType || nr.ot_type || 'pay';
 
-        return {
+        const standardized = {
             ...nr,
+            date: dateStr, 
             otHours,
             bonus,
             recordType,
@@ -216,10 +243,33 @@ export const standardizeRecords = (records) => {
                 amount: bonus,
                 category: nr.bonusCategory || '其他',
                 name: nr.bonusName || '',
-                date: nr.date
+                date: dateStr
             }] : [])
         };
+
+        if (recordMap.has(dateStr)) {
+            const existing = recordMap.get(dateStr);
+            // Merge strategy:
+            // - Prioritize data from record with isLeave: true if available
+            // - Always keep whichever has an endTime if one is missing
+            // - Sum bonuses and combine bonusEntries
+            recordMap.set(dateStr, {
+                ...existing,
+                ...standardized,
+                isLeave: existing.isLeave || standardized.isLeave,
+                leaveType: standardized.isLeave ? standardized.leaveType : existing.leaveType,
+                leaveDuration: standardized.isLeave ? standardized.leaveDuration : existing.leaveDuration,
+                endTime: standardized.endTime || existing.endTime,
+                otHours: standardized.otHours || existing.otHours,
+                bonus: existing.bonus + standardized.bonus,
+                bonusEntries: [...(existing.bonusEntries || []), ...(standardized.bonusEntries || [])]
+            });
+        } else {
+            recordMap.set(dateStr, standardized);
+        }
     });
+
+    return Array.from(recordMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 };
 
 /**
@@ -386,8 +436,8 @@ export const addOrUpdateRecord = async (input) => {
     let updatedBonusCategories = false;
 
     for (const record of recordsToProcess) {
-        const dateStr = format(new Date(record.date), 'yyyy-MM-dd');
-        const index = newData.findIndex(r => format(new Date(r.date), 'yyyy-MM-dd') === dateStr);
+        const dateStr = normalizeDate(record.date);
+        const index = newData.findIndex(r => normalizeDate(r.date) === dateStr);
 
         if (index >= 0) {
             const existing = newData[index];
@@ -401,7 +451,7 @@ export const addOrUpdateRecord = async (input) => {
                         amount: record.bonus,
                         category: record.bonusCategory,
                         name: record.bonusName,
-                        date: record.date
+                        date: dateStr
                     });
                 }
                 newData[index] = {
@@ -413,8 +463,6 @@ export const addOrUpdateRecord = async (input) => {
                 const existingBonus = parseFloat(existing.bonus) || 0;
                 const inputBonus = record.bonus !== undefined ? parseFloat(record.bonus) : existingBonus;
 
-                // If bonus is updated and value changed, clear existing breakdown entries
-                // to prevents mismatch between total bonus and breakdown in AnalysisPage
                 let newEntries = existing.bonusEntries || [];
                 if (record.bonus !== undefined && Math.abs(inputBonus - existingBonus) > 0.01) {
                     newEntries = [];
@@ -422,14 +470,15 @@ export const addOrUpdateRecord = async (input) => {
 
                 newData[index] = {
                     ...record,
-                    bonus: inputBonus, // Ensure it's stored as number
+                    date: dateStr, // Ensure stored date is normalized
+                    bonus: inputBonus,
                     bonusEntries: newEntries,
                     bonusCategory: existing.bonusCategory || '',
                     bonusName: existing.bonusName || ''
                 };
             }
         } else {
-            newData.push(record);
+            newData.push({ ...record, date: dateStr });
         }
 
         // Check bonus category for settings update
