@@ -185,22 +185,33 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
     const travelByMonth = incomeChartMonths.map(m => getMonthlyStat(m, r => calculateDailySalary(r, { ...settings, liveRate }).travelAllowance));
     const totalIncomeByMonth = incomeChartMonths.map((m, i) => baseByMonth[i] + bonusByMonth[i] + otPayByMonth[i] + travelByMonth[i]);
 
-    // Cumulative Annual Income (Jan to month X) for each year in the view
-    const cumulativeIncomeByMonth = incomeChartMonths.map((m, i) => {
-        const year = m.getFullYear();
+    const getIncomeForMonth = (m) => {
+        let base = parseFloat(settings.salary?.baseMonthly) || 50000;
+        if (settings.salaryHistory && Array.isArray(settings.salaryHistory)) {
+            const sortedHistory = [...settings.salaryHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const monthEnd = endOfMonth(m);
+            const applicable = sortedHistory.find(h => new Date(h.date) <= monthEnd);
+            if (applicable) base = parseFloat(applicable.amount) || base;
+        }
+        const bonus = getMonthlyStat(m, r => parseFloat(r.bonus));
+        const ot = getMonthlyStat(m, r => calculateDailySalary(r, { ...settings, liveRate }).otPay);
+        const travel = getMonthlyStat(m, r => calculateDailySalary(r, { ...settings, liveRate }).travelAllowance);
+        return base + bonus + ot + travel;
+    };
+
+    const rolling12MIncomeByMonth = incomeChartMonths.map(m => {
         let sum = 0;
-        incomeChartMonths.forEach((otherM, otherIdx) => {
-            if (otherM.getFullYear() === year && otherM <= m) {
-                sum += totalIncomeByMonth[otherIdx];
-            }
-        });
+        for (let i = 0; i < 12; i++) {
+            const targetMonth = subMonths(m, i);
+            sum += getIncomeForMonth(targetMonth);
+        }
         return sum;
     });
 
     const incomeData = {
         labels: incomeChartMonths.map(m => format(m, incomeRange === 'year' ? 'MMM' : 'yy/MM')),
         datasets: [
-            { label: '年度累計收入', data: cumulativeIncomeByMonth, borderColor: 'rgb(34, 197, 94)', backgroundColor: 'rgb(34, 197, 94)', fill: false, tension: 0.4, borderWidth: 2, pointRadius: 4, order: 0, yAxisID: 'yCumulative', pointStyle: 'circle' },
+            { label: '滾動年收 (Rolling 12M)', data: rolling12MIncomeByMonth, borderColor: 'rgb(156, 163, 175)', backgroundColor: 'rgb(156, 163, 175)', fill: false, tension: 0.4, borderWidth: 2, pointRadius: 4, order: 0, yAxisID: 'yCumulative', pointStyle: 'circle', borderDash: [5, 5] },
             { label: '單月總收入', data: totalIncomeByMonth, borderColor: 'rgb(253, 224, 71)', backgroundColor: 'rgba(253, 224, 71, 0.4)', fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0, order: 1 },
             { label: '底薪', data: baseByMonth, borderColor: 'rgb(56, 189, 248)', backgroundColor: 'rgb(56, 189, 248)', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.4, hidden: false, order: 2, pointStyle: 'circle' },
             { label: '獎金', data: bonusByMonth, borderColor: 'rgb(245, 158, 11)', backgroundColor: 'rgb(245, 158, 11)', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.4, hidden: false, order: 3, pointStyle: 'circle' },
@@ -295,9 +306,10 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                             if (isStacked && dataset.type !== 'line') {
                                 // Accumulate totals for stacked bar top label
                                 totals[index] += value;
-                                // Draw value INSIDE the segment
+                                // Draw value INSIDE the segment at the bottom
                                 ctx.fillStyle = '#ffffff';
-                                ctx.fillText('$' + (value / 1000).toFixed(1) + 'k', position.x, position.y);
+                                ctx.textBaseline = 'bottom';
+                                ctx.fillText('$' + (value / 1000).toFixed(1) + 'k', position.x, element.base - 2);
                             } else if (dataset.type === 'line' || chart.config.type === 'line') {
                                 // Line chart or non-stacked bar
                                 ctx.fillStyle = dataset.borderColor || '#6366f1';
