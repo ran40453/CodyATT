@@ -15,7 +15,13 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
     const [settings, setSettings] = useState(null)
     const [liveRate, setLiveRate] = useState(null)
     const [modalTop, setModalTop] = useState('140px')
+    const [isNeighborsLoaded, setIsNeighborsLoaded] = useState(false)
     const bannerRef = useRef(null)
+
+    useEffect(() => {
+        const timer = setTimeout(() => setIsNeighborsLoaded(true), 300);
+        return () => clearTimeout(timer);
+    }, [currentDate]);
 
     useEffect(() => {
         const init = async () => {
@@ -156,7 +162,7 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
             </header>
 
             {!isYearView && (
-                <motion.div ref={bannerRef} className="mx-4 neumo-card p-1 bg-purple-500 overflow-hidden relative group">
+                <motion.div ref={bannerRef} className="mx-4 neumo-card p-1 bg-purple-500 overflow-visible relative group">
                     <div className="absolute inset-0 bg-purple-500 z-0" />
                     <div className="relative z-10 w-full flex flex-col justify-between p-2.5">
                         <div className="flex justify-between items-center mb-1">
@@ -198,13 +204,21 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
                 <div ref={containerRef} className="relative overflow-hidden w-full h-full">
                     <motion.div style={{ x, width: '300%', display: 'flex' }} drag="x" dragConstraints={{ left: -containerWidth * 2, right: 0 }} dragElastic={0.2} onDragEnd={handleDragEnd}>
                         <div style={{ width: containerWidth }} className="shrink-0 px-4">
-                            <CalendarMonthGrid monthDate={prevMonth} dataMap={dataMap} settings={settings} onUpdate={onUpdate} onDelete={onUpdate} isPrivacy={isPrivacy} onDayClick={setFocusedDay} modalTop={modalTop} />
+                            {isNeighborsLoaded ? (
+                                <CalendarMonthGrid monthDate={prevMonth} dataMap={dataMap} settings={settings} onUpdate={onUpdate} onDelete={onUpdate} isPrivacy={isPrivacy} onDayClick={setFocusedDay} modalTop={modalTop} />
+                            ) : (
+                                <div className="h-[600px] w-full" />
+                            )}
                         </div>
                         <div style={{ width: containerWidth }} className="shrink-0 px-4">
                             <CalendarMonthGrid monthDate={currentDate} dataMap={dataMap} settings={settings} onUpdate={onUpdate} onDelete={onUpdate} isPrivacy={isPrivacy} onDayClick={setFocusedDay} modalTop={modalTop} />
                         </div>
                         <div style={{ width: containerWidth }} className="shrink-0 px-4">
-                            <CalendarMonthGrid monthDate={nextMonth} dataMap={dataMap} settings={settings} onUpdate={onUpdate} onDelete={onUpdate} isPrivacy={isPrivacy} onDayClick={setFocusedDay} modalTop={modalTop} />
+                            {isNeighborsLoaded ? (
+                                <CalendarMonthGrid monthDate={nextMonth} dataMap={dataMap} settings={settings} onUpdate={onUpdate} onDelete={onUpdate} isPrivacy={isPrivacy} onDayClick={setFocusedDay} modalTop={modalTop} />
+                            ) : (
+                                <div className="h-[600px] w-full" />
+                            )}
                         </div>
                     </motion.div>
                 </div>

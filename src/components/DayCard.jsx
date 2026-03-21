@@ -167,11 +167,27 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy, setti
 
 export default React.memo(DayCard, (prevProps, nextProps) => {
     // Only re-render if fundamental props change.
+    const r1 = prevProps.record;
+    const r2 = nextProps.record;
+
+    const recordChanged = 
+        r1?.date !== r2?.date ||
+        r1?.endTime !== r2?.endTime ||
+        r1?.isLeave !== r2?.isLeave ||
+        r1?.isHoliday !== r2?.isHoliday ||
+        r1?.isWorkDay !== r2?.isWorkDay ||
+        r1?.otHours !== r2?.otHours ||
+        r1?.otType !== r2?.otType ||
+        r1?.travelCountry !== r2?.travelCountry ||
+        r1?.remarks !== r2?.remarks ||
+        r1?.bonus !== r2?.bonus ||
+        r1?.Remark !== r2?.Remark;
+
     return (
         prevProps.day.getTime() === nextProps.day.getTime() &&
         prevProps.isCurrentMonth === nextProps.isCurrentMonth &&
         prevProps.isPrivacy === nextProps.isPrivacy &&
-        JSON.stringify(prevProps.record) === JSON.stringify(nextProps.record) &&
+        !recordChanged &&
         prevProps.settings === nextProps.settings
     );
 });

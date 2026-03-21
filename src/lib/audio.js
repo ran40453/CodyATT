@@ -59,16 +59,16 @@ export const playTick = () => {
         osc.connect(gain);
         gain.connect(ctx.destination);
 
-        // Wood Block: Sine 800Hz, very short envelope
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(800, t);
+        // Softer Thud: Triangle 400Hz, very short envelope
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(400, t);
 
         gain.gain.setValueAtTime(0.0, t);
-        gain.gain.linearRampToValueAtTime(0.3, t + 0.005);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+        gain.gain.linearRampToValueAtTime(0.15, t + 0.002);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
 
         osc.start(t);
-        osc.stop(t + 0.05);
+        osc.stop(t + 0.03);
 
         setTimeout(() => {
             osc.disconnect();

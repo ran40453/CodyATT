@@ -59,52 +59,44 @@ export default function InteractiveAttendanceBar({ attendanceBoxes, today, class
                 }
 
                 return (
-                    <motion.div
+                    <div
                         key={idx}
-                        whileHover="hovered"
-                        className="flex-1 h-full relative cursor-pointer overflow-visible"
+                        className="flex-1 h-8 -my-3.5 relative cursor-pointer overflow-visible flex items-center group/segment"
                         style={{ minWidth: 0, touchAction: 'none' }}
+                        onMouseEnter={() => setActiveIdx(idx)}
+                        onMouseLeave={() => setActiveIdx(null)}
+                        onClick={() => onSelectDate && onSelectDate(box.day)}
                     >
-                        <motion.div
-                            variants={{
-                                initial: {
-                                    borderRadius: 2,
-                                    height: '100%',
-                                    width: '100%',
-                                    scale: 1,
-                                    y: 0,
-                                    zIndex: 10,
-                                    backgroundColor: hexBg,
-                                },
-                                hovered: {
-                                    borderRadius: '50%',
-                                    // Use a trick to ensure height matches width for a perfect circle
-                                    aspectRatio: '1 / 1',
-                                    height: 'auto',
-                                    scale: 2.2, // Slightly larger for clarity
-                                    zIndex: 50,
-                                    y: '-50%',
-                                    top: '50%',
-                                    backgroundColor: "#a855f7",
-                                    boxShadow: '0 8px 16px rgba(168, 85, 247, 0.4)',
-                                    border: '1.5px solid white'
-                                }
+                        {/* The Morphing Shape - State Based */}
+                        <div
+                            className={cn(
+                                "absolute left-0 w-full h-[40%] top-1/2 -translate-y-1/2 transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]",
+                                activeIdx === idx 
+                                    ? "w-[28px] h-[28px] left-1/2 -ml-[14px] z-50 bg-[#a855f7] border border-white shadow-xl scale-125" 
+                                    : "z-10 bg-gray-200",
+                                isPastOrToday && box.type === 'attendance' ? "bg-purple-500" : 
+                                isPastOrToday && box.type === 'leave' ? "bg-pink-400" : 
+                                isPastOrToday ? "bg-gray-300" : "bg-gray-100"
+                            )}
+                            style={{ 
+                                borderRadius: activeIdx === idx ? '50%' : '2px',
+                                backgroundColor: activeIdx === idx ? '#a855f7' : undefined 
                             }}
-                            initial="initial"
-                            animate="initial" // Force initial state to clear any stuck animations
-                            className="absolute top-0 left-0 w-full flex items-center justify-center pointer-events-none"
                         >
-                            <motion.span 
-                                variants={{
-                                    initial: { opacity: 0, scale: 0 },
-                                    hovered: { opacity: 1, scale: 0.7 }
-                                }}
-                                className="text-[10px] font-black text-white pointer-events-none select-none"
-                            >
-                                {format(boxDay, 'dd')}
-                            </motion.span>
-                        </motion.div>
-                    </motion.div>
+                            <AnimatePresence>
+                                {activeIdx === idx && (
+                                    <motion.span
+                                        initial={{ opacity: 0, scale: 0 }}
+                                        animate={{ opacity: 1, scale: 0.8 }}
+                                        exit={{ opacity: 0, scale: 0 }}
+                                        className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white pointer-events-none select-none"
+                                    >
+                                        {format(boxDay, 'dd')}
+                                    </motion.span>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    </div>
                 )
             })}
         </div>

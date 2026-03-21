@@ -94,8 +94,8 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
             if (moveEvent.stopPropagation) moveEvent.stopPropagation();
             const currentY = moveEvent.clientY || (moveEvent.touches && moveEvent.touches[0].clientY)
             const diff = startY - currentY
-            // Sensitivity Divider: 20 (Threshold)
-            const minuteDiff = Math.round(diff / 20) * 15
+            // Sensitivity Divider: 50 (Higher = Less Sensitive)
+            const minuteDiff = Math.round(diff / 50) * 15
             const totalMins = Math.max(0, Math.min(23 * 60 + 45, startMins + minuteDiff))
             const nh = Math.floor(totalMins / 60)
             const nm = totalMins % 60
