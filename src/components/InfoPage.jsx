@@ -418,8 +418,8 @@ function InfoPage() {
                     </h3>
                 </div>
 
-                {/* Manual Move Icons (Hidden on Mobile Drag, visible on Desktop hover) */}
-                <div className="hidden group-hover:flex items-center gap-1">
+                {/* Manual Move Icons — always in layout to prevent row resize flicker */}
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -695,18 +695,34 @@ function InfoPage() {
                                     <div className="w-full flex-1 flex flex-col EditorWrapper h-full pb-20 md:pb-0">
                                         <style>{`
                                             .sun-editor { border: none !important; display: flex; flex-direction: column; height: 100%; background-color: transparent !important; }
-                                            .sun-editor .se-toolbar { outline: none !important; background: ${isDark ? '#1f262f' : '#f3f4f6'} !important; border: none !important; border-bottom: 1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} !important; }
-                                            .sun-editor-editable { background-color: transparent !important; color: ${isDark ? '#e5e7eb' : '#1f2937'} !important; font-family: inherit !important; font-size: 14px; line-height: 1.8; height: 100% !important; flex: 1; min-height: calc(100vh - 200px); }
-                                            .sun-editor .se-btn-tray { display: flex; flex-wrap: nowrap; overflow-x: auto; }
-                                            .sun-editor .se-btn-tray::-webkit-scrollbar { display: none; }
+                                            .sun-editor .se-toolbar { outline: none !important; background: ${isDark ? '#1f262f' : '#f0f2f5'} !important; border: none !important; border-bottom: 1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'} !important; padding: 2px 4px !important; }
+                                            .sun-editor-editable { background-color: transparent !important; color: ${isDark ? '#e5e7eb' : '#1f2937'} !important; font-family: inherit !important; font-size: 14px; line-height: 1.8; height: 100% !important; flex: 1; min-height: calc(100vh - 220px); padding: 20px 28px !important; }
+                                            .sun-editor .se-btn-tray { display: flex; flex-wrap: wrap; gap: 1px; }
                                             .sun-editor .se-resizing-bar { display: none !important; }
+                                            .sun-editor button.se-btn { border-radius: 6px !important; transition: background 0.15s !important; }
+                                            .sun-editor button.se-btn:hover { background: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'} !important; }
+                                            .sun-editor .se-btn-select.se-btn-tool-format { min-width: 80px !important; }
+                                            ${isDark ? `
+                                            .sun-editor .se-toolbar svg { color: #9ca3af !important; }
+                                            .sun-editor .se-btn-select { color: #9ca3af !important; background: transparent !important; }
+                                            .sun-editor .se-list-layer { background: #1f262f !important; border: 1px solid rgba(255,255,255,0.1) !important; }
+                                            .sun-editor .se-list-layer .se-list-inner li button { color: #d1d5db !important; }
+                                            .sun-editor .se-list-layer .se-list-inner li button:hover { background: rgba(255,255,255,0.08) !important; }
+                                            ` : ''}
                                         `}</style>
                                         <SunEditor
                                             key={selectedFile?.filename}
                                             setContents={editContent} onChange={setEditContent} width="100%" height="100%"
                                             setOptions={{
                                                 buttonList: [
-                                                    ['undo', 'redo'], ['formatBlock', 'font', 'fontSize'], ['bold', 'underline', 'italic', 'strike'], ['fontColor', 'hiliteColor'], ['removeFormat'], ['outdent', 'indent'], ['align', 'horizontalRule', 'list', 'lineHeight'], ['table', 'link']
+                                                    ['undo', 'redo'],
+                                                    ['bold', 'underline', 'italic', 'strike', 'removeFormat'],
+                                                    ['fontColor', 'hiliteColor'],
+                                                    ['formatBlock', 'fontSize'],
+                                                    ['/'],
+                                                    ['align', 'list', 'outdent', 'indent'],
+                                                    ['horizontalRule', 'link', 'table'],
+                                                    ['codeView']
                                                 ],
                                                 defaultStyle: "font-family: inherit; font-size: 14px;",
                                                 mode: "classic"

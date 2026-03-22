@@ -215,7 +215,7 @@ export const standardizeRecords = (records) => {
         }
 
         const bonus = parseFloat(nr.bonus) || 0;
-        const recordType = nr.recordType || (bonus > 0 ? 'bonus' : 'attendance');
+        const recordType = nr.recordType || 'attendance';
         const travelCountry = nr.travelCountry || nr.travel_country || '';
         const isHoliday = nr.isHoliday !== undefined ? !!nr.isHoliday : isTaiwanHoliday(new Date(dateStr));
         const isLeave = !!(nr.isLeave || nr.is_leave);
