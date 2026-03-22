@@ -8,6 +8,7 @@ import InfoPage from './components/InfoPage'
 import Tabbar from './components/Tabbar'
 import AddRecordModal from './components/AddRecordModal'
 import Layout from './components/Layout'
+import { Toaster, toast as sonnerToast } from './components/ui/sonner'
 
 import { fetchRecordsFromSheets, fetchSettingsFromSheets, addOrUpdateRecord, loadSettings, loadData, deleteRecord } from './lib/storage'
 import { useClickFeedback } from './hooks/useClickFeedback'
@@ -43,23 +44,14 @@ function App() {
         sync();
     }, []);
 
-    const [toast, setToast] = useState(null)
-
-    React.useEffect(() => {
-        if (toast) {
-            const timer = setTimeout(() => setToast(null), 3000)
-            return () => clearTimeout(timer)
-        }
-    }, [toast])
-
     const handleUpdateRecord = async (updatedRecord) => {
         const result = await addOrUpdateRecord(updatedRecord)
         if (result.records) {
             setRecords(result.records)
             if (!result.sync.ok && result.sync.error === 'Config missing') {
-                setToast({ type: 'warning', message: '已儲存至本機 (尚未設定雲端同步)' })
+                sonnerToast.warning('已儲存至本機 (尚未設定雲端同步)')
             } else if (!result.sync.ok) {
-                setToast({ type: 'error', message: '已儲存至本機 (雲端同步失敗)' })
+                sonnerToast.error('已儲存至本機 (雲端同步失敗)')
             }
         } else {
             setRecords(result)
@@ -69,7 +61,7 @@ function App() {
     const handleDeleteRecord = async (date) => {
         const newRecords = deleteRecord(date);
         setRecords(newRecords);
-        setToast({ type: 'success', message: '紀錄已刪除' });
+        sonnerToast.success('紀錄已刪除');
     }
 
     const renderPage = () => {
@@ -116,13 +108,7 @@ function App() {
                 {renderPage()}
             </div>
 
-            {toast && (
-                <div className={`fixed top-4 left-1/2 -translate-x-1/2 px-4 py-3 rounded-2xl shadow-xl z-50 text-xs font-black transition-all duration-300 flex items-center gap-2 ${toast.type === 'error' ? 'bg-red-500 text-white' :
-                    toast.type === 'warning' ? 'bg-orange-400 text-white' : 'bg-green-500 text-white'
-                    }`}>
-                    <span>{toast.message}</span>
-                </div>
-            )}
+            <Toaster position="top-center" />
 
             {/* Floating Tabbar - Hide on md breakpoint (desktop) */}
             <div className="md:hidden">

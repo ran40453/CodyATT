@@ -6,6 +6,9 @@ import QuickCopyTool from './toolbox/QuickCopyTool'
 import AppFolder from './AppFolder'
 import HeaderActions from './HeaderActions'
 import InteractiveAttendanceBar from './InteractiveAttendanceBar'
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
+import { Badge } from './ui/badge'
+import { Button } from './ui/button'
 
 import { motion } from 'framer-motion'
 import {
@@ -368,7 +371,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
             <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="neumo-card p-1 bg-purple-500 overflow-visible relative group rounded-3xl" // Changed to overflow-visible for morphing
+                className="bg-purple-500 shadow-neumo-raised p-1 overflow-visible relative group rounded-3xl"
             >
                 {/* Background Pattern */}
                 <div className="absolute inset-0 bg-purple-500 z-0 transition-all duration-500 group-hover:brightness-105 rounded-3xl" />
@@ -407,7 +410,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
                 <motion.div
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="neumo-card p-6 flex flex-col gap-4"
+                    className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-6 flex flex-col gap-4"
                 >
                     <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
                         {/* Left: Title and Amount */}
@@ -516,7 +519,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.2 }}
-                        className="neumo-card p-4 flex flex-col h-32" // Match height
+                        className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-4 flex flex-col h-32"
                     >
                         <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Tools</h3>
                         <div className="flex-1 grid grid-cols-4 gap-3 overflow-hidden">
@@ -612,7 +615,7 @@ function FilledStatsBlock({ label, icon: Icon, value, total, used, unit, color, 
     return (
         <motion.div
             whileHover={{ scale: 1.02, filter: "brightness(1.05)" }}
-            className="neumo-card p-1 relative h-32 overflow-hidden group cursor-default transition-all duration-300"
+            className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-1 relative h-32 overflow-hidden group cursor-default transition-all duration-300"
         >
             {/* Background Container (Pressed) */}
             <div className="w-full h-full rounded-2xl neumo-pressed relative overflow-hidden bg-gray-50/50">

@@ -23,6 +23,10 @@ import { loadSettings, calculateDailySalary, fetchExchangeRate, calculateCompLea
 import HeaderActions from './HeaderActions'
 import { isTaiwanHoliday } from '../lib/holidays'
 import { START_DATE } from './CalendarPage'
+import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
+import { Badge } from './ui/badge'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, BarController, LineController, Title, Tooltip, Legend, Filler, ArcElement)
 
@@ -571,7 +575,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                         </div>
 
                         {/* Income Trend Chart */}
-                        <div className="neumo-card h-[360px] p-4 flex flex-col relative">
+                        <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl h-[360px] p-4 flex flex-col relative">
                             <div className="flex justify-between items-start mb-4">
                                 <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">年度收入趨勢</h3>
                                 {/* Toggle Button */}
@@ -602,7 +606,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                         </div>
 
                         {/* Yearly Total Income Comparison Chart (#10) */}
-                        <div className="neumo-card h-[300px] p-4 flex flex-col">
+                        <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl h-[300px] p-4 flex flex-col">
                             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">每年總收入比較</h3>
                             <div className="flex-1 min-h-0 relative">
                                 <Bar
@@ -673,7 +677,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                             <div className="space-y-4">
                                 <div onClick={() => setIsOTListOpen(true)} className="cursor-pointer group relative h-full">
                                     <div className="absolute inset-0 bg-indigo-400/0 group-hover:bg-indigo-400/5 rounded-2xl transition-colors" />
-                                    <div className="neumo-card p-6 h-full flex flex-col">
+                                    <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-6 h-full flex flex-col">
                                         <div className="flex justify-between items-start mb-4">
                                             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
                                                 <Clock size={14} className="text-indigo-500" /> 加班統計 (總計)
@@ -701,7 +705,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                             <div className="space-y-4">
                                 <div onClick={() => setIsLeaveListOpen(true)} className="cursor-pointer group relative h-full">
                                     <div className="absolute inset-0 bg-rose-400/0 group-hover:bg-rose-400/5 rounded-2xl transition-colors" />
-                                    <div className="neumo-card p-6 h-full flex flex-row items-center gap-4">
+                                    <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-6 h-full flex flex-row items-center gap-4">
                                         <div className="flex-1">
                                             <div className="flex justify-between items-start mb-4">
                                                 <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
@@ -747,7 +751,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                             <div className="space-y-4">
                                 <div onClick={() => setIsTravelListOpen(true)} className="cursor-pointer group relative h-full">
                                     <div className="absolute inset-0 bg-emerald-400/0 group-hover:bg-emerald-400/5 rounded-2xl transition-colors" />
-                                    <div className="neumo-card p-6 h-full flex flex-row items-center gap-4">
+                                    <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-6 h-full flex flex-row items-center gap-4">
                                         <div className="flex-1">
                                             <div className="flex justify-between items-start mb-4">
                                                 <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
@@ -792,7 +796,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
 
 
                         {/* Work Load Chart */}
-                        <div className="neumo-card h-[300px] p-4 flex flex-col relative">
+                        <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl h-[300px] p-4 flex flex-col relative">
                             <div className="flex justify-between items-start mb-4">
                                 <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">工作負荷趨勢 (OT vs Comp)</h3>
                                 {/* Toggle Button */}
@@ -823,7 +827,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                         </div>
 
                         {/* Yearly Total OT Comparison Chart (#9) */}
-                        <div className="neumo-card h-[300px] p-4 flex flex-col">
+                        <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl h-[300px] p-4 flex flex-col">
                             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">每年總加班與勤怠比較</h3>
                             <div className="flex-1 min-h-0 relative">
                                 <Chart
@@ -959,7 +963,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
 
 function StatCard({ label, value, sub, unit, icon: Icon, color, compositionData }) {
     return (
-        <div className="neumo-card p-5 flex flex-row items-center gap-4 h-full">
+        <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-5 flex flex-row items-center gap-4 h-full">
             <div className="flex-1 space-y-3">
                 <div className="flex justify-between items-start">
                     <div className={cn("p-2 rounded-xl neumo-pressed inline-flex", color)}><Icon size={18} /></div>
@@ -987,7 +991,7 @@ function StatCard({ label, value, sub, unit, icon: Icon, color, compositionData 
 
 function MiniStatCard({ label, value, unit, subValue, color }) {
     return (
-        <div className="neumo-card p-4 flex flex-col items-center justify-center space-y-1 h-full aspect-square md:aspect-auto">
+        <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-4 flex flex-col items-center justify-center space-y-1 h-full aspect-square md:aspect-auto">
             <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{label}</span>
             <div className="flex flex-col items-center">
                 <h4 className={cn("text-2xl font-black leading-none", color)}>{value}</h4>
@@ -1016,7 +1020,7 @@ function LegendItem({ color, label, value }) {
 
 function HistoryCard({ label, items }) {
     return (
-        <div className="neumo-card p-6 h-full">
+        <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-6 h-full">
             <h3 className="font-black italic text-sm text-gray-400 uppercase tracking-widest mb-4">{label}</h3>
             <div className="space-y-3">
                 {items.length === 0 && <p className="text-xs text-gray-400 font-bold">No travel history</p>}
@@ -1153,7 +1157,7 @@ function BonusDetailModal({ isOpen, onClose, data, onUpdate, isPrivacy }) {
                     {sortedGroups.map(group => (
                         <div key={group} className="space-y-2">
                             <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">{group}</div>
-                            <div className="neumo-card p-4 space-y-4">
+                            <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-4 space-y-4">
                                 {grouped[group].map((b, idx) => (
                                     <div key={idx} className={cn("flex justify-between items-center", idx !== grouped[group].length - 1 && "border-b border-gray-100 pb-4")}>
                                         {editingId === b.id ? (
@@ -1175,8 +1179,8 @@ function BonusDetailModal({ isOpen, onClose, data, onUpdate, isPrivacy }) {
                                                     />
                                                 </div>
                                                 <div className="flex justify-end gap-2">
-                                                    <button onClick={() => setEditingId(null)} className="px-3 py-1.5 neumo-button text-[10px] font-black text-gray-400">取消</button>
-                                                    <button onClick={() => handleSaveEdit(b)} className="px-3 py-1.5 neumo-button text-amber-500 text-[10px] font-black">儲存</button>
+                                                    <button onClick={() => setEditingId(null)} className="px-3 py-1.5 shadow-neumo-flat hover:shadow-neumo-raised rounded-xl text-[10px] font-black text-gray-400 transition-all active:shadow-neumo-pressed">取消</button>
+                                                    <button onClick={() => handleSaveEdit(b)} className="px-3 py-1.5 shadow-neumo-flat hover:shadow-neumo-raised rounded-xl text-amber-500 text-[10px] font-black transition-all active:shadow-neumo-pressed">儲存</button>
                                                 </div>
                                             </div>
                                         ) : (
@@ -1191,8 +1195,8 @@ function BonusDetailModal({ isOpen, onClose, data, onUpdate, isPrivacy }) {
                                                 <div className="flex items-center gap-3">
                                                     <div className="font-black text-[#202731]">{mask('$' + Math.round(b.amount).toLocaleString())}</div>
                                                     <div className="flex gap-1">
-                                                        <button onClick={() => handleEditClick(b)} className="p-1.5 text-gray-300 hover:text-amber-500 transition-colors neumo-button"><Edit2 size={12} /></button>
-                                                        <button onClick={() => handleDelete(b)} className="p-1.5 text-gray-300 hover:text-rose-500 transition-colors neumo-button"><Trash2 size={12} /></button>
+                                                        <button onClick={() => handleEditClick(b)} className="p-1.5 text-gray-300 hover:text-amber-500 transition-colors shadow-neumo-flat hover:shadow-neumo-raised rounded-lg active:shadow-neumo-pressed"><Edit2 size={12} /></button>
+                                                        <button onClick={() => handleDelete(b)} className="p-1.5 text-gray-300 hover:text-rose-500 transition-colors shadow-neumo-flat hover:shadow-neumo-raised rounded-lg active:shadow-neumo-pressed"><Trash2 size={12} /></button>
                                                     </div>
                                                 </div>
                                             </>
@@ -1251,7 +1255,7 @@ function LeaveListModal({ isOpen, onClose, data, onDelete }) {
                     {sortedGroups.map(group => (
                         <div key={group} className="space-y-2">
                             <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">{group}</div>
-                            <div className="neumo-card p-4 space-y-4">
+                            <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-4 space-y-4">
                                 {grouped[group].map((r, i) => (
                                     <div key={i} className={cn("flex justify-between items-center", i !== grouped[group].length - 1 && "border-b border-gray-100 pb-4")}>
                                         <div className="flex items-center gap-3">
@@ -1271,7 +1275,7 @@ function LeaveListModal({ isOpen, onClose, data, onDelete }) {
                                                 leaveViewMode === 'deptComp' ? "bg-purple-50 text-purple-600" : "bg-rose-50 text-rose-600")}>
                                                 {r.leaveType || '請假'}
                                             </div>
-                                            {onDelete && <button onClick={() => onDelete(format(new Date(r.date), 'yyyy-MM-dd'))} className="p-1.5 neumo-button text-gray-300 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>}
+                                            {onDelete && <button onClick={() => onDelete(format(new Date(r.date), 'yyyy-MM-dd'))} className="p-1.5 text-gray-300 hover:text-rose-500 transition-colors shadow-neumo-flat hover:shadow-neumo-raised rounded-lg active:shadow-neumo-pressed"><Trash2 size={12} /></button>}
                                         </div>
                                     </div>
                                 ))}
@@ -1350,7 +1354,7 @@ function OTListModal({ isOpen, onClose, data, settings, liveRate, onDelete }) {
                     {sortedGroups.map(group => (
                         <div key={group} className="space-y-2">
                             <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">{group}</div>
-                            <div className="neumo-card p-4 space-y-4">
+                            <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-4 space-y-4">
                                 {grouped[group].map((r, i) => (
                                     <div key={i} className={cn("flex justify-between items-center", i !== grouped[group].length - 1 && "border-b border-gray-100 pb-4")}>
                                         <div className="flex items-center gap-3">
@@ -1372,7 +1376,7 @@ function OTListModal({ isOpen, onClose, data, settings, liveRate, onDelete }) {
                                                     ? `$${Math.round(calculateDailySalary(r, { ...settings, liveRate }).otPay || 0)}`
                                                     : `${calculateCompLeaveUnits(r)}`}
                                             </div>
-                                            {onDelete && <button onClick={() => onDelete(format(new Date(r.date), 'yyyy-MM-dd'))} className="p-1.5 neumo-button text-gray-300 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>}
+                                            {onDelete && <button onClick={() => onDelete(format(new Date(r.date), 'yyyy-MM-dd'))} className="p-1.5 text-gray-300 hover:text-rose-500 transition-colors shadow-neumo-flat hover:shadow-neumo-raised rounded-lg active:shadow-neumo-pressed"><Trash2 size={12} /></button>}
                                         </div>
                                     </div>
                                 ))}
@@ -1459,7 +1463,7 @@ function TravelListModal({ isOpen, onClose, data, settings, liveRate, onDelete }
                     {sortedGroups.map(group => (
                         <div key={group} className="space-y-2">
                             <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">{group}</div>
-                            <div className="neumo-card p-4 space-y-4">
+                            <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-4 space-y-4">
                                 {grouped[group].map((range, i) => {
                                     const totalAllowance = range.records.reduce((sum, r) => {
                                         const results = calculateDailySalary(r, { ...settings, liveRate });
@@ -1485,7 +1489,7 @@ function TravelListModal({ isOpen, onClose, data, settings, liveRate, onDelete }
                                                         ${Math.round(totalAllowance).toLocaleString()}
                                                     </div>
                                                 </div>
-                                                {onDelete && <button onClick={() => handleDeleteRange(range)} className="p-1.5 neumo-button text-gray-300 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>}
+                                                {onDelete && <button onClick={() => handleDeleteRange(range)} className="p-1.5 text-gray-300 hover:text-rose-500 transition-colors shadow-neumo-flat hover:shadow-neumo-raised rounded-lg active:shadow-neumo-pressed"><Trash2 size={12} /></button>}
                                             </div>
                                         </div>
                                     );
@@ -1502,7 +1506,7 @@ function TravelListModal({ isOpen, onClose, data, settings, liveRate, onDelete }
 
 function LeaveBreakdownCard({ label, items }) {
     return (
-        <div className="neumo-card p-6 h-full">
+        <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-6 h-full">
             <h3 className="font-black italic text-sm text-gray-400 uppercase tracking-widest mb-4">{label}</h3>
             <div className="space-y-3">
                 {items.length === 0 && <p className="text-xs text-gray-400 font-bold">No leave data</p>}

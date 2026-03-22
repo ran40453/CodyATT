@@ -460,7 +460,7 @@ function InfoPage() {
             </header>
 
             <div className={cn(
-                "flex-1 flex overflow-hidden relative neumo-raised rounded-3xl z-20 transition-colors duration-300",
+                "flex-1 flex relative neumo-raised rounded-3xl z-20 transition-colors duration-300",
                 isDark ? "bg-[#202731]" : "bg-[#E0E5EC]"
             )}>
                 <motion.div
@@ -630,7 +630,7 @@ function InfoPage() {
                 </motion.div>
 
                 <div className={cn(
-                    "flex-1 h-full overflow-hidden flex flex-col w-full absolute md:relative transition-all duration-300",
+                    "flex-1 h-full flex flex-col w-full absolute md:relative transition-all duration-300",
                     !isMobileListVisible ? "translate-x-0" : "translate-x-full md:translate-x-0",
                     isDark ? "bg-[#202731]" : "bg-[#E0E5EC]"
                 )}>

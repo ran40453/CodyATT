@@ -4,6 +4,9 @@ import { X, Plus, Calendar, Globe, Palmtree, Moon, Clock, CreditCard, Coffee, Gi
 import { format } from 'date-fns'
 import { cn } from '../lib/utils'
 import { playTick } from '../lib/audio'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Badge } from './ui/badge'
 
 function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
     const bonusCategories = settings?.bonusCategories || ['季獎金', '年終獎金', '其他獎金', '補助金', '退費', '分紅']
@@ -221,7 +224,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                     initial={{ scale: 0.9, opacity: 0, y: 20 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                    className="relative w-full max-w-2xl neumo-card p-6 overflow-hidden"
+                    className="relative w-full max-w-2xl bg-neumo-bg shadow-neumo-raised rounded-3xl p-6"
                 >
                     {/* Confirm Overlay */}
                     {showConfirm && (
@@ -237,13 +240,13 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                             <div className="flex gap-3 w-full pt-4">
                                 <button
                                     onClick={() => setShowConfirm(false)}
-                                    className="flex-1 h-12 rounded-xl neumo-raised text-gray-500 font-black text-xs"
+                                    className="flex-1 h-12 rounded-xl shadow-neumo-flat hover:shadow-neumo-raised active:shadow-neumo-pressed transition-all text-gray-500 font-black text-xs"
                                 >
                                     取消
                                 </button>
                                 <button
                                     onClick={() => handleFinalSubmit(pendingPayloads)}
-                                    className="flex-1 h-12 rounded-xl neumo-button text-red-500 font-black text-xs"
+                                    className="flex-1 h-12 rounded-xl shadow-neumo-flat hover:shadow-neumo-raised active:shadow-neumo-pressed transition-all text-red-500 font-black text-xs"
                                 >
                                     確認覆蓋
                                 </button>
@@ -256,7 +259,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                             <Plus size={20} strokeWidth={3} />
                             {mode === 'attendance' ? (isBatchMode ? '批量新增' : '新增紀錄') : '新增獎金'}
                         </h3>
-                        <button onClick={onClose} className="neumo-button p-2 text-gray-400">
+                        <button onClick={onClose} className="shadow-neumo-flat hover:shadow-neumo-raised active:shadow-neumo-pressed rounded-xl p-2 text-gray-400 transition-all">
                             <X size={18} />
                         </button>
                     </div>
@@ -296,7 +299,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                         type="date"
                                         value={date}
                                         onChange={(e) => setDate(e.target.value)}
-                                        className="neumo-input w-full h-12 font-bold px-4 flex-1"
+                                        className="w-full h-12 font-bold px-4 bg-neumo-bg shadow-neumo-pressed rounded-xl outline-none focus:ring-2 focus:ring-neumo-brand/40 transition-all"
                                     />
                                     {isBatchMode && (
                                         <>
@@ -305,7 +308,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                                 type="date"
                                                 value={endDate}
                                                 onChange={(e) => setEndDate(e.target.value)}
-                                                className="neumo-input w-full h-12 font-bold px-4 flex-1"
+                                                className="w-full h-12 font-bold px-4 bg-neumo-bg shadow-neumo-pressed rounded-xl outline-none focus:ring-2 focus:ring-neumo-brand/40 transition-all"
                                             />
                                         </>
                                     )}
@@ -321,7 +324,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                     <select
                                         value={country}
                                         onChange={(e) => setCountry(e.target.value)}
-                                        className="neumo-input w-full h-12 font-bold px-4 bg-transparent appearance-none"
+                                        className="w-full h-12 font-bold px-4 bg-neumo-bg shadow-neumo-pressed rounded-xl outline-none focus:ring-2 focus:ring-neumo-brand/40 appearance-none transition-all"
                                     >
                                         <option value="">無出差</option>
                                         <option value="印度">印度 (IN)</option>
@@ -396,7 +399,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                             setIsWorkDay(!isWorkDay);
                                             if (!isWorkDay) setIsHoliday(false);
                                         }}
-                                        className={cn("py-2 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase transition-all group", isWorkDay ? "neumo-pressed text-blue-600" : "neumo-raised text-gray-400")}
+                                        className={cn("py-2 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase transition-all group", isWorkDay ? "shadow-neumo-pressed text-blue-600" : "shadow-neumo-flat hover:shadow-neumo-raised text-gray-400")}
                                     >
                                         <motion.div initial={false} whileHover={{ scale: 0 }} transition={{ duration: 0.1 }} className="flex flex-col items-center">
                                             <Check size={16} />
@@ -410,7 +413,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                         }}
                                         className={cn(
                                             "h-12 rounded-2xl flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-all",
-                                            isHoliday ? "neumo-pressed text-orange-500" : "neumo-raised text-gray-400"
+                                            isHoliday ? "shadow-neumo-pressed text-orange-500" : "shadow-neumo-flat hover:shadow-neumo-raised text-gray-400"
                                         )}
                                     >
                                         <Palmtree size={14} /> 假日
@@ -419,7 +422,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                         onClick={() => setIsLeave(!isLeave)}
                                         className={cn(
                                             "h-12 rounded-2xl flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-all",
-                                            isLeave ? "neumo-pressed text-indigo-500" : "neumo-raised text-gray-400"
+                                            isLeave ? "shadow-neumo-pressed text-indigo-500" : "shadow-neumo-flat hover:shadow-neumo-raised text-gray-400"
                                         )}
                                     >
                                         <Moon size={14} /> 請假
@@ -429,15 +432,17 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                 {/* Leave Details (Only if isLeave is active) */}
                                 {isLeave && (
                                     <motion.div
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: 'auto', opacity: 1 }}
-                                        className="space-y-4 pt-2 overflow-hidden"
+                                        initial={{ opacity: 0, y: -6 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -6 }}
+                                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                        className="space-y-4 pt-2"
                                     >
                                         <div className="space-y-2 relative">
                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">假別 (Type)</label>
                                             <button
                                                 onClick={() => setIsLeaveTypePickerOpen(!isLeaveTypePickerOpen)}
-                                                className="w-full h-12 neumo-raised rounded-2xl flex items-center justify-between px-4 text-xs font-black text-gray-600 transition-all hover:scale-[0.99] active:scale-95"
+                                                className="w-full h-12 shadow-neumo-flat hover:shadow-neumo-raised active:shadow-neumo-pressed rounded-2xl flex items-center justify-between px-4 text-xs font-black text-gray-600 transition-all hover:scale-[0.99] active:scale-95"
                                             >
                                                 <span>{leaveType}</span>
                                                 <div className={cn("transition-transform duration-200", isLeaveTypePickerOpen ? "rotate-180" : "rotate-0")}>
@@ -451,7 +456,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                                         initial={{ opacity: 0, y: -10, scale: 0.95 }}
                                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                                                        className="absolute left-0 right-0 bottom-full mb-2 z-[60] bg-[#E0E5EC]/95 backdrop-blur-md neumo-card p-2 grid grid-cols-2 gap-2 shadow-2xl max-h-[240px] overflow-y-auto"
+                                                        className="absolute left-0 right-0 bottom-full mb-2 z-[60] bg-[#E0E5EC]/95 backdrop-blur-md shadow-neumo-raised rounded-2xl p-2 grid grid-cols-2 gap-2 shadow-2xl max-h-[240px] overflow-y-auto"
                                                     >
                                                         {Object.keys(settings?.leaveRules || {}).filter(type => type !== '補休').map(type => (
                                                             <button
@@ -464,7 +469,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                                                     "py-3 px-1 text-[10px] font-black rounded-xl transition-all border border-transparent text-center",
                                                                     leaveType === type
                                                                         ? "bg-rose-50 text-rose-600 border-rose-200 shadow-sm"
-                                                                        : "neumo-raised text-gray-400 hover:text-gray-600"
+                                                                        : "shadow-neumo-flat hover:shadow-neumo-raised text-gray-400 hover:text-gray-600"
                                                                 )}
                                                             >
                                                                 {type}
@@ -537,7 +542,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                         value={bonus}
                                         onChange={(e) => setBonus(e.target.value)}
                                         placeholder="輸入獎金金額..."
-                                        className="neumo-input w-full h-12 font-bold px-4"
+                                        className="w-full h-12 font-bold px-4 bg-neumo-bg shadow-neumo-pressed rounded-xl outline-none focus:ring-2 focus:ring-neumo-brand/40 transition-all"
                                     />
                                 </div>
 
@@ -552,7 +557,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                                 <select
                                                     value={bonusCategory}
                                                     onChange={(e) => setBonusCategory(e.target.value)}
-                                                    className="neumo-input flex-1 h-12 font-bold px-4 bg-transparent appearance-none"
+                                                    className="flex-1 h-12 font-bold px-4 bg-neumo-bg shadow-neumo-pressed rounded-xl outline-none focus:ring-2 focus:ring-neumo-brand/40 appearance-none transition-all"
                                                 >
                                                     {bonusCategories.map(cat => (
                                                         <option key={cat} value={cat}>{cat}</option>
@@ -560,7 +565,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                                 </select>
                                                 <button
                                                     onClick={() => setShowCustomCategory(true)}
-                                                    className="neumo-button w-12 h-12 flex items-center justify-center text-neumo-brand"
+                                                    className="shadow-neumo-flat hover:shadow-neumo-raised active:shadow-neumo-pressed rounded-xl w-12 h-12 flex items-center justify-center text-neumo-brand transition-all"
                                                 >
                                                     <Plus size={18} strokeWidth={3} />
                                                 </button>
@@ -571,12 +576,12 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                                     placeholder="輸入自定義類別..."
                                                     value={customCategory}
                                                     onChange={(e) => setCustomCategory(e.target.value)}
-                                                    className="neumo-input flex-1 h-12 font-bold px-4"
+                                                    className="flex-1 h-12 font-bold px-4 bg-neumo-bg shadow-neumo-pressed rounded-xl outline-none focus:ring-2 focus:ring-neumo-brand/40 transition-all"
                                                     autoFocus
                                                 />
                                                 <button
                                                     onClick={() => setShowCustomCategory(false)}
-                                                    className="neumo-button w-12 h-12 flex items-center justify-center text-gray-400"
+                                                    className="shadow-neumo-flat hover:shadow-neumo-raised active:shadow-neumo-pressed rounded-xl w-12 h-12 flex items-center justify-center text-gray-400 transition-all"
                                                 >
                                                     <X size={18} />
                                                 </button>
@@ -594,7 +599,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                         value={bonusName}
                                         onChange={(e) => setBonusName(e.target.value)}
                                         placeholder="例如：2023 績效獎金..."
-                                        className="neumo-input w-full h-12 font-bold px-4"
+                                        className="w-full h-12 font-bold px-4 bg-neumo-bg shadow-neumo-pressed rounded-xl outline-none focus:ring-2 focus:ring-neumo-brand/40 transition-all"
                                     />
                                 </div>
                             </div>
@@ -604,7 +609,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                             <button
                                 onClick={handlePreSubmit}
                                 className={cn(
-                                    "neumo-button flex-1 h-14 font-black text-sm flex items-center justify-center gap-2",
+                                    "shadow-neumo-flat hover:shadow-neumo-raised active:shadow-neumo-pressed rounded-2xl flex-1 h-14 font-black text-sm flex items-center justify-center gap-2 transition-all",
                                     mode === 'bonus' ? "text-amber-500" : "text-neumo-brand"
                                 )}
                             >
@@ -616,7 +621,7 @@ function AddRecordModal({ isOpen, onClose, onAdd, settings, records }) {
                                 <button
                                     onClick={() => setIsBatchMode(!isBatchMode)}
                                     className={cn(
-                                        "neumo-button w-14 h-14 flex items-center justify-center transition-all",
+                                        "shadow-neumo-flat hover:shadow-neumo-raised active:shadow-neumo-pressed rounded-2xl w-14 h-14 flex items-center justify-center transition-all",
                                         isBatchMode ? "text-white bg-neumo-brand shadow-inner rounded-xl" : "text-gray-400"
                                     )}
                                     title="批量新增模式"

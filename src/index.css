@@ -7,6 +7,28 @@
     --neumo-light: #ffffff;
     --neumo-shadow: #b8bec7;
     --neumo-text: #202731;
+
+    /* shadcn CSS variables — mapped to CodyATT neumo-indigo design */
+    --background: 214 18% 90%;       /* #E0E5EC neumo-bg */
+    --foreground: 217 23% 23%;       /* #2D3748 neumo-text */
+    --card: 214 18% 90%;
+    --card-foreground: 217 23% 23%;
+    --popover: 214 18% 90%;
+    --popover-foreground: 217 23% 23%;
+    --primary: 239 84% 67%;          /* #6366F1 neumo-brand */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 214 15% 84%;
+    --secondary-foreground: 217 23% 23%;
+    --muted: 214 12% 80%;
+    --muted-foreground: 215 10% 52%;
+    --accent: 239 84% 67%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 10% 75%;           /* #b8bec7 neumo-shadow */
+    --input: 215 10% 75%;
+    --ring: 239 84% 67%;
+    --radius: 0.75rem;
 }
 
 body {

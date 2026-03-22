@@ -540,7 +540,7 @@ function SettingsPage({ isPrivacy }) {
 
 function SettingsCard({ id, title, icon: Icon, color, isExpanded, onToggle, children, action }) {
     return (
-        <div className="neumo-card overflow-hidden transition-all duration-300">
+        <div className="neumo-card transition-all duration-300">
             <div
                 onClick={onToggle}
                 className="p-5 flex justify-between items-center cursor-pointer group"
@@ -561,10 +561,10 @@ function SettingsCard({ id, title, icon: Icon, color, isExpanded, onToggle, chil
             <AnimatePresence>
                 {isExpanded && (
                     <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
                     >
                         <div className="px-5 pb-6 border-t border-gray-50/50 pt-5">
                             {children}

@@ -1,9 +1,12 @@
 import React from 'react';
 import { Menu, Settings, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from './ui/button';
+import { TooltipProvider } from './ui/tooltip';
 
 const Layout = ({ children, title = "CodyATT", subtitle = "ATTENDANCE DASHBOARD", onSettingsClick, activeTab, onTabChange, onAddClick, tabs }) => {
     return (
+        <TooltipProvider>
         <div className="min-h-screen bg-neumo-bg text-[#2D3748] font-sans selection:bg-neumo-brand/30 flex flex-col md:flex-row">
 
             {/* Desktop Sidebar */}
@@ -40,13 +43,14 @@ const Layout = ({ children, title = "CodyATT", subtitle = "ATTENDANCE DASHBOARD"
 
                 {/* Sidebar Footer / Add Button */}
                 <div className="pt-6 border-t border-white/10">
-                    <button
+                    <Button
+                        variant="primary"
                         onClick={onAddClick}
-                        className="w-full py-3 rounded-xl bg-neumo-brand text-white font-black uppercase tracking-widest shadow-[0_8px_20px_rgba(99,102,241,0.4)] hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2"
+                        className="w-full py-3 rounded-xl font-black uppercase tracking-widest gap-2"
                     >
                         <Plus size={20} strokeWidth={3} />
                         <span>Add Record</span>
-                    </button>
+                    </Button>
                 </div>
             </aside>
 
@@ -65,6 +69,7 @@ const Layout = ({ children, title = "CodyATT", subtitle = "ATTENDANCE DASHBOARD"
                 </main>
             </div>
         </div>
+        </TooltipProvider>
     );
 };
 
