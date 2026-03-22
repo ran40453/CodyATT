@@ -74,9 +74,15 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
             setIsLeave(record.isLeave || false)
             setOtType(record.otType || 'pay')
             setRemarks(record.remarks || '')
-            setBonus(record.bonus || 0) 
+            setBonus(record.bonus || 0)
+            // 同步請假相關欄位
+            setLeaveType(record.leaveType || '特休')
+            setLeaveDuration(record.leaveDuration ?? 8)
+            setIsFullDay(record.leaveDuration === 8 || (record.isLeave && !record.leaveDuration) || false)
+            setLeaveStartTime(record.leaveStartTime || settings?.rules?.standardStartTime || '08:30')
+            setLeaveEndTime(record.leaveEndTime || record.endTime || defaultTime)
         }
-    }, [record?.date, record?.endTime, record?.travelCountry, record?.isHoliday, record?.isWorkDay, record?.isLeave, record?.otType, record?.remarks, record?.bonus])
+    }, [record?.date, record?.endTime, record?.travelCountry, record?.isHoliday, record?.isWorkDay, record?.isLeave, record?.otType, record?.remarks, record?.bonus, record?.leaveType, record?.leaveDuration, record?.leaveStartTime, record?.leaveEndTime])
 
     const handleDragStart = (e, type = 'endTime') => {
         if (e.cancelable) e.preventDefault();

@@ -80,8 +80,11 @@ function InfoPage() {
 
     const handleFileSelect = (file) => {
         setSelectedFile(file)
-        const cleanHtmlOrMarkdown = marked.parse(file.content || '')
-        setEditContent(cleanHtmlOrMarkdown)
+        // Bug #12 修復：判斷內容是否已為 HTML（曾儲存過），避免 marked.parse 雙重處理
+        const rawContent = file.content || '';
+        const isAlreadyHtml = /^\s*<[a-zA-Z!]/.test(rawContent);
+        const displayHtml = isAlreadyHtml ? rawContent : marked.parse(rawContent);
+        setEditContent(displayHtml)
         setEditFilename(file.filename.replace('.md', ''))
         setIsEditing(false)
         setIsMobileListVisible(false)
@@ -167,15 +170,21 @@ function InfoPage() {
 
     const handleCopy = () => {
         if (!selectedFile) return;
-        navigator.clipboard.writeText(selectedFile.content || editContent).then(() => {
+        // Bug #13 修復：優先複製當前編輯中的內容（editContent），而非已儲存的舊版本
+        const contentToCopy = editContent || selectedFile.content || '';
+        navigator.clipboard.writeText(contentToCopy).then(() => {
             setIsCopying(true);
             setTimeout(() => setIsCopying(false), 2000);
         });
     };
 
-    const handleCreateNewFile = () => {
+    const handleCreateNewFile = async () => {
         const dummyName = `Untitled_${Math.floor(Math.random() * 10000)}`;
-        const newFile = { filename: `${dummyName}.md`, content: '' };
+        const filename = `${dummyName}.md`;
+        const newFile = { filename, content: '' };
+
+        // Bug #16 修復：立即寫入 Gist，避免切換 tab 後檔案遺失
+        await updateGistFile(filename, '# New Note\n');
 
         setFiles(prev => [...prev, newFile]);
         setSelectedFile(newFile);
@@ -188,7 +197,7 @@ function InfoPage() {
             setFolders(prev => {
                 const newFolders = { ...prev };
                 if (!newFolders[activeFolder]) newFolders[activeFolder] = [];
-                newFolders[activeFolder].push(`${dummyName}.md`);
+                newFolders[activeFolder].push(filename);
                 saveSettings({ ...loadSettings(), infoPageFolders: newFolders });
                 syncSettingsToGist({ ...loadSettings(), infoPageFolders: newFolders });
                 return newFolders;
@@ -693,6 +702,7 @@ function InfoPage() {
                                             .sun-editor .se-resizing-bar { display: none !important; }
                                         `}</style>
                                         <SunEditor
+                                            key={selectedFile?.filename}
                                             setContents={editContent} onChange={setEditContent} width="100%" height="100%"
                                             setOptions={{
                                                 buttonList: [

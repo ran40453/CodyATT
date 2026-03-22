@@ -55,7 +55,6 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy, setti
 
     return (
         <motion.div
-            layout
             onClick={() => onClick && onClick(day)}
             whileHover={{ backgroundColor: "#f3e8ff", scale: 0.98 }}
             className={cn(
@@ -72,8 +71,8 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy, setti
                 <div className="flex items-center gap-1.5">
                     <span className={cn(
                         "text-base md:text-2xl font-black leading-none",
-                        isToday(day) ? "text-neumo-brand" : ((isHoliday || isTaiwanHoliday(day)) ? "text-rose-600" : "text-[#202731]"),
-                        isSunday && !isHoliday && !isTaiwanHoliday(day) && "opacity-60"
+                        isToday(day) ? "text-neumo-brand" : (isHoliday ? "text-rose-600" : "text-[#202731]"),
+                        isSunday && !isHoliday && "opacity-60"
                     )}>
                         {format(day, 'dd')}
                     </span>
@@ -109,7 +108,7 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy, setti
             {/* Center Area: OT Info */}
             <div className="flex-1 flex flex-col justify-center items-end md:items-center relative">
                 {/* Desktop: Centered OT */}
-                {otHours > 0 && (
+                {otHours >= 0.5 && (
                     <div className="absolute right-0 md:static flex items-center gap-1 bg-white/40 md:bg-transparent px-1.5 py-0.5 rounded-lg">
                         <span className={cn(
                             "text-xs md:text-lg font-black",
@@ -146,7 +145,7 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy, setti
 
                 {/* Right: Desktop only Holiday Name / Remark */}
                 <div className="hidden md:flex items-center gap-2">
-                    {(isHoliday || isTaiwanHoliday(day)) && getHolidayName(day) && (
+                    {isHoliday && getHolidayName(day) && (
                         <span className="text-[9px] font-black text-rose-500/80 uppercase tracking-tighter bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">
                             {getHolidayName(day)}
                         </span>
@@ -170,7 +169,7 @@ export default React.memo(DayCard, (prevProps, nextProps) => {
     const r1 = prevProps.record;
     const r2 = nextProps.record;
 
-    const recordChanged = 
+    const recordChanged =
         r1?.date !== r2?.date ||
         r1?.endTime !== r2?.endTime ||
         r1?.isLeave !== r2?.isLeave ||
@@ -181,7 +180,11 @@ export default React.memo(DayCard, (prevProps, nextProps) => {
         r1?.travelCountry !== r2?.travelCountry ||
         r1?.remarks !== r2?.remarks ||
         r1?.bonus !== r2?.bonus ||
-        r1?.Remark !== r2?.Remark;
+        r1?.Remark !== r2?.Remark ||
+        r1?.leaveDuration !== r2?.leaveDuration ||
+        r1?.leaveType !== r2?.leaveType ||
+        r1?.leaveStartTime !== r2?.leaveStartTime ||
+        r1?.leaveEndTime !== r2?.leaveEndTime;
 
     return (
         prevProps.day.getTime() === nextProps.day.getTime() &&

@@ -17,13 +17,7 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
     const [settings, setSettings] = useState(null)
     const [liveRate, setLiveRate] = useState(null)
     const [modalTop, setModalTop] = useState('140px')
-    const [isNeighborsLoaded, setIsNeighborsLoaded] = useState(false)
     const bannerRef = useRef(null)
-
-    useEffect(() => {
-        const timer = setTimeout(() => setIsNeighborsLoaded(true), 300);
-        return () => clearTimeout(timer);
-    }, [currentDate]);
 
     useEffect(() => {
         const init = async () => {
@@ -62,6 +56,8 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
     const containerRef = useRef(null);
     const [containerWidth, setContainerWidth] = useState(0);
 
+    const isMonthChangingRef = useRef(false)
+
     useEffect(() => {
         const updatePos = () => {
             if (containerRef.current) setContainerWidth(containerRef.current.offsetWidth);
@@ -72,11 +68,15 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
         };
         updatePos();
         window.addEventListener('resize', updatePos);
-        return () => window.removeEventListener('resize', updatePos);
+        window.addEventListener('scroll', updatePos, { passive: true });
+        return () => {
+            window.removeEventListener('resize', updatePos);
+            window.removeEventListener('scroll', updatePos);
+        };
     }, []);
 
     useEffect(() => {
-        if (containerWidth > 0) {
+        if (containerWidth > 0 && !isMonthChangingRef.current) {
             x.set(-containerWidth);
         }
     }, [containerWidth, currentDate]);
@@ -95,12 +95,22 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
             newDate = addMonths(currentDate, 1);
         }
 
+        if (newDate !== currentDate) {
+            isMonthChangingRef.current = true;
+        }
+
         animate(x, targetX, {
             type: "spring",
             stiffness: 300,
             damping: 30,
             onComplete: () => {
-                if (newDate !== currentDate) setCurrentDate(newDate);
+                if (newDate !== currentDate) {
+                    setCurrentDate(newDate);
+                    requestAnimationFrame(() => {
+                        x.set(-containerWidth);
+                        isMonthChangingRef.current = false;
+                    });
+                }
             }
         });
     };
@@ -202,30 +212,24 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
                 <YearView year={currentDate.getFullYear()} dataMap={dataMap} onSelectMonth={(m) => { setCurrentDate(setMonth(setYear(new Date(), currentDate.getFullYear()), m)); setIsYearView(false); }} />
             ) : (
                 <div ref={containerRef} className="relative overflow-hidden w-full h-full min-h-[600px]">
-                    <motion.div 
+                    <motion.div
                         initial={false}
                         style={{ x, width: '300%' }}
                         drag="x"
                         dragConstraints={{ left: -containerWidth * 2, right: 0 }}
+                        dragElastic={0.08}
+                        dragMomentum={false}
                         onDragEnd={handleDragEnd}
                         className="flex"
                     >
-                        <div style={{ width: containerWidth }} className="shrink-0 px-4">
-                            {isNeighborsLoaded ? (
-                                <CalendarMonthGrid monthDate={prevMonth} dataMap={dataMap} settings={settings} onUpdate={onUpdate} onDelete={onUpdate} isPrivacy={isPrivacy} onDayClick={setFocusedDay} modalTop={modalTop} />
-                            ) : (
-                                <div className="h-[600px] w-full" />
-                            )}
+                        <div style={{ width: containerWidth || '33.333%' }} className="shrink-0 px-4">
+                            <CalendarMonthGrid monthDate={prevMonth} dataMap={dataMap} settings={settings} onUpdate={onUpdate} onDelete={onUpdate} isPrivacy={isPrivacy} onDayClick={setFocusedDay} modalTop={modalTop} />
                         </div>
-                        <div style={{ width: containerWidth }} className="shrink-0 px-4">
+                        <div style={{ width: containerWidth || '33.333%' }} className="shrink-0 px-4">
                             <CalendarMonthGrid monthDate={currentDate} dataMap={dataMap} settings={settings} onUpdate={onUpdate} onDelete={onUpdate} isPrivacy={isPrivacy} onDayClick={setFocusedDay} modalTop={modalTop} />
                         </div>
-                        <div style={{ width: containerWidth }} className="shrink-0 px-4">
-                            {isNeighborsLoaded ? (
-                                <CalendarMonthGrid monthDate={nextMonth} dataMap={dataMap} settings={settings} onUpdate={onUpdate} onDelete={onUpdate} isPrivacy={isPrivacy} onDayClick={setFocusedDay} modalTop={modalTop} />
-                            ) : (
-                                <div className="h-[600px] w-full" />
-                            )}
+                        <div style={{ width: containerWidth || '33.333%' }} className="shrink-0 px-4">
+                            <CalendarMonthGrid monthDate={nextMonth} dataMap={dataMap} settings={settings} onUpdate={onUpdate} onDelete={onUpdate} isPrivacy={isPrivacy} onDayClick={setFocusedDay} modalTop={modalTop} />
                         </div>
                     </motion.div>
                 </div>
