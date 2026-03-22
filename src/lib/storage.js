@@ -214,8 +214,7 @@ export const standardizeRecords = (records) => {
             otHours = tieredSum;
         }
 
-        const bonus = parseFloat(nr.bonus) || 0;
-        const recordType = nr.recordType || 'attendance';
+        const rawBonus = parseFloat(nr.bonus) || 0;
         const travelCountry = nr.travelCountry || nr.travel_country || '';
         const isHoliday = nr.isHoliday !== undefined ? !!nr.isHoliday : isTaiwanHoliday(new Date(dateStr));
         const isLeave = !!(nr.isLeave || nr.is_leave);
@@ -223,9 +222,45 @@ export const standardizeRecords = (records) => {
         const endTime = nr.endTime || nr.end_time || '';
         const otType = nr.otType || nr.ot_type || 'pay';
 
+        // Retroactive fix: a record with endTime is an attendance record, never a pure bonus record.
+        // The old bug (line 218) tagged attendance+bonus records as recordType:'bonus' which caused
+        // the bonus accumulation branch in updateRecord to double-count on every sync.
+        let recordType = nr.recordType || 'attendance';
+        if (recordType === 'bonus' && endTime) {
+            recordType = 'attendance';
+        }
+
+        // Build bonusEntries and deduplicate by amount+category+date.
+        // This repairs records that were corrupted by the legacy multi-file merge (e.g.
+        // records.json + ot_records.json both had the same entry → bonusEntries doubled).
+        const rawEntries = Array.isArray(nr.bonusEntries) ? nr.bonusEntries.map(be => ({
+            ...be,
+            id: be.id || `be-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        })) : (rawBonus > 0 ? [{
+            id: `be-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            amount: rawBonus,
+            category: nr.bonusCategory || '其他',
+            name: nr.bonusName || '',
+            date: dateStr
+        }] : []);
+
+        const seenBonusKeys = new Set();
+        const bonusEntries = rawEntries.filter(e => {
+            const key = `${parseFloat(e.amount || 0).toFixed(2)}:${e.category || ''}:${e.date || dateStr}`;
+            if (seenBonusKeys.has(key)) return false;
+            seenBonusKeys.add(key);
+            return true;
+        });
+
+        // Recalculate bonus from deduplicated entries when entries are present;
+        // otherwise fall back to the raw bonus field.
+        const bonus = bonusEntries.length > 0
+            ? bonusEntries.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
+            : rawBonus;
+
         const standardized = {
             ...nr,
-            date: dateStr, 
+            date: dateStr,
             otHours,
             bonus,
             recordType,
@@ -235,16 +270,7 @@ export const standardizeRecords = (records) => {
             isRestDay,
             endTime,
             otType,
-            bonusEntries: Array.isArray(nr.bonusEntries) ? nr.bonusEntries.map(be => ({
-                ...be,
-                id: be.id || `be-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-            })) : (bonus > 0 ? [{
-                id: `be-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                amount: bonus,
-                category: nr.bonusCategory || '其他',
-                name: nr.bonusName || '',
-                date: dateStr
-            }] : [])
+            bonusEntries
         };
 
         if (recordMap.has(dateStr)) {
@@ -258,6 +284,19 @@ export const standardizeRecords = (records) => {
                 ? (standardized.otHours + existing.otHours) 
                 : standardized.otHours;
 
+            // Merge bonusEntries and deduplicate again to prevent re-doubling
+            const mergedRawEntries = [...(existing.bonusEntries || []), ...(standardized.bonusEntries || [])];
+            const mergedSeenKeys = new Set();
+            const mergedEntries = mergedRawEntries.filter(e => {
+                const key = `${parseFloat(e.amount || 0).toFixed(2)}:${e.category || ''}:${e.date || dateStr}`;
+                if (mergedSeenKeys.has(key)) return false;
+                mergedSeenKeys.add(key);
+                return true;
+            });
+            const mergedBonus = mergedEntries.length > 0
+                ? mergedEntries.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
+                : Math.max(existing.bonus, standardized.bonus);
+
             recordMap.set(dateStr, {
                 ...existing,
                 ...standardized,
@@ -266,8 +305,8 @@ export const standardizeRecords = (records) => {
                 leaveDuration: standardized.isLeave ? standardized.leaveDuration : existing.leaveDuration,
                 endTime: standardized.endTime || existing.endTime,
                 otHours: mergedOT,
-                bonus: existing.bonus + standardized.bonus,
-                bonusEntries: [...(existing.bonusEntries || []), ...(standardized.bonusEntries || [])]
+                bonus: mergedBonus,
+                bonusEntries: mergedEntries
             });
         } else {
             recordMap.set(dateStr, standardized);
