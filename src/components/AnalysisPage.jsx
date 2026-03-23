@@ -50,8 +50,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
     const [isOTListOpen, setIsOTListOpen] = useState(false);
 
     // Chart Toggles
-    const [incomeRange, setIncomeRange] = useState('year'); // 'year', 'all'
-    const [workloadRange, setWorkloadRange] = useState('year'); // 'year', 'all'
+    const [globalRange, setGlobalRange] = useState('year'); // 'year', 'all'
 
     const mask = (val) => isPrivacy ? '••••' : val;
 
@@ -131,13 +130,12 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
             return { extraTotal, totalOT, totalDeptComp, totalBonus, totalTravel, totalOTPay, tripCount }
         }
 
-        const yearMetrics = getMetrics(rollingYearRecords)
-        const lifetimeMetrics = getMetrics(data) // Use all data for lifetime stats
+        const metrics = getMetrics(globalRange === 'year' ? rollingYearRecords : data);
+        const months = getChartMonths(globalRange);
 
-        // Calculate Base Salary (Rolling Year)
-        const rollingMonths = eachMonthOfInterval({ start: subDays(now, 365), end: now }); // Use approx months for calculation
-        let totalBaseInYear = 0;
-        rollingMonths.forEach(m => {
+        // Calculate Base Salary for the selected period
+        let totalBase = 0;
+        months.forEach(m => {
             let base = parseFloat(settings.salary?.baseMonthly) || 50000;
             if (settings.salaryHistory && Array.isArray(settings.salaryHistory)) {
                 const sortedHistory = [...settings.salaryHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -145,22 +143,25 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                 const applicable = sortedHistory.find(h => new Date(h.date) <= monthEnd);
                 if (applicable) base = parseFloat(applicable.amount) || base;
             }
-            totalBaseInYear += base;
+            totalBase += base;
         });
 
-        const rollingAnnualSalary = totalBaseInYear + yearMetrics.extraTotal
-        const rollingMonthlySalary = rollingAnnualSalary / 12
+        // Current UI logic defines "年薪" as:
+        // By default (Rolling Year), it is TotalBaseInYear + TotalExtra
+        // If 'all', annualized is AvgMonthly * 12
+        const totalIncome = totalBase + metrics.extraTotal;
+        const avgMonthlyIncome = months.length > 0 ? totalIncome / months.length : 0;
+        const annualEquivalentIncome = globalRange === 'year' ? totalIncome : avgMonthlyIncome * 12;
 
         return {
-            rollingAnnualSalary,
-            rollingMonthlySalary,
-            yearMetrics,
-            lifetimeMetrics, // Expose lifetime metrics
+            annualSalary: annualEquivalentIncome,
+            monthlySalary: avgMonthlyIncome,
+            metrics,
             breakdown: {
-                base: totalBaseInYear,
-                ot: yearMetrics.totalOTPay,
-                travel: yearMetrics.totalTravel,
-                bonus: yearMetrics.totalBonus
+                base: totalBase,
+                ot: metrics.totalOTPay,
+                travel: metrics.totalTravel,
+                bonus: metrics.totalBonus
             }
         }
     }
@@ -175,7 +176,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
     }
 
     // Financial Chart Data (Dynamic Range)
-    const incomeChartMonths = getChartMonths(incomeRange);
+    const incomeChartMonths = getChartMonths(globalRange);
     const baseByMonth = incomeChartMonths.map(m => {
         let base = parseFloat(settings.salary?.baseMonthly) || 50000;
         if (settings.salaryHistory && Array.isArray(settings.salaryHistory)) {
@@ -215,7 +216,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
     });
 
     const incomeData = {
-        labels: incomeChartMonths.map(m => format(m, incomeRange === 'year' ? 'MMM' : 'yy/MM')),
+        labels: incomeChartMonths.map(m => format(m, globalRange === 'year' ? 'MMM' : 'yy/MM')),
         datasets: [
             { label: '滾動年收 (Rolling 12M)', data: rolling12MIncomeByMonth, borderColor: 'rgb(156, 163, 175)', backgroundColor: 'rgb(156, 163, 175)', fill: false, tension: 0.4, borderWidth: 2, pointRadius: 4, order: 0, yAxisID: 'yCumulative', pointStyle: 'circle', borderDash: [5, 5] },
             { label: '單月總收入', data: totalIncomeByMonth, borderColor: 'rgb(253, 224, 71)', backgroundColor: 'rgba(253, 224, 71, 0.4)', fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0, order: 1 },
@@ -226,14 +227,14 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
     };
 
     // Travel Chart Data (Dynamic Range)
-    const workloadChartMonths = getChartMonths(workloadRange);
+    const workloadChartMonths = getChartMonths(globalRange);
     const otByMonth = workloadChartMonths.map(m => getMonthlyStat(m, r => parseFloat(r.otHours) || (r.endTime ? calculateOTHours(r.endTime, settings?.rules?.standardEndTime) : 0)));
     const compByMonth = workloadChartMonths.map(m => getMonthlyStat(m, r => (r.otType === 'leave' || r.otType === 'internal') ? calculateCompLeaveUnits(r) : 0));
     const leaveDaysByMonth = workloadChartMonths.map(m => getMonthlyStat(m, r => r.isLeave ? (parseFloat(r.leaveDuration) || 8) / 8 : 0));
     const travelDaysByMonth = workloadChartMonths.map(m => getMonthlyStat(m, r => (r.travelCountry && r.travelCountry.trim() !== '') ? 1 : 0));
 
     const travelData = {
-        labels: workloadChartMonths.map(m => format(m, workloadRange === 'year' ? 'MMM' : 'yy/MM')),
+        labels: workloadChartMonths.map(m => format(m, globalRange === 'year' ? 'MMM' : 'yy/MM')),
         datasets: [
             { type: 'bar', label: '加班時數', data: otByMonth, backgroundColor: 'rgba(99, 102, 241, 0.4)', borderColor: 'rgb(99, 102, 241)', borderWidth: 1, borderRadius: 4, yAxisID: 'y', order: 3 },
             { type: 'line', label: '補休單位', data: compByMonth, borderColor: 'rgb(79, 70, 229)', backgroundColor: 'rgb(79, 70, 229)', fill: false, tension: 0.4, yAxisID: 'y1', order: 4, pointStyle: 'circle', pointRadius: 3 },
@@ -369,6 +370,9 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
 
     // Yearly Aggregation for comparison charts (#9, #10)
     const getYearsInData = () => {
+        if (globalRange === 'year') {
+            return [now.getFullYear()];
+        }
         const years = new Set();
         data.forEach(r => {
             const d = parse(r.date);
@@ -439,7 +443,8 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
 
     const countryStats = () => {
         const counts = {}
-        data.forEach(r => {
+        const records = globalRange === 'year' ? rollingYearRecords : data;
+        records.forEach(r => {
             const country = standardizeCountry(r.travelCountry);
             if (country) counts[country] = (counts[country] || 0) + 1
         })
@@ -448,7 +453,8 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
 
     const leaveTypeStats = () => {
         const counts = {}
-        data.filter(r => r.isLeave).forEach(r => {
+        const records = globalRange === 'year' ? rollingYearRecords : data;
+        records.filter(r => r.isLeave).forEach(r => {
             const type = r.leaveType || '未分類';
             const days = (parseFloat(r.leaveDuration) || 8) / 8;
             counts[type] = (counts[type] || 0) + days;
@@ -461,8 +467,30 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
         <div className="space-y-6 pb-32">
             <header className="flex justify-between items-end">
                 <div className="space-y-1">
-                    <h1 className="text-3xl font-black tracking-tight">Analysis</h1>
-                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">Insights & Trends</p>
+                    <div className="flex items-center gap-4">
+                        <h1 className="text-3xl font-black tracking-tight">Analysis</h1>
+                        <div className="flex bg-gray-100/50 p-1 rounded-lg">
+                            <button
+                                onClick={() => setGlobalRange('year')}
+                                className={cn(
+                                    "px-3 py-1 rounded-md text-[9px] font-black transition-all",
+                                    globalRange === 'year' ? "bg-white text-neumo-brand shadow-sm" : "text-gray-400 hover:text-gray-600"
+                                )}
+                            >
+                                近一年
+                            </button>
+                            <button
+                                onClick={() => setGlobalRange('all')}
+                                className={cn(
+                                    "px-3 py-1 rounded-md text-[9px] font-black transition-all",
+                                    globalRange === 'all' ? "bg-white text-neumo-brand shadow-sm" : "text-gray-400 hover:text-gray-600"
+                                )}
+                            >
+                                全部
+                            </button>
+                        </div>
+                    </div>
+                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Insights & Trends</p>
                 </div>
 
                 <HeaderActions
@@ -520,8 +548,8 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div onClick={() => setIsSalaryDetailOpen(true)} className="cursor-pointer">
                                 <StatCard
-                                    label="當年年薪 (Rolling 365)"
-                                    value={mask(`$${Math.round(stats.rollingAnnualSalary).toLocaleString()}`)}
+                                    label="年薪"
+                                    value={mask(`$${Math.round(stats.annualSalary).toLocaleString()}`)}
                                     icon={Briefcase}
                                     color="text-neumo-brand"
                                     sub="點擊查看明細"
@@ -539,14 +567,14 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                             <div className="cursor-default">
                                 <StatCard
                                     label="平均月薪"
-                                    value={mask(`$${Math.round(stats.rollingMonthlySalary).toLocaleString()}`)}
+                                    value={mask(`$${Math.round(stats.monthlySalary).toLocaleString()}`)}
                                     icon={Briefcase}
                                     color="text-sky-500"
-                                    sub={`底薪: ${mask('$' + Math.round(stats.breakdown.base / 12).toLocaleString())}\n其他: ${mask('$' + Math.round((stats.breakdown.ot + stats.breakdown.travel + stats.breakdown.bonus) / 12).toLocaleString())}`}
+                                    sub={`底薪: ${mask('$' + Math.round(stats.breakdown.base / (globalRange === 'all' ? Math.max(1, getChartMonths(globalRange).length) : 12)).toLocaleString())}\n其他: ${mask('$' + Math.round((stats.breakdown.ot + stats.breakdown.travel + stats.breakdown.bonus) / (globalRange === 'all' ? Math.max(1, getChartMonths(globalRange).length) : 12)).toLocaleString())}`}
                                     compositionData={{
                                         labels: ['底薪', '加班費', '津貼', '獎金'],
                                         datasets: [{
-                                            data: [stats.breakdown.base / 12, stats.breakdown.ot / 12, stats.breakdown.travel / 12, stats.breakdown.bonus / 12],
+                                            data: [stats.breakdown.base, stats.breakdown.ot, stats.breakdown.travel, stats.breakdown.bonus],
                                             backgroundColor: ['#38bdf8', '#ff4500', '#10b981', '#f59e0b'],
                                             borderWidth: 0,
                                             cutout: '70%'
@@ -556,15 +584,15 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                             </div>
                             <div onClick={() => setIsBonusDetailOpen(true)} className="cursor-pointer">
                                 <StatCard
-                                    label="累計獎金與津貼"
-                                    value={mask(`$${Math.round(stats.yearMetrics.totalBonus + stats.yearMetrics.totalTravel).toLocaleString()}`)}
+                                    label="獎金與津貼"
+                                    value={mask(`$${Math.round(stats.metrics.totalBonus + stats.metrics.totalTravel).toLocaleString()}`)}
                                     icon={Gift}
                                     color="text-amber-500"
-                                    sub={`獎金: ${mask('$' + Math.round(stats.yearMetrics.totalBonus).toLocaleString())}\n津貼: ${mask('$' + Math.round(stats.yearMetrics.totalTravel).toLocaleString())}`}
+                                    sub={`獎金: ${mask('$' + Math.round(stats.metrics.totalBonus).toLocaleString())}\n津貼: ${mask('$' + Math.round(stats.metrics.totalTravel).toLocaleString())}`}
                                     compositionData={{
                                         labels: ['獎金', '津貼'],
                                         datasets: [{
-                                            data: [stats.yearMetrics.totalBonus, stats.yearMetrics.totalTravel],
+                                            data: [stats.metrics.totalBonus, stats.metrics.totalTravel],
                                             backgroundColor: ['#f59e0b', '#10b981'],
                                             borderWidth: 0,
                                             cutout: '70%'
@@ -577,28 +605,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                         {/* Income Trend Chart */}
                         <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl h-[360px] p-4 flex flex-col relative">
                             <div className="flex justify-between items-start mb-4">
-                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">年度收入趨勢</h3>
-                                {/* Toggle Button */}
-                                <div className="flex bg-gray-100/50 p-1 rounded-lg">
-                                    <button
-                                        onClick={() => setIncomeRange('year')}
-                                        className={cn(
-                                            "px-3 py-1 rounded-md text-[9px] font-black transition-all",
-                                            incomeRange === 'year' ? "bg-white text-neumo-brand shadow-sm" : "text-gray-400 hover:text-gray-600"
-                                        )}
-                                    >
-                                        近一年
-                                    </button>
-                                    <button
-                                        onClick={() => setIncomeRange('all')}
-                                        className={cn(
-                                            "px-3 py-1 rounded-md text-[9px] font-black transition-all",
-                                            incomeRange === 'all' ? "bg-white text-neumo-brand shadow-sm" : "text-gray-400 hover:text-gray-600"
-                                        )}
-                                    >
-                                        全部
-                                    </button>
-                                </div>
+                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">收入趨勢圖</h3>
                             </div>
                             <div className="flex-1 min-h-0 relative">
                                 <Line data={incomeData} options={{ ...options, maintainAspectRatio: false }} />
@@ -680,20 +687,20 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                                     <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-6 h-full flex flex-col">
                                         <div className="flex justify-between items-start mb-4">
                                             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                <Clock size={14} className="text-indigo-500" /> 加班統計 (總計)
+                                                <Clock size={14} className="text-indigo-500" /> 加班統計
                                             </h3>
                                             <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-indigo-300" />
                                         </div>
                                         <div className="flex-1 flex flex-col justify-center">
                                             <div className="flex items-baseline gap-1">
-                                                <span className="text-4xl font-black text-indigo-500">{stats.lifetimeMetrics.totalOT.toFixed(1)}</span>
+                                                <span className="text-4xl font-black text-indigo-500">{stats.metrics.totalOT.toFixed(1)}</span>
                                                 <span className="text-[10px] font-black text-gray-400 uppercase">Hours</span>
                                             </div>
                                             <div className="mt-2 text-xs font-black text-gray-700">
-                                                {mask('$' + Math.round(stats.lifetimeMetrics.totalOTPay).toLocaleString())}
+                                                {mask('$' + Math.round(stats.metrics.totalOTPay).toLocaleString())}
                                             </div>
                                             <div className="mt-2 flex items-baseline gap-1">
-                                                <span className="text-lg font-black text-purple-600">{stats.lifetimeMetrics.totalDeptComp.toFixed(0)}</span>
+                                                <span className="text-lg font-black text-purple-600">{stats.metrics.totalDeptComp.toFixed(0)}</span>
                                                 <span className="text-[9px] font-black text-gray-400 uppercase">部門補休單 (1H=2Units)</span>
                                             </div>
                                         </div>
@@ -709,12 +716,12 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                                         <div className="flex-1">
                                             <div className="flex justify-between items-start mb-4">
                                                 <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                    <Coffee size={14} className="text-rose-500" /> 請假統計 (總計)
+                                                    <Coffee size={14} className="text-rose-500" /> 請假統計
                                                 </h3>
                                                 <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-rose-300" />
                                             </div>
                                             <div className="flex items-baseline gap-1 mb-4">
-                                                <span className="text-4xl font-black text-rose-500">{data.filter(r => r.isLeave).length}</span>
+                                                <span className="text-4xl font-black text-rose-500">{(globalRange === 'year' ? rollingYearRecords : data).filter(r => r.isLeave).length}</span>
                                                 <span className="text-[10px] font-black text-gray-400 uppercase">Records</span>
                                             </div>
                                             <div className="space-y-1">
@@ -755,12 +762,12 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                                         <div className="flex-1">
                                             <div className="flex justify-between items-start mb-4">
                                                 <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                    <Plane size={14} className="text-emerald-500" /> 出差統計 (總計)
+                                                    <Plane size={14} className="text-emerald-500" /> 出差統計
                                                 </h3>
                                                 <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-300" />
                                             </div>
                                             <div className="flex items-baseline gap-1 mb-4">
-                                                <span className="text-4xl font-black text-emerald-500">{stats.lifetimeMetrics.tripCount}</span>
+                                                <span className="text-4xl font-black text-emerald-500">{stats.metrics.tripCount}</span>
                                                 <span className="text-[10px] font-black text-gray-400 uppercase">Days</span>
                                             </div>
                                             <div className="space-y-1">
@@ -799,27 +806,6 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                         <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl h-[300px] p-4 flex flex-col relative">
                             <div className="flex justify-between items-start mb-4">
                                 <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">工作負荷趨勢 (OT vs Comp)</h3>
-                                {/* Toggle Button */}
-                                <div className="flex bg-gray-100/50 p-1 rounded-lg">
-                                    <button
-                                        onClick={() => setWorkloadRange('year')}
-                                        className={cn(
-                                            "px-3 py-1 rounded-md text-[9px] font-black transition-all",
-                                            workloadRange === 'year' ? "bg-white text-neumo-brand shadow-sm" : "text-gray-400 hover:text-gray-600"
-                                        )}
-                                    >
-                                        近一年
-                                    </button>
-                                    <button
-                                        onClick={() => setWorkloadRange('all')}
-                                        className={cn(
-                                            "px-3 py-1 rounded-md text-[9px] font-black transition-all",
-                                            workloadRange === 'all' ? "bg-white text-neumo-brand shadow-sm" : "text-gray-400 hover:text-gray-600"
-                                        )}
-                                    >
-                                        全部
-                                    </button>
-                                </div>
                             </div>
                             <div className="flex-1 min-h-0 relative">
                                 <Chart type="bar" data={travelData} options={travelOptions} plugins={[valuePlugin]} />
@@ -897,7 +883,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                 isOpen={isSalaryDetailOpen}
                 onClose={() => setIsSalaryDetailOpen(false)}
                 data={stats.breakdown}
-                total={stats.rollingAnnualSalary}
+                total={stats.annualSalary}
                 mask={mask}
             />
             <BonusDetailModal
