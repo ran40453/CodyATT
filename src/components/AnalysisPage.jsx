@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { format, startOfMonth, endOfMonth, eachMonthOfInterval, isSameMonth, subDays, isWithinInterval, subMonths, eachDayOfInterval, parseISO, isSameDay, addDays, getDay, differenceInCalendarDays, startOfYear, endOfYear } from 'date-fns'
-import { TrendingUp, Clock, Calendar, Globe, ArrowUpRight, Coffee, Trophy, BarChart3, Gift, X, Edit2, Trash2, Check, Plane, Briefcase, MapPin, ListFilter } from 'lucide-react'
+import { TrendingUp, Clock, Calendar, ArrowUpRight, Coffee, Trophy, BarChart3, Gift, X, Edit2, Trash2, Check, Plane, Briefcase, MapPin, ListFilter } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     Chart as ChartJS,
@@ -463,33 +463,10 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
     }
 
     return (
-
         <div className="space-y-6 pb-32">
-            <header className="flex justify-between items-end">
+            <header className="flex justify-between items-start">
                 <div className="space-y-1">
-                    <div className="flex items-center gap-4">
-                        <h1 className="text-3xl font-black tracking-tight">Analysis</h1>
-                        <div className="flex bg-gray-100/50 p-1 rounded-lg">
-                            <button
-                                onClick={() => setGlobalRange('year')}
-                                className={cn(
-                                    "px-3 py-1 rounded-md text-[9px] font-black transition-all",
-                                    globalRange === 'year' ? "bg-white text-neumo-brand shadow-sm" : "text-gray-400 hover:text-gray-600"
-                                )}
-                            >
-                                近一年
-                            </button>
-                            <button
-                                onClick={() => setGlobalRange('all')}
-                                className={cn(
-                                    "px-3 py-1 rounded-md text-[9px] font-black transition-all",
-                                    globalRange === 'all' ? "bg-white text-neumo-brand shadow-sm" : "text-gray-400 hover:text-gray-600"
-                                )}
-                            >
-                                全部
-                            </button>
-                        </div>
-                    </div>
+                    <h1 className="text-3xl font-black tracking-tight">Analysis</h1>
                     <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Insights & Trends</p>
                 </div>
 
@@ -498,9 +475,25 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                     togglePrivacy={togglePrivacy || setIsPrivacy}
                     onSettingsClick={onSettingsClick}
                 >
-                    <div className="neumo-pressed px-3 py-2 rounded-xl flex items-center gap-2 text-[9px] font-black text-green-600 h-full">
-                        <Globe size={12} className="animate-pulse" />
-                        USD: {liveRate.toFixed(2)}
+                    <div className="flex bg-gray-100/50 p-1 rounded-lg">
+                        <button
+                            onClick={() => setGlobalRange('year')}
+                            className={cn(
+                                "px-3 py-1.5 rounded-md text-[9px] font-black transition-all",
+                                globalRange === 'year' ? "bg-white text-neumo-brand shadow-sm" : "text-gray-400 hover:text-gray-600"
+                            )}
+                        >
+                            近一年
+                        </button>
+                        <button
+                            onClick={() => setGlobalRange('all')}
+                            className={cn(
+                                "px-3 py-1.5 rounded-md text-[9px] font-black transition-all",
+                                globalRange === 'all' ? "bg-white text-neumo-brand shadow-sm" : "text-gray-400 hover:text-gray-600"
+                            )}
+                        >
+                            全部
+                        </button>
                     </div>
                 </HeaderActions>
             </header>

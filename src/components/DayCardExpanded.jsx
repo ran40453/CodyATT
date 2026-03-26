@@ -510,11 +510,11 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
                                         <button
                                             onClick={toggleOtType}
                                             className={cn(
-                                                "w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0 text-white shadow-lg",
+                                                "w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0 text-white shadow-lg text-xs font-black",
                                                 otType === 'pay' ? "bg-amber-500" : "bg-purple-600"
                                             )}
                                         >
-                                            {otType === 'pay' ? <span className="text-base leading-none">💰</span> : <Coffee size={14} />}
+                                            {otType === 'pay' ? '薪' : '補'}
                                         </button>
                                     </div>
 

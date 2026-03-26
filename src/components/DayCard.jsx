@@ -114,13 +114,6 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy, setti
                             "text-xs md:text-lg font-black",
                             otType === 'internal' ? "text-purple-600" : (otType === 'pay' ? "text-amber-500" : "text-indigo-500")
                         )}>{otHours.toFixed(1)}</span>
-                        {otType === 'leave' ? (
-                            <Coffee size={16} className="text-indigo-500 md:w-5 md:h-5" />
-                        ) : otType === 'internal' ? (
-                            <Coffee size={16} className="text-purple-600 md:w-5 md:h-5" />
-                        ) : (
-                            <span className="text-sm md:text-xl leading-none">💰</span>
-                        )}
                     </div>
                 )}
             </div>
