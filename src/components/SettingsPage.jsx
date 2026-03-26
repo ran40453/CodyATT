@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Save, RefreshCw, DollarSign, Calculator, Briefcase, Calendar as CalendarIcon, Activity, Plus, Trash2, Globe, Palmtree } from 'lucide-react'
-import { loadSettings, saveSettings, syncSettingsToGist, testConnection, fetchExchangeRate, createGist, fetchSettingsFromGist, fetchRecordsFromGist } from '../lib/storage'
+import { loadSettings, saveSettings, syncSettingsToGist, syncRecordsToSheets, loadData, testConnection, fetchExchangeRate, createGist, fetchSettingsFromGist, fetchRecordsFromGist } from '../lib/storage'
 import { cn } from '../lib/utils'
 import { format } from 'date-fns'
 
@@ -53,7 +53,12 @@ function SettingsPage({ isPrivacy }) {
             setIsSaving(true)
             const updated = { ...settings, liveRate: liveRate || settings.allowance.exchangeRate }
             saveSettings(updated)
-            await syncSettingsToGist(updated)
+            // Push both settings AND records to Gist
+            const localRecords = loadData();
+            await Promise.all([
+                syncSettingsToGist(updated),
+                localRecords.length > 0 ? syncRecordsToSheets(localRecords) : Promise.resolve()
+            ])
             setTimeout(() => setIsSaving(false), 1000)
         }, 400);
     }
@@ -113,6 +118,35 @@ function SettingsPage({ isPrivacy }) {
             alert(`建立失敗: ${res.error}`);
         }
         setIsSaving(false);
+    }
+
+    const handlePush = () => {
+        if (!settings.githubToken || !settings.gistId) {
+            alert('請先輸入 GitHub Token 與 Gist ID');
+            return;
+        }
+        if (document.activeElement) document.activeElement.blur();
+        setTimeout(async () => {
+            if (!confirm('將把本機所有紀錄強制上傳至雲端（覆蓋 Gist 資料），確定要繼續？')) return;
+            setIsSaving(true);
+            try {
+                const localRecords = loadData();
+                const updated = { ...settings, liveRate: liveRate || settings.allowance.exchangeRate };
+                saveSettings(updated);
+                const [settingsRes, recordsRes] = await Promise.all([
+                    syncSettingsToGist(updated),
+                    syncRecordsToSheets(localRecords)
+                ]);
+                if (settingsRes.ok && recordsRes.ok) {
+                    alert(`推送成功！已上傳 ${localRecords.length} 筆紀錄至雲端。`);
+                } else {
+                    alert('推送部分失敗，請檢查 Console 錯誤訊息。');
+                }
+            } catch (e) {
+                alert(`推送發生錯誤: ${e.message}`);
+            }
+            setIsSaving(false);
+        }, 400);
     }
 
     const handleRecover = () => {
@@ -227,8 +261,18 @@ function SettingsPage({ isPrivacy }) {
                             >
                                 {isTesting ? 'TESTING...' : '測試 Gist 連線'}
                             </button>
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handlePush(); }}
+                                disabled={isSaving}
+                                className="neumo-button flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-blue-500"
+                            >
+                                推送至雲端 (PUSH)
+                            </button>
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleRecover(); }}
+                                disabled={isSaving}
                                 className="neumo-button flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-rose-500"
                             >
                                 從雲端恢復 (PULL)
