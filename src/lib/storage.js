@@ -644,24 +644,34 @@ export const syncRecordsToGist = async (records) => {
 
     try {
         console.log(`Sync: Starting records sync for ${records.length} items to Gist ${gistId}...`);
+
+        // First, fetch existing files to avoid 422 from deleting non-existent legacy files
+        const legacyFilenames = ['record.json', 'record', 'ot_records.json', 'otcal_records.json'];
+        const filesPayload = {
+            'records.json': { content: recordsToGistFormat(records) }
+        };
+        try {
+            const existingHeaders = { 'Authorization': `token ${token}` };
+            const existingRes = await fetch(`https://api.github.com/gists/${gistId}`, { headers: existingHeaders });
+            if (existingRes.ok) {
+                const existingGist = await existingRes.json();
+                legacyFilenames.forEach(f => {
+                    if (existingGist.files[f]) {
+                        filesPayload[f] = null; // Only delete files that actually exist
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn('Sync: Could not pre-check Gist files, skipping legacy cleanup.', e.message);
+        }
+
         const response = await fetch(`https://api.github.com/gists/${gistId}`, {
             method: 'PATCH',
             headers: {
                 'Authorization': `token ${token}`,
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                files: {
-                    'records.json': {
-                        content: recordsToGistFormat(records)
-                    },
-                    // Consolidation: Clean up legacy filenames so they don't get merged again
-                    'record.json': null,
-                    'record': null,
-                    'ot_records.json': null,
-                    'otcal_records.json': null
-                }
-            })
+            body: JSON.stringify({ files: filesPayload })
         });
 
         if (response.ok) {
