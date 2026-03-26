@@ -1,7 +1,7 @@
 import React from 'react'
 import { format, isToday, getDay, isAfter, startOfDay, isSameDay } from 'date-fns'
 import { motion } from 'framer-motion'
-import { Palmtree, Moon, DollarSign, Coffee, MessageSquare } from 'lucide-react'
+import { Palmtree, Moon, Coffee, MessageSquare } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { calculateOTHours, calculateDuration, calculateDailySalary, standardizeCountry } from '../lib/storage'
 import { isTaiwanHoliday, getHolidayName } from '../lib/holidays'
@@ -48,9 +48,9 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy, setti
 
     const mask = (val) => isPrivacy ? '••••' : val;
 
-    const getCountryCode = (name) => {
-        const mapping = { '印度': 'IN', '越南': 'VN', 'VIETNAM': 'VN', '大陸': 'CN' };
-        return mapping[name] || name;
+    const countryFlag = (code) => {
+        const flags = { 'VN': '🇻🇳', 'IN': '🇮🇳', 'CN': '🇨🇳' };
+        return flags[code] || code;
     }
 
     return (
@@ -78,8 +78,8 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy, setti
                     </span>
                     {/* Mobile: Travel Country next to date */}
                     {travelCountry && (
-                        <span className="md:hidden text-[8px] font-black text-green-600 uppercase border border-green-200 px-1 rounded bg-green-50/50">
-                            {getCountryCode(travelCountry)}
+                        <span className="md:hidden text-[10px]">
+                            {countryFlag(travelCountry)}
                         </span>
                     )}
                 </div>
@@ -98,8 +98,8 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy, setti
                     )}
                     {/* Desktop: Travel below price */}
                     {travelCountry && (
-                        <span className="text-[8px] font-black text-green-600 uppercase border border-green-200 px-1 rounded bg-green-50/50">
-                            {getCountryCode(travelCountry)}
+                        <span className="text-base leading-none">
+                            {countryFlag(travelCountry)}
                         </span>
                     )}
                 </div>
@@ -112,14 +112,14 @@ function DayCard({ day, record, onClick, isCurrentMonth = true, isPrivacy, setti
                     <div className="absolute right-0 md:static flex items-center gap-1 bg-white/40 md:bg-transparent px-1.5 py-0.5 rounded-lg">
                         <span className={cn(
                             "text-xs md:text-lg font-black",
-                            otType === 'internal' ? "text-purple-600" : (otType === 'pay' ? "text-neumo-brand" : "text-indigo-500")
+                            otType === 'internal' ? "text-purple-600" : (otType === 'pay' ? "text-amber-500" : "text-indigo-500")
                         )}>{otHours.toFixed(1)}</span>
                         {otType === 'leave' ? (
                             <Coffee size={16} className="text-indigo-500 md:w-5 md:h-5" />
                         ) : otType === 'internal' ? (
                             <Coffee size={16} className="text-purple-600 md:w-5 md:h-5" />
                         ) : (
-                            <DollarSign size={16} className="text-green-500 md:w-5 md:h-5 border-2 border-green-500 rounded-full p-0.5" />
+                            <span className="text-sm md:text-xl leading-none">💰</span>
                         )}
                     </div>
                 )}

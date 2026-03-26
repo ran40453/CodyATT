@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { format, getDay, isAfter } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, Clock, Check, Palmtree, Moon, DollarSign, Coffee, Trash2, MessageSquare, Calendar as CalendarIcon, FileText } from 'lucide-react'
+import { MapPin, Clock, Check, Palmtree, Moon, Coffee, Trash2, MessageSquare, Calendar as CalendarIcon, FileText } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { calculateOTHours, calculateDuration, calculateDailySalary, calculateCompLeaveUnits, standardizeCountry } from '../lib/storage'
 import { isTaiwanHoliday, getHolidayName } from '../lib/holidays'
@@ -372,10 +372,11 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
                             active={!!travelCountry}
                             activeClass="neumo-pressed text-green-600"
                             inactiveClass="neumo-raised text-gray-400"
-                            label={travelCountry || '出差'}
+                            label={travelCountry ? ({ 'VN': '🇻🇳 VN', 'IN': '🇮🇳 IN', 'CN': '🇨🇳 CN' }[travelCountry] || travelCountry) : '出差'}
                             icon={<MapPin size={16} />}
                             iconVariants={iconVariants}
                             textVariants={textVariants}
+                            alwaysShowLabel={!!travelCountry}
                         />
                     </div>
 
@@ -509,11 +510,11 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
                                         <button
                                             onClick={toggleOtType}
                                             className={cn(
-                                                "w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0",
-                                                otType === 'pay' ? "bg-green-500 text-white shadow-lg" : "bg-purple-600 text-white shadow-lg"
+                                                "w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0 text-white shadow-lg",
+                                                otType === 'pay' ? "bg-amber-500" : "bg-purple-600"
                                             )}
                                         >
-                                            {otType === 'pay' ? <DollarSign size={14} /> : <Coffee size={14} />}
+                                            {otType === 'pay' ? <span className="text-base leading-none">💰</span> : <Coffee size={14} />}
                                         </button>
                                     </div>
 
@@ -522,7 +523,10 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
                                             預估 {otType === 'pay' ? '薪資' : '部門補休'}
                                         </p>
                                         <div className="flex items-baseline gap-1 justify-end md:justify-start">
-                                            <span className="text-2xl font-black tabular-nums leading-none text-green-600">
+                                            <span className={cn(
+                                                "text-2xl font-black tabular-nums leading-none",
+                                                otType === 'pay' ? "text-amber-500" : "text-green-600"
+                                            )}>
                                                 {`$${Math.round(salaryMetrics?.total || 0).toLocaleString()}`}
                                             </span>
                                             <span className="text-[9px] font-bold text-gray-400 uppercase">
@@ -594,7 +598,7 @@ function DayCardExpanded({ day, record, onUpdate, onDelete, onClose, style, clas
     )
 }
 
-function ModeButton({ onClick, active, activeClass, inactiveClass, label, icon, iconVariants, textVariants }) {
+function ModeButton({ onClick, active, activeClass, inactiveClass, label, icon, iconVariants, textVariants, alwaysShowLabel }) {
     return (
         <motion.button
             onClick={onClick}
@@ -602,12 +606,20 @@ function ModeButton({ onClick, active, activeClass, inactiveClass, label, icon, 
             initial="initial"
             className={cn("py-2 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase transition-all overflow-hidden relative", active ? activeClass : inactiveClass)}
         >
-            <motion.div variants={iconVariants} className="flex flex-col items-center justify-center">
-                {icon}
-            </motion.div>
-            <motion.span variants={textVariants} className="absolute inset-0 flex items-center justify-center text-[10px] font-black pointer-events-none">
-                {label}
-            </motion.span>
+            {alwaysShowLabel && active ? (
+                <span className="text-[10px] font-black pointer-events-none leading-tight text-center px-1">
+                    {label}
+                </span>
+            ) : (
+                <>
+                    <motion.div variants={iconVariants} className="flex flex-col items-center justify-center">
+                        {icon}
+                    </motion.div>
+                    <motion.span variants={textVariants} className="absolute inset-0 flex items-center justify-center text-[10px] font-black pointer-events-none">
+                        {label}
+                    </motion.span>
+                </>
+            )}
         </motion.button>
     );
 }
