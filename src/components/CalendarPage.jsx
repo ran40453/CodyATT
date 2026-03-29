@@ -158,7 +158,6 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
             <header className="flex justify-between items-end px-4 pt-4 mb-2">
                 <div className="space-y-1">
                     <h1 className="text-3xl font-black tracking-tight text-[#202731]">Calendar</h1>
-                    <p className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-400">Monthly View</p>
                 </div>
 
                 <HeaderActions
@@ -205,8 +204,28 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
                     <div className="h-6 rounded-lg bg-gray-100/90 p-1 flex items-center shadow-inner overflow-visible">
                         <InteractiveAttendanceBar attendanceBoxes={attendanceBoxes} today={new Date()} className="w-full h-1.5 gap-[2px] overflow-visible" />
                     </div>
+                    <div className="grid grid-cols-7 mt-2 px-0.5">
+                        {['S','M','T','W','T','F','S'].map((day, i) => {
+                            const isTodayCol = i === new Date().getDay();
+                            return (
+                                <div key={i} className="flex justify-center">
+                                    {isTodayCol ? (
+                                        <span className="bg-white text-purple-500 text-[11px] font-black px-2 h-5 rounded-full flex items-center justify-center leading-none">
+                                            {day}
+                                        </span>
+                                    ) : (
+                                        <span className="text-white/80 text-[11px] font-black leading-none flex items-center justify-center h-5">
+                                            {day}
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
+
+            <div className="h-3" />
 
             {isYearView ? (
                 <YearView year={currentDate.getFullYear()} dataMap={dataMap} onSelectMonth={(m) => { setCurrentDate(setMonth(setYear(new Date(), currentDate.getFullYear()), m)); setIsYearView(false); }} />

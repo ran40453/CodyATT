@@ -342,26 +342,16 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
             <QuickCopyTool isOpen={isQuickCopyOpen} onClose={() => setIsQuickCopyOpen(false)} />
 
             {/* Header */}
-            <header className="flex justify-between items-start md:items-center mb-2">
-                <div className="space-y-1 md:hidden">
-                    <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
-                        Dashboard
-                    </h1>
-                    <p className="text-gray-500 text-xs font-bold tracking-widest uppercase italic">Powered by Cody</p>
-                </div>
-
-                {/* Desktop Month Badge (Mobile has it in title, let's put it standalone for desktop) */}
-                <div className="hidden md:block">
-                    <span className="text-sm font-bold bg-neumo-brand/10 text-neumo-brand px-3 py-1.5 rounded-xl uppercase tracking-widest">{format(today, 'MMMM')}</span>
+            <header className="flex justify-between items-end mb-2">
+                <div className="space-y-1">
+                    <h1 className="text-3xl font-black tracking-tight text-[#202731]">Dashboard</h1>
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <div className="md:hidden">
-                        <span className="text-sm font-bold bg-neumo-brand/10 text-neumo-brand px-2 py-1 rounded-lg">{format(today, 'MMMM')}</span>
-                    </div>
+                    <span className="text-sm font-bold bg-neumo-brand/10 text-neumo-brand px-2 py-1 rounded-lg">{format(today, 'MMMM')}</span>
                     <HeaderActions
                         isPrivacy={isPrivacy}
-                        togglePrivacy={togglePrivacy || setIsPrivacy} // Robustness
+                        togglePrivacy={togglePrivacy || setIsPrivacy}
                         onSettingsClick={onSettingsClick}
                     />
                 </div>

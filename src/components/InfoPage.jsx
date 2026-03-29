@@ -38,6 +38,7 @@ function InfoPage() {
     const [isCopying, setIsCopying] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
     const [newFolderName, setNewFolderName] = useState('')
+    const [saveError, setSaveError] = useState(null)
 
     // Uncategorized files are those not in any folder's list
     const getUncategorizedFiles = (allFiles, currentFolders) => {
@@ -135,8 +136,10 @@ function InfoPage() {
 
             setSelectedFile(updatedFile);
             setIsEditing(false);
+            setSaveError(null);
         } else {
-            alert('Failed to save: ' + result.error);
+            setSaveError('Failed to save: ' + result.error);
+            setTimeout(() => setSaveError(null), 4000);
         }
         setIsSaving(false);
     };
@@ -398,27 +401,30 @@ function InfoPage() {
     const renderFileList = (fileList, folderPath = 'uncategorized') => {
         if (!fileList || fileList.length === 0) return <div className="p-2 text-[10px] text-gray-400 italic">Empty</div>;
         return fileList.map(file => (
-            <button
+            <div
                 key={file.filename}
+                role="button"
+                tabIndex={0}
                 draggable
                 onDragStart={(e) => handleDragStart(e, file.filename, 'file')}
                 onDragEnd={handleDragEnd}
                 onClick={() => handleFileSelect(file)}
+                onKeyDown={(e) => e.key === 'Enter' && handleFileSelect(file)}
                 className={cn(
-                    "w-full text-left p-2 pl-3 rounded-lg transition-all duration-200 group relative overflow-hidden mb-1 flex items-center gap-2",
+                    "w-full text-left p-2.5 pl-3 rounded-xl transition-all duration-200 group mb-1 flex items-center gap-2 cursor-pointer select-none",
                     selectedFile?.filename === file.filename
-                        ? "bg-yellow-500/20 text-yellow-500 shadow-sm border border-yellow-500/30"
-                        : (isDark ? "hover:bg-white/5 text-gray-400 hover:text-gray-200" : "hover:bg-black/5 text-gray-600 hover:text-gray-900")
+                        ? "bg-white/25 border border-white/40 shadow-sm"
+                        : "border border-transparent hover:bg-white/10 hover:border-white/20"
                 )}
             >
-                <FileText size={14} className={cn("shrink-0 transition-colors", selectedFile?.filename === file.filename ? "text-yellow-500" : "text-gray-500")} />
+                <FileText size={14} className={cn("shrink-0 transition-colors", selectedFile?.filename === file.filename ? "text-white" : "text-white/60")} />
                 <div className="min-w-0 flex-1">
-                    <h3 className={cn("text-xs font-bold truncate transition-colors", selectedFile?.filename === file.filename ? (isDark ? "text-yellow-100" : "text-yellow-700") : (isDark ? "text-gray-400 group-hover:text-gray-200" : "text-gray-600 group-hover:text-gray-900"))}>
+                    <h3 className={cn("text-xs font-bold truncate transition-colors", selectedFile?.filename === file.filename ? "text-white" : "text-white/75 group-hover:text-white")}>
                         {file.filename.replace('.md', '')}
                     </h3>
                 </div>
 
-                {/* Manual Move Icons — always in layout to prevent row resize flicker */}
+                {/* Manual Move Icons */}
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                     <button
                         onClick={(e) => {
@@ -426,13 +432,13 @@ function InfoPage() {
                             const rect = e.currentTarget.getBoundingClientRect();
                             setMovingItem({ name: file.filename, type: 'file', anchorEl: { top: rect.top, left: rect.left } });
                         }}
-                        className={cn("p-1.5 rounded-md", isDark ? "hover:bg-gray-700 text-gray-500" : "hover:bg-gray-200 text-gray-400")}
+                        className="p-1.5 rounded-lg hover:bg-white/20 text-white/50 hover:text-white"
                         title="Move..."
                     >
                         <MoreVertical size={12} />
                     </button>
                 </div>
-            </button>
+            </div>
         ));
     };
 
@@ -445,7 +451,6 @@ function InfoPage() {
             <header className="flex justify-between items-end px-1 mb-2">
                 <div className="space-y-1">
                     <h1 className="text-3xl font-black tracking-tight text-[#202731]">Info & Notes</h1>
-                    <p className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-400">Documentation Library</p>
                 </div>
 
                 <HeaderActions onSettingsClick={() => { }}>
@@ -460,51 +465,35 @@ function InfoPage() {
             </header>
 
             <div className={cn(
-                "flex-1 flex relative neumo-raised rounded-3xl z-20 transition-colors duration-300",
+                "flex-1 flex relative neumo-raised rounded-3xl z-20 transition-colors duration-300 overflow-hidden",
                 isDark ? "bg-[#202731]" : "bg-[#E0E5EC]"
             )}>
                 <motion.div
                     className={cn(
                         "flex flex-col w-full md:w-1/3 min-w-[260px] max-w-sm border-r z-10 absolute md:relative h-full transition-all duration-300",
                         isMobileListVisible ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-                        isDark ? "bg-transparent border-white/5" : "bg-transparent border-white/50"
+                        isDark ? "bg-purple-900 border-white/5" : "bg-purple-600 border-purple-700/30"
                     )}
                 >
-                    <div className={cn(
-                        "p-3 border-b flex justify-between items-center transition-colors shadow-sm",
-                        isDark ? "border-white/5 bg-[#171C24]" : "border-white/50 bg-[#D0D6DF]"
-                    )}>
-                        <div className="flex items-center gap-2">
-                            <span className={cn("text-[10px] font-black uppercase tracking-wider", isDark ? "text-gray-400" : "text-gray-500")}>
-                                {files.length} ITEMS
-                            </span>
-                        </div>
-                        <div className="flex gap-1">
-                            <button
-                                onClick={load}
-                                className={cn("p-1.5 rounded-md transition-colors", isDark ? "hover:bg-gray-800 text-gray-400 hover:text-blue-400" : "hover:bg-gray-200 text-gray-600 hover:text-blue-600")}
-                                title="Refresh"
-                            >
-                                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                    {/* Top action bar */}
+                    <div className="p-2.5 flex items-center justify-between shrink-0 border-b border-white/10">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-white/60">
+                            {files.length} items
+                        </span>
+                        <div className="flex gap-0.5">
+                            <button onClick={load} className="p-1.5 rounded-lg transition-all hover:bg-white/15 text-white/70 hover:text-white" title="Refresh">
+                                <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
                             </button>
-                            <button
-                                onClick={handleCreateNewFile}
-                                className={cn("p-1.5 rounded-md transition-colors", isDark ? "hover:bg-gray-800 text-gray-400 hover:text-yellow-400" : "hover:bg-gray-200 text-gray-600 hover:text-blue-600")}
-                                title="New Note"
-                            >
-                                <SquarePen size={16} />
+                            <button onClick={handleCreateNewFile} className="p-1.5 rounded-lg transition-all hover:bg-white/15 text-white/70 hover:text-white" title="New Note">
+                                <SquarePen size={14} />
                             </button>
-                            <button
-                                onClick={() => setIsFolderModalOpen(true)}
-                                className={cn("p-1.5 rounded-md transition-colors", isDark ? "hover:bg-gray-800 text-gray-400 hover:text-green-400" : "hover:bg-gray-200 text-gray-600 hover:text-green-600")}
-                                title={`New Folder ${activeFolder ? `in ${activeFolder}` : ''}`}
-                            >
-                                <FolderPlus size={16} />
+                            <button onClick={() => setIsFolderModalOpen(true)} className="p-1.5 rounded-lg transition-all hover:bg-white/15 text-white/70 hover:text-white" title={`New Folder${activeFolder ? ` in ${activeFolder}` : ''}`}>
+                                <FolderPlus size={14} />
                             </button>
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-2 space-y-4 nice-scrollbar">
+                    <div className="flex-1 overflow-y-auto p-3 space-y-1 nice-scrollbar">
                         {loading ? (
                             <div className="flex justify-center items-center h-40">
                                 <Loader2 className="animate-spin text-gray-500" />
@@ -548,20 +537,23 @@ function InfoPage() {
                                                         dragOverFolder === path ? "border-dashed border-yellow-500 bg-yellow-500/10" : "border-transparent"
                                                     )}
                                                 >
-                                                    <div className="flex items-center gap-1 group/folder rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors pl-1">
+                                                    <div className={cn(
+                                                        "flex items-center gap-1 group/folder rounded-xl transition-all",
+                                                        activeFolder === path ? "bg-white/20" : "hover:bg-white/10"
+                                                    )}>
                                                         <button
                                                             draggable
                                                             onDragStart={(e) => handleDragStart(e, path, 'folder')}
                                                             onDragEnd={handleDragEnd}
                                                             onClick={() => toggleFolder(path)}
                                                             className={cn(
-                                                                "flex items-center gap-1.5 flex-1 text-left px-1 py-1.5 text-xs font-bold transition-colors cursor-grab active:cursor-grabbing",
-                                                                activeFolder === path ? (isDark ? "text-yellow-400" : "text-yellow-600") : (isDark ? "text-gray-400" : "text-gray-600"),
+                                                                "flex items-center gap-1.5 flex-1 text-left px-2 py-2 text-xs font-bold transition-colors cursor-grab active:cursor-grabbing rounded-xl",
+                                                                activeFolder === path ? "text-white" : "text-white/75 hover:text-white",
                                                                 draggedFile?.name === path ? "opacity-30" : "opacity-100"
                                                             )}
                                                         >
                                                             {openFolders[path] ? <ChevronRight size={14} className="rotate-90 transition-transform" /> : <ChevronRight size={14} className="transition-transform" />}
-                                                            <Folder size={14} className={cn(activeFolder === path ? "text-yellow-500" : (isDark ? "text-blue-400" : "text-blue-500"))} />
+                                                            <Folder size={14} className="text-white/70" />
                                                             <span className="truncate">{name}</span>
                                                         </button>
 
@@ -572,14 +564,14 @@ function InfoPage() {
                                                                     const rect = e.currentTarget.getBoundingClientRect();
                                                                     setMovingItem({ name: path, type: 'folder', anchorEl: { top: rect.top, left: rect.left } });
                                                                 }}
-                                                                className={cn("p-1.5 rounded-md", isDark ? "hover:bg-gray-700 text-gray-500" : "hover:bg-gray-200 text-gray-400")}
+                                                                className="p-1.5 rounded-lg hover:bg-white/20 text-white/50 hover:text-white"
                                                                 title="Move folder..."
                                                             >
                                                                 <MoreVertical size={12} />
                                                             </button>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); deleteFolder(path); }}
-                                                                className={cn("p-1.5 rounded-md", isDark ? "hover:bg-red-500/20 text-gray-500 hover:text-red-400" : "hover:bg-red-100 text-gray-400 hover:text-red-600")}
+                                                                className="p-1.5 rounded-lg hover:bg-red-500/30 text-white/50 hover:text-red-300"
                                                                 title="Delete folder"
                                                             >
                                                                 <Trash2 size={12} />
@@ -594,7 +586,7 @@ function InfoPage() {
                                                             initial={{ height: 0, opacity: 0 }}
                                                             animate={{ height: 'auto', opacity: 1 }}
                                                             exit={{ height: 0, opacity: 0 }}
-                                                            className={cn("overflow-hidden ml-3 pl-2 border-l", isDark ? "border-white/10" : "border-gray-300")}
+                                                            className="overflow-hidden ml-3 pl-2 border-l border-white/20"
                                                         >
                                                             {/* Render Subfolders */}
                                                             {Object.entries(node.children).sort().map(([subName, subNode]) => renderFolder(subNode, subName, depth + 1))}
@@ -621,12 +613,13 @@ function InfoPage() {
                                         dragOverFolder === 'uncategorized' ? "border-dashed border-gray-400 bg-gray-500/10" : "border-transparent"
                                     )}
                                 >
-                                    <div className="px-2 py-1 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Uncategorized</div>
+                                    <div className="px-2 py-1 text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Uncategorized</div>
                                     {renderFileList(uncategorized)}
                                 </div>
                             </>
                         )}
                     </div>
+
                 </motion.div>
 
                 <div className={cn(
@@ -636,7 +629,7 @@ function InfoPage() {
                 )}>
                     {selectedFile ? (
                         <>
-                            <div className={cn("md:hidden p-3 border-b flex items-center gap-2 sticky top-0 z-10", isDark ? "bg-[#1A202A] border-white/5 text-gray-200" : "bg-[#D6DCE5] border-white/50 text-gray-800")}>
+                            <div className={cn("md:hidden p-3 border-b flex items-center gap-2 sticky top-0 z-10", isDark ? "bg-[#1A202A] border-white/5 text-gray-200" : "bg-[#D0D6DF] border-white/50 text-gray-800")}>
                                 <button onClick={handleBackToList} className="p-1 -ml-1 text-yellow-500 flex items-center gap-1">
                                     <ChevronLeft size={18} />
                                     <span className="text-xs font-bold">List</span>
@@ -661,7 +654,12 @@ function InfoPage() {
                                 </div>
                             </div>
 
-                            <div className={cn("hidden md:flex justify-between items-center p-3 border-b", isDark ? "border-white/5 bg-[#171C24] text-gray-200" : "border-white/50 bg-[#D0D6DF] text-gray-800")}>
+                            {saveError && (
+                                <div className="px-4 py-2 bg-red-500/10 border-b border-red-500/20 text-red-500 text-xs font-bold">
+                                    {saveError}
+                                </div>
+                            )}
+                            <div className={cn("hidden md:flex justify-between items-center p-3 border-b", isDark ? "border-white/5 bg-[#1A202A] text-gray-200" : "border-white/50 bg-[#D0D6DF] text-gray-800")}>
                                 {isEditing ? (
                                     <input type="text" value={editFilename} onChange={(e) => setEditFilename(e.target.value)} className={cn("text-sm font-bold bg-transparent border-b outline-none pb-0.5", isDark ? "border-gray-600 focus:border-yellow-500 text-yellow-100" : "border-gray-300 focus:border-yellow-500 text-yellow-700")} placeholder="Note Title..." />
                                 ) : (
@@ -719,7 +717,6 @@ function InfoPage() {
                                                     ['bold', 'underline', 'italic', 'strike', 'removeFormat'],
                                                     ['fontColor', 'hiliteColor'],
                                                     ['formatBlock', 'fontSize'],
-                                                    ['/'],
                                                     ['align', 'list', 'outdent', 'indent'],
                                                     ['horizontalRule', 'link', 'table'],
                                                     ['codeView']

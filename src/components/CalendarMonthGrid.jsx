@@ -56,14 +56,6 @@ function CalendarMonthGrid({
 
     return (
         <div className="relative pb-4">
-            <div className="grid grid-cols-7 gap-1 md:gap-3 mb-1">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                    <div key={day} className="text-center text-[7px] md:text-[9px] font-black text-gray-400 uppercase tracking-widest">
-                        {day}
-                    </div>
-                ))}
-            </div>
-
             <div className="grid grid-cols-7 gap-1 md:gap-3 lg:min-h-[600px] relative" style={{ gridAutoRows: 'minmax(80px, 1fr)' }}>
                 {days.map((day) => {
                     return (
@@ -102,9 +94,9 @@ export function CalendarOverlay({ day, record, onUpdate, onDelete, onClose, isPr
     return (
         <>
             <motion.div
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                exit={{ opacity: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0, pointerEvents: 'none' }}
                 transition={{ duration: 0 }}
                 className="fixed inset-0 z-[1998] bg-black/5 backdrop-blur-[1px] pointer-events-auto"
                 onClick={(e) => {
@@ -116,7 +108,7 @@ export function CalendarOverlay({ day, record, onUpdate, onDelete, onClose, isPr
             <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 10, x: "-50%" }}
                 animate={{ opacity: 1, scale: 1, y: 0, x: "-50%" }}
-                exit={{ opacity: 0, scale: 0.95, y: 10, x: "-50%" }}
+                exit={{ opacity: 0, scale: 0.95, y: 10, x: "-50%", pointerEvents: 'none' }}
                 transition={{ type: "spring", stiffness: 400, damping: 22, mass: 1 }}
                 style={blockStyle}
                 className="z-[1999] pointer-events-auto"

@@ -218,11 +218,11 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
     const incomeData = {
         labels: incomeChartMonths.map(m => format(m, globalRange === 'year' ? 'MMM' : 'yy/MM')),
         datasets: [
-            { label: '滾動年收 (Rolling 12M)', data: rolling12MIncomeByMonth, borderColor: 'rgb(156, 163, 175)', backgroundColor: 'rgb(156, 163, 175)', fill: false, tension: 0.4, borderWidth: 2, pointRadius: 4, order: 0, yAxisID: 'yCumulative', pointStyle: 'circle', borderDash: [5, 5] },
-            { label: '單月總收入', data: totalIncomeByMonth, borderColor: 'rgb(253, 224, 71)', backgroundColor: 'rgba(253, 224, 71, 0.4)', fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0, order: 1 },
-            { label: '底薪', data: baseByMonth, borderColor: 'rgb(56, 189, 248)', backgroundColor: 'rgb(56, 189, 248)', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.4, hidden: false, order: 2, pointStyle: 'circle' },
-            { label: '獎金', data: bonusByMonth, borderColor: 'rgb(245, 158, 11)', backgroundColor: 'rgb(245, 158, 11)', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.4, hidden: false, order: 3, pointStyle: 'circle' },
-            { label: '加班費', data: otPayByMonth, borderColor: 'rgb(255, 69, 0)', backgroundColor: 'rgb(255, 69, 0)', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.4, hidden: false, order: 4, pointStyle: 'circle' },
+            { label: '滾動年收 (Rolling 12M)', data: rolling12MIncomeByMonth, borderColor: 'rgb(156, 163, 175)', backgroundColor: 'rgba(156, 163, 175, 0.15)', fill: true, tension: 0.4, borderWidth: 2, pointRadius: 4, order: 0, yAxisID: 'yCumulative', pointStyle: 'circle', borderDash: [5, 5] },
+            { label: '單月總收入', data: totalIncomeByMonth, borderColor: 'rgb(253, 224, 71)', backgroundColor: 'rgba(253, 224, 71, 0.35)', fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0, order: 1 },
+            { label: '底薪', data: baseByMonth, borderColor: 'rgb(56, 189, 248)', backgroundColor: 'rgba(56, 189, 248, 0.25)', borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.4, hidden: false, order: 2, pointStyle: 'circle' },
+            { label: '獎金', data: bonusByMonth, borderColor: 'rgb(245, 158, 11)', backgroundColor: 'rgba(245, 158, 11, 0.25)', borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.4, hidden: false, order: 3, pointStyle: 'circle' },
+            { label: '加班費', data: otPayByMonth, borderColor: 'rgb(255, 69, 0)', backgroundColor: 'rgba(255, 69, 0, 0.25)', borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.4, hidden: false, order: 4, pointStyle: 'circle' },
         ]
     };
 
@@ -236,10 +236,10 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
     const travelData = {
         labels: workloadChartMonths.map(m => format(m, globalRange === 'year' ? 'MMM' : 'yy/MM')),
         datasets: [
-            { type: 'bar', label: '加班時數', data: otByMonth, backgroundColor: 'rgba(99, 102, 241, 0.4)', borderColor: 'rgb(99, 102, 241)', borderWidth: 1, borderRadius: 4, yAxisID: 'y', order: 3 },
-            { type: 'line', label: '補休單位', data: compByMonth, borderColor: 'rgb(79, 70, 229)', backgroundColor: 'rgb(79, 70, 229)', fill: false, tension: 0.4, yAxisID: 'y1', order: 4, pointStyle: 'circle', pointRadius: 3 },
-            { type: 'line', label: '請假天數', data: leaveDaysByMonth, borderColor: 'rgb(244, 63, 94)', backgroundColor: 'rgb(244, 63, 94)', borderWidth: 2, pointRadius: 3, fill: false, tension: 0.3, yAxisID: 'y1', order: 1, pointStyle: 'circle' },
-            { type: 'line', label: '出差天數', data: travelDaysByMonth, borderColor: 'rgb(16, 185, 129)', backgroundColor: 'rgb(16, 185, 129)', borderWidth: 2, pointRadius: 3, fill: false, tension: 0.3, yAxisID: 'y1', order: 2, pointStyle: 'circle' }
+            { type: 'bar', label: '加班時數', data: otByMonth, backgroundColor: 'rgba(99, 102, 241, 0.5)', borderColor: 'rgb(99, 102, 241)', borderWidth: 1, borderRadius: 4, order: 3 },
+            { type: 'bar', label: '補休單位', data: compByMonth, backgroundColor: 'rgba(79, 70, 229, 0.5)', borderColor: 'rgb(79, 70, 229)', borderWidth: 1, borderRadius: 4, order: 4 },
+            { type: 'bar', label: '請假天數', data: leaveDaysByMonth, backgroundColor: 'rgba(244, 63, 94, 0.5)', borderColor: 'rgb(244, 63, 94)', borderWidth: 1, borderRadius: 4, order: 1 },
+            { type: 'bar', label: '出差天數', data: travelDaysByMonth, backgroundColor: 'rgba(16, 185, 129, 0.5)', borderColor: 'rgb(16, 185, 129)', borderWidth: 1, borderRadius: 4, order: 2 }
         ]
     };
 
@@ -279,10 +279,10 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                 labels: { boxWidth: 8, font: { size: 9 }, usePointStyle: true, pointStyle: 'circle' }
             }
         },
-        scales: { 
-            x: { grid: { display: false }, ticks: { font: { size: 9 } } }, 
-            y: { display: true, ticks: { font: { size: 9 }, color: '#9ca3af' }, grid: { color: 'rgba(0,0,0,0.03)' } },
-            yCumulative: { display: true, position: 'right', ticks: { font: { size: 9 }, color: '#9ca3af' }, grid: { display: false } }
+        scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+            y: { display: !isPrivacy, ticks: { font: { size: 9 }, color: '#9ca3af', callback: v => v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v }, grid: { color: 'rgba(0,0,0,0.03)' } },
+            yCumulative: { display: !isPrivacy, position: 'right', ticks: { font: { size: 9 }, color: '#9ca3af', callback: v => v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v }, grid: { display: false } }
         }
     };
 
@@ -290,12 +290,11 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
         ...options,
         scales: {
             x: { grid: { display: false }, ticks: { font: { size: 9 } } },
-            y: { display: false, position: 'left' },
-            y1: { display: false, position: 'right' }
+            y: { display: true, position: 'left', ticks: { font: { size: 9 }, color: '#9ca3af' }, grid: { color: 'rgba(0,0,0,0.03)' } },
         },
         plugins: {
             legend: {
-                display: true, // Enable legend for toggling
+                display: true,
                 labels: { boxWidth: 8, font: { size: 9 }, usePointStyle: true }
             },
             tooltip: { enabled: true }
@@ -306,6 +305,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
     const valuePlugin = {
         id: 'valuePlugin',
         afterDatasetsDraw(chart) {
+            if (isPrivacy) return;
             const { ctx, data } = chart;
             ctx.save();
             ctx.font = 'bold 9px sans-serif';
@@ -467,7 +467,6 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
             <header className="flex justify-between items-start">
                 <div className="space-y-1">
                     <h1 className="text-3xl font-black tracking-tight">Analysis</h1>
-                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Insights & Trends</p>
                 </div>
 
                 <HeaderActions
@@ -538,7 +537,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                         className="space-y-6"
                     >
                         {/* Financial Stats */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-3 gap-2 md:gap-4">
                             <div onClick={() => setIsSalaryDetailOpen(true)} className="cursor-pointer">
                                 <StatCard
                                     label="年薪"
@@ -651,9 +650,9 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                                         ...options,
                                         scales: {
                                             x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: 'bold' } } },
-                                            y: { stacked: true, display: true, position: 'left', grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 8 }, callback: v => '$' + (v / 1000).toFixed(0) + 'k' } }
+                                            y: { stacked: true, display: !isPrivacy, position: 'left', grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 8 }, callback: v => '$' + (v / 1000).toFixed(0) + 'k' } }
                                         },
-                                        plugins: { legend: { display: false }, tooltip: { enabled: true, callbacks: { label: ctx => `${ctx.dataset.label}: $${Math.round(ctx.raw).toLocaleString()}` } } }
+                                        plugins: { legend: { display: false }, tooltip: { enabled: !isPrivacy, callbacks: { label: ctx => `${ctx.dataset.label}: $${Math.round(ctx.raw).toLocaleString()}` } } }
                                     }}
                                     plugins={[valuePlugin]}
                                 />
@@ -672,29 +671,30 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                         className="space-y-6"
                     >
                         {/* Travel Stats & History (LIFETIME) */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-3 gap-2 md:gap-4">
                             {/* OT Statistics Consolidated */}
                             <div className="space-y-4">
                                 <div onClick={() => setIsOTListOpen(true)} className="cursor-pointer group relative h-full">
                                     <div className="absolute inset-0 bg-indigo-400/0 group-hover:bg-indigo-400/5 rounded-2xl transition-colors" />
-                                    <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-6 h-full flex flex-col">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                <Clock size={14} className="text-indigo-500" /> 加班統計
+                                    <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-3 md:p-6 h-full flex flex-col">
+                                        <div className="flex justify-between items-start mb-2 md:mb-4">
+                                            <h3 className="text-[8px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                <span className="hidden md:inline"><Clock size={14} className="inline text-indigo-500 mr-1.5" /></span>加班統計
                                             </h3>
                                             <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-indigo-300" />
                                         </div>
                                         <div className="flex-1 flex flex-col justify-center">
                                             <div className="flex items-baseline gap-1">
-                                                <span className="text-4xl font-black text-indigo-500">{stats.metrics.totalOT.toFixed(1)}</span>
-                                                <span className="text-[10px] font-black text-gray-400 uppercase">Hours</span>
+                                                <span className="text-2xl md:text-4xl font-black text-indigo-500">{stats.metrics.totalOT.toFixed(1)}</span>
+                                                <span className="text-[8px] md:text-[10px] font-black text-gray-400 uppercase">H</span>
                                             </div>
-                                            <div className="mt-2 text-xs font-black text-gray-700">
+                                            <div className="mt-1 md:mt-2 text-[9px] md:text-xs font-black text-gray-700">
                                                 {mask('$' + Math.round(stats.metrics.totalOTPay).toLocaleString())}
                                             </div>
-                                            <div className="mt-2 flex items-baseline gap-1">
-                                                <span className="text-lg font-black text-purple-600">{stats.metrics.totalDeptComp.toFixed(0)}</span>
-                                                <span className="text-[9px] font-black text-gray-400 uppercase">部門補休單 (1H=2Units)</span>
+                                            <div className="mt-1 md:mt-2 flex items-baseline gap-1">
+                                                <span className="text-sm md:text-lg font-black text-purple-600">{stats.metrics.totalDeptComp.toFixed(0)}</span>
+                                                <span className="text-[7px] md:text-[9px] font-black text-gray-400 uppercase hidden md:inline">部門補休單</span>
+                                                <span className="text-[7px] font-black text-gray-400 uppercase md:hidden">單</span>
                                             </div>
                                         </div>
                                     </div>
@@ -705,19 +705,19 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                             <div className="space-y-4">
                                 <div onClick={() => setIsLeaveListOpen(true)} className="cursor-pointer group relative h-full">
                                     <div className="absolute inset-0 bg-rose-400/0 group-hover:bg-rose-400/5 rounded-2xl transition-colors" />
-                                    <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-6 h-full flex flex-row items-center gap-4">
-                                        <div className="flex-1">
-                                            <div className="flex justify-between items-start mb-4">
-                                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                    <Coffee size={14} className="text-rose-500" /> 請假統計
+                                    <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-3 md:p-6 h-full flex flex-row items-center gap-2 md:gap-4">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-start mb-1 md:mb-4">
+                                                <h3 className="text-[8px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                    <span className="hidden md:inline"><Coffee size={14} className="inline text-rose-500 mr-1.5" /></span>請假統計
                                                 </h3>
                                                 <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-rose-300" />
                                             </div>
-                                            <div className="flex items-baseline gap-1 mb-4">
-                                                <span className="text-4xl font-black text-rose-500">{(globalRange === 'year' ? rollingYearRecords : data).filter(r => r.isLeave).length}</span>
-                                                <span className="text-[10px] font-black text-gray-400 uppercase">Records</span>
+                                            <div className="flex items-baseline gap-1 mb-1 md:mb-4">
+                                                <span className="text-2xl md:text-4xl font-black text-rose-500">{(globalRange === 'year' ? rollingYearRecords : data).filter(r => r.isLeave).length}</span>
+                                                <span className="text-[8px] md:text-[10px] font-black text-gray-400 uppercase">筆</span>
                                             </div>
-                                            <div className="space-y-1">
+                                            <div className="space-y-0.5 hidden md:block">
                                                 {leaveTypeStats().slice(0, 3).map(c => (
                                                     <div key={c.name} className="flex justify-between text-[8px] font-black uppercase">
                                                         <span className="text-gray-400 truncate max-w-[60px]">{c.name}</span>
@@ -726,7 +726,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                                                 ))}
                                             </div>
                                         </div>
-                                        <div className="w-24 h-24 shrink-0">
+                                        <div className="w-14 h-14 md:w-24 md:h-24 shrink-0">
                                             <Doughnut
                                                 data={{
                                                     labels: leaveTypeStats().map(s => s.name),
@@ -751,19 +751,19 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                             <div className="space-y-4">
                                 <div onClick={() => setIsTravelListOpen(true)} className="cursor-pointer group relative h-full">
                                     <div className="absolute inset-0 bg-emerald-400/0 group-hover:bg-emerald-400/5 rounded-2xl transition-colors" />
-                                    <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-6 h-full flex flex-row items-center gap-4">
-                                        <div className="flex-1">
-                                            <div className="flex justify-between items-start mb-4">
-                                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                    <Plane size={14} className="text-emerald-500" /> 出差統計
+                                    <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-3 md:p-6 h-full flex flex-row items-center gap-2 md:gap-4">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-start mb-1 md:mb-4">
+                                                <h3 className="text-[8px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                    <span className="hidden md:inline"><Plane size={14} className="inline text-emerald-500 mr-1.5" /></span>出差統計
                                                 </h3>
                                                 <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-300" />
                                             </div>
-                                            <div className="flex items-baseline gap-1 mb-4">
-                                                <span className="text-4xl font-black text-emerald-500">{stats.metrics.tripCount}</span>
-                                                <span className="text-[10px] font-black text-gray-400 uppercase">Days</span>
+                                            <div className="flex items-baseline gap-1 mb-1 md:mb-4">
+                                                <span className="text-2xl md:text-4xl font-black text-emerald-500">{stats.metrics.tripCount}</span>
+                                                <span className="text-[8px] md:text-[10px] font-black text-gray-400 uppercase">D</span>
                                             </div>
-                                            <div className="space-y-1">
+                                            <div className="space-y-0.5 hidden md:block">
                                                 {countryStats().slice(0, 3).map(c => (
                                                     <div key={c.name} className="flex justify-between text-[8px] font-black uppercase">
                                                         <span className="text-gray-400">{c.name}</span>
@@ -772,7 +772,7 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                                                 ))}
                                             </div>
                                         </div>
-                                        <div className="w-24 h-24 shrink-0">
+                                        <div className="w-14 h-14 md:w-24 md:h-24 shrink-0">
                                             <Doughnut
                                                 data={{
                                                     labels: countryStats().map(s => s.name),
@@ -942,28 +942,40 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
 
 function StatCard({ label, value, sub, unit, icon: Icon, color, compositionData }) {
     return (
-        <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl p-5 flex flex-row items-center gap-4 h-full">
-            <div className="flex-1 space-y-3">
-                <div className="flex justify-between items-start">
-                    <div className={cn("p-2 rounded-xl neumo-pressed inline-flex", color)}><Icon size={18} /></div>
-                </div>
-                <div>
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{label}</p>
-                    <h4 className="text-xl font-black leading-none mb-1">{value}<span className="text-xs ml-0.5">{unit || ''}</span></h4>
-                    {sub && <p className="text-[10px] font-bold text-gray-500 italic mt-1 whitespace-pre-line">{sub}</p>}
-                </div>
+        <div className="bg-neumo-bg shadow-neumo-raised rounded-3xl h-full">
+            {/* Mobile: compact 3-col layout — no icon, label on top, value in doughnut center */}
+            <div className="md:hidden p-2.5 flex flex-col items-center gap-1.5">
+                <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest text-center leading-tight">{label}</p>
+                {compositionData ? (
+                    <div className="relative w-full" style={{ paddingTop: '90%' }}>
+                        <div className="absolute inset-0">
+                            <Doughnut
+                                data={compositionData}
+                                options={{ plugins: { legend: { display: false }, tooltip: { enabled: false } }, maintainAspectRatio: false }}
+                            />
+                        </div>
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span className="font-black text-center leading-tight text-gray-800" style={{ fontSize: 'clamp(7px, 2.5vw, 11px)' }}>{value}</span>
+                        </div>
+                    </div>
+                ) : (
+                    <h4 className="text-lg font-black leading-none">{value}<span className="text-[10px] ml-0.5">{unit || ''}</span></h4>
+                )}
             </div>
-            {compositionData && (
-                <div className="w-20 h-20 shrink-0">
-                    <Doughnut
-                        data={compositionData}
-                        options={{
-                            plugins: { legend: { display: false }, tooltip: { enabled: true } },
-                            maintainAspectRatio: false
-                        }}
-                    />
+
+            {/* Desktop: no icon, label above value */}
+            <div className="hidden md:flex p-5 flex-row items-center gap-4 h-full">
+                <div className="flex-1 space-y-2">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{label}</p>
+                    <h4 className="text-xl font-black leading-none">{value}<span className="text-xs ml-0.5">{unit || ''}</span></h4>
+                    {sub && <p className="text-[10px] font-bold text-gray-500 italic whitespace-pre-line">{sub}</p>}
                 </div>
-            )}
+                {compositionData && (
+                    <div className="w-20 h-20 shrink-0">
+                        <Doughnut data={compositionData} options={{ plugins: { legend: { display: false }, tooltip: { enabled: true } }, maintainAspectRatio: false }} />
+                    </div>
+                )}
+            </div>
         </div>
     )
 }
