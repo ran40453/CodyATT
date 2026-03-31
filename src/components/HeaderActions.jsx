@@ -1,5 +1,6 @@
 import React from 'react'
 import { Settings, Eye, EyeOff } from 'lucide-react'
+import { UserButton } from '@clerk/clerk-react'
 import { cn } from '../lib/utils'
 
 function HeaderActions({ children, isPrivacy, togglePrivacy, onSettingsClick }) {
@@ -29,6 +30,8 @@ function HeaderActions({ children, isPrivacy, togglePrivacy, onSettingsClick }) 
             >
                 <Settings size={20} />
             </button>
+
+            <UserButton afterSignOutUrl="/" />
         </div>
     )
 }
