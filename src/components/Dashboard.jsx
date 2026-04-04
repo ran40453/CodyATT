@@ -382,7 +382,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
                             {mask(String(attendedPercent))}<span className="text-xs align-top">%</span>
                         </span>
                     </div>
-                    <div className="h-6 rounded-lg bg-gray-100/90 p-1 flex items-center shadow-inner overflow-visible">
+                    <div className="h-6 flex items-center overflow-visible">
                         <InteractiveAttendanceBar
                             attendanceBoxes={attendanceBoxes}
                             today={today}

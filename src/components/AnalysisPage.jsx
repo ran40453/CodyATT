@@ -648,13 +648,13 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
                                     }}
                                     options={{
                                         ...options,
+                                        indexAxis: 'y',
                                         scales: {
-                                            x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: 'bold' } } },
-                                            y: { stacked: true, display: !isPrivacy, position: 'left', grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 8 }, callback: v => '$' + (v / 1000).toFixed(0) + 'k' } }
+                                            x: { stacked: true, display: !isPrivacy, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 8 }, callback: v => '$' + (v / 1000).toFixed(0) + 'k' } },
+                                            y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: 'bold' } } }
                                         },
                                         plugins: { legend: { display: false }, tooltip: { enabled: !isPrivacy, callbacks: { label: ctx => `${ctx.dataset.label}: $${Math.round(ctx.raw).toLocaleString()}` } } }
                                     }}
-                                    plugins={[valuePlugin]}
                                 />
                             </div>
                         </div>

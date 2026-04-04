@@ -71,16 +71,21 @@ export default function InteractiveAttendanceBar({ attendanceBoxes, today, class
                         <div
                             className={cn(
                                 "absolute left-0 w-full h-[40%] top-1/2 -translate-y-1/2 transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]",
-                                activeIdx === idx 
-                                    ? "w-[28px] h-[28px] left-1/2 -ml-[14px] z-50 bg-[#a855f7] border border-white shadow-xl scale-125" 
-                                    : "z-10 bg-gray-200",
-                                isPastOrToday && box.type === 'attendance' ? "bg-purple-500" : 
-                                isPastOrToday && box.type === 'leave' ? "bg-pink-400" : 
-                                isPastOrToday ? "bg-gray-300" : "bg-gray-100"
+                                activeIdx === idx
+                                    ? "w-[28px] h-[28px] left-1/2 -ml-[14px] z-50 shadow-xl scale-125"
+                                    : "z-10"
                             )}
-                            style={{ 
+                            style={{
                                 borderRadius: activeIdx === idx ? '50%' : '9999px',
-                                backgroundColor: activeIdx === idx ? '#a855f7' : undefined 
+                                backgroundColor: activeIdx === idx
+                                    ? '#ffffff'
+                                    : isPastOrToday && box.type === 'attendance'
+                                        ? '#ffffff'
+                                        : isPastOrToday && box.type === 'leave'
+                                            ? '#f9a8d4'
+                                            : isPastOrToday
+                                                ? 'rgba(255,255,255,0.35)'
+                                                : 'rgba(255,255,255,0.15)'
                             }}
                         >
                             <AnimatePresence>
@@ -89,7 +94,7 @@ export default function InteractiveAttendanceBar({ attendanceBoxes, today, class
                                         initial={{ opacity: 0, scale: 0 }}
                                         animate={{ opacity: 1, scale: 0.8 }}
                                         exit={{ opacity: 0, scale: 0 }}
-                                        className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white pointer-events-none select-none"
+                                        className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-purple-600 pointer-events-none select-none"
                                     >
                                         {format(boxDay, 'dd')}
                                     </motion.span>

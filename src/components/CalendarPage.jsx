@@ -157,7 +157,7 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
 
     return (
         <div className="relative bg-[#E0E5EC] min-h-screen">
-            <header className="flex justify-between items-end px-4 pt-4 mb-2">
+            <header className="flex justify-between items-end px-4 mb-2">
                 <div className="space-y-1">
                     <h1 className="text-3xl font-black tracking-tight text-[#202731]">Calendar</h1>
                 </div>
@@ -203,7 +203,7 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
                             {mask(String(attendedPercent))}<span className="text-xs align-top">%</span>
                         </span>
                     </div>
-                    <div className="h-6 rounded-lg bg-gray-100/90 p-1 flex items-center shadow-inner overflow-visible">
+                    <div className="h-6 flex items-center overflow-visible">
                         <InteractiveAttendanceBar attendanceBoxes={attendanceBoxes} today={new Date()} className="w-full h-1.5 gap-[2px] overflow-visible" />
                     </div>
                     <motion.div
@@ -237,7 +237,7 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
             {isYearView ? (
                 <YearView year={currentDate.getFullYear()} dataMap={dataMap} onSelectMonth={(m) => { setCurrentDate(setMonth(setYear(new Date(), currentDate.getFullYear()), m)); setIsYearView(false); }} />
             ) : (
-                <div ref={containerRef} className="relative overflow-hidden w-full h-full min-h-[600px]">
+                <div ref={containerRef} className="relative overflow-hidden w-full h-full min-h-[600px] pt-2">
                     <motion.div
                         initial={false}
                         style={{ x, width: '300%' }}
