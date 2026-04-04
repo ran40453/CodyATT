@@ -10,8 +10,10 @@ import HeaderActions from './HeaderActions'
 
 export const START_DATE = new Date('2024-09-09');
 
-function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsClick }) {
-    const [currentDate, setCurrentDate] = useState(new Date())
+function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsClick, currentDate: currentDateProp, setCurrentDate: setCurrentDateProp }) {
+    const [internalDate, setInternalDate] = useState(currentDateProp || new Date())
+    const currentDate = currentDateProp || internalDate
+    const setCurrentDate = setCurrentDateProp || setInternalDate
     const [focusedDay, setFocusedDay] = useState(null)
     const [isYearView, setIsYearView] = useState(false)
     const [settings, setSettings] = useState(null)
@@ -174,7 +176,7 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
                 </HeaderActions>
             </header>
 
-            <div className="mx-4 neumo-card p-1 bg-purple-500 overflow-visible relative group rounded-3xl">
+            <motion.div layoutId="attendance-bar" className="mx-4 neumo-card p-1 bg-purple-500 overflow-visible relative group rounded-3xl">
                 <div className="absolute inset-0 bg-purple-500 z-0 rounded-3xl" />
                 <div className="relative z-10 w-full flex flex-col justify-between p-2.5">
                     <div className="flex justify-between items-center mb-1">
@@ -204,7 +206,12 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
                     <div className="h-6 rounded-lg bg-gray-100/90 p-1 flex items-center shadow-inner overflow-visible">
                         <InteractiveAttendanceBar attendanceBoxes={attendanceBoxes} today={new Date()} className="w-full h-1.5 gap-[2px] overflow-visible" />
                     </div>
-                    <div className="grid grid-cols-7 mt-2 px-0.5">
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                        className="grid grid-cols-7 mt-2 px-0.5 overflow-hidden"
+                    >
                         {['S','M','T','W','T','F','S'].map((day, i) => {
                             const isTodayCol = i === new Date().getDay();
                             return (
@@ -221,9 +228,9 @@ function CalendarPage({ data, onUpdate, onDelete, isPrivacy, setIsPrivacy, toggl
                                 </div>
                             );
                         })}
-                    </div>
+                    </motion.div>
                 </div>
-            </div>
+            </motion.div>
 
             <div className="h-3" />
 

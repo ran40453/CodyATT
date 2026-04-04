@@ -20,6 +20,7 @@ function App() {
     const [records, setRecords] = useState([])
     const [settings, setSettings] = useState(null)
     const [isPrivacy, setIsPrivacy] = useState(() => localStorage.getItem('ot-privacy') === 'true')
+    const [sharedDate, setSharedDate] = useState(new Date())
 
     const togglePrivacy = () => {
         const next = !isPrivacy
@@ -74,9 +75,9 @@ function App() {
 
         switch (activeTab) {
             case 'home':
-                return <Dashboard data={records} {...commonProps} />
+                return <Dashboard data={records} currentDate={sharedDate} setCurrentDate={setSharedDate} {...commonProps} />
             case 'calendar':
-                return <CalendarPage data={records} onUpdate={handleUpdateRecord} onDelete={handleDeleteRecord} {...commonProps} />
+                return <CalendarPage data={records} onUpdate={handleUpdateRecord} onDelete={handleDeleteRecord} currentDate={sharedDate} setCurrentDate={setSharedDate} {...commonProps} />
             case 'analysis':
                 return <AnalysisPage data={records} onUpdate={handleUpdateRecord} {...commonProps} />
             case 'info':

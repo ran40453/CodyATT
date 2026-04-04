@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, subDays, subMonths, getDaysInMonth, eachDayOfInterval, eachMonthOfInterval, isSameDay, isSameMonth, getYear } from 'date-fns'
-import { TrendingUp, Globe, Wallet, Clock, Coffee, Moon, Gift, Eye, EyeOff, Briefcase, ChevronRight, Calendar, Battery, Palmtree, Check } from 'lucide-react'
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, subDays, subMonths, addMonths, setMonth, setYear, getDaysInMonth, eachDayOfInterval, eachMonthOfInterval, isSameDay, isSameMonth, getYear } from 'date-fns'
+import { TrendingUp, Globe, Wallet, Clock, Coffee, Moon, Gift, Eye, EyeOff, Briefcase, ChevronRight, ChevronLeft, Calendar, Battery, Palmtree, Check } from 'lucide-react'
 
 import QuickCopyTool from './toolbox/QuickCopyTool'
 import AppFolder from './AppFolder'
@@ -31,12 +31,13 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tool
 
 export const START_DATE = new Date('2024-09-09');
 
-function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsClick }) {
+function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsClick, currentDate, setCurrentDate }) {
     const [settings, setSettings] = useState(null)
     const [liveRate, setLiveRate] = useState(null)
     const [showSalary, setShowSalary] = useState(false) // Default hidden
     const [isQuickCopyOpen, setIsQuickCopyOpen] = useState(false)
     const today = new Date()
+    const displayDate = currentDate || today
 
     useEffect(() => {
         const init = async () => {
@@ -72,8 +73,8 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
 
     const mask = (val) => isPrivacy ? '••••' : val;
 
-    // Filter for Current Month Only
-    const currentMonthInterval = { start: startOfMonth(today), end: endOfMonth(today) }
+    // Filter for Selected Month (currentDate) and rolling year
+    const currentMonthInterval = { start: startOfMonth(displayDate), end: endOfMonth(displayDate) }
     const rollingYearInterval = { start: subDays(today, 365), end: today }
 
     const currentMonthRecords = data.filter(r => {
@@ -120,7 +121,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
         // Try to get salary from history for the current month
         if (settings.salaryHistory && Array.isArray(settings.salaryHistory)) {
             const sortedHistory = [...settings.salaryHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
-            const monthStart = startOfMonth(today);
+            const monthStart = startOfMonth(displayDate);
             const applicable = sortedHistory.find(h => new Date(h.date) <= monthStart);
             if (applicable && applicable.amount) {
                 baseMonthly = Number(applicable.amount);
@@ -311,7 +312,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
         }
     }
 
-    // Attendance Grid Data
+    // Attendance Grid Data (uses displayDate month)
     const currentMonthDays = eachDayOfInterval(currentMonthInterval);
     const attendanceBoxes = currentMonthDays.map(day => {
         const dayStr = format(day, 'yyyy-MM-dd');
@@ -343,51 +344,49 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
 
             {/* Header */}
             <header className="flex justify-between items-end mb-2">
-                <div className="space-y-1">
-                    <h1 className="text-3xl font-black tracking-tight text-[#202731]">Dashboard</h1>
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <span className="text-sm font-bold bg-neumo-brand/10 text-neumo-brand px-2 py-1 rounded-lg">{format(today, 'MMMM')}</span>
-                    <HeaderActions
-                        isPrivacy={isPrivacy}
-                        togglePrivacy={togglePrivacy || setIsPrivacy}
-                        onSettingsClick={onSettingsClick}
-                    />
-                </div>
+                <h1 className="text-3xl font-black tracking-tight text-[#202731]">Dashboard</h1>
+                <HeaderActions
+                    isPrivacy={isPrivacy}
+                    togglePrivacy={togglePrivacy || setIsPrivacy}
+                    onSettingsClick={onSettingsClick}
+                />
             </header>
 
-            {/* Attendance Block (Redesigned: Grid of Squares) */}
+            {/* Attendance Block — shared layoutId with CalendarPage for smooth tab transition */}
             <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
+                layoutId="attendance-bar"
                 className="bg-purple-500 shadow-neumo-raised p-1 overflow-visible relative group rounded-3xl"
             >
-                {/* Background Pattern */}
-                <div className="absolute inset-0 bg-purple-500 z-0 transition-all duration-500 group-hover:brightness-105 rounded-3xl" />
-
-                <div className="relative z-10 w-full h-24 flex flex-col justify-between p-4 overflow-visible">
-                    {/* Header Text (White) */}
-                    <div className="flex justify-between items-start">
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-white/90 uppercase tracking-widest mb-0.5 mix-blend-screen shadow-black/10 text-shadow group-hover:scale-105 transition-transform duration-300 origin-left">本月出勤</span>
-                            <span className="text-xs font-black text-white mix-blend-screen">
-                                {mask(format(today, 'yyyy / MM'))}
-                            </span>
+                <div className="absolute inset-0 bg-purple-500 z-0 rounded-3xl" />
+                <div className="relative z-10 w-full flex flex-col justify-between p-2.5">
+                    <div className="flex justify-between items-center mb-1">
+                        <div className="flex items-center gap-3">
+                            <span className="text-[9px] font-black text-white/90 uppercase tracking-widest">本月出勤</span>
+                            <div className="flex items-center gap-1 bg-white/20 backdrop-blur-md rounded-xl p-0.5 px-1.5 shadow-sm">
+                                <button onClick={() => setCurrentDate(subMonths(displayDate, 1))} className="p-1 hover:scale-110 text-white">
+                                    <ChevronLeft size={16} strokeWidth={3} />
+                                </button>
+                                <select value={displayDate.getFullYear()} onChange={(e) => setCurrentDate(setYear(displayDate, parseInt(e.target.value)))} className="bg-transparent text-[11px] font-black text-white focus:outline-none appearance-none px-1">
+                                    {Array.from({ length: 11 }, (_, i) => today.getFullYear() - 5 + i).map(y => <option key={y} value={y} className="text-gray-800">{y}</option>)}
+                                </select>
+                                <span className="text-white/40 text-[10px] font-bold">/</span>
+                                <select value={displayDate.getMonth()} onChange={(e) => setCurrentDate(setMonth(displayDate, parseInt(e.target.value)))} className="bg-transparent text-[11px] font-black text-white focus:outline-none appearance-none px-1">
+                                    {Array.from({ length: 12 }, (_, i) => i).map(m => <option key={m} value={m} className="text-gray-800">{format(new Date(2024, m), 'MM')}</option>)}
+                                </select>
+                                <button onClick={() => setCurrentDate(addMonths(displayDate, 1))} className="p-1 hover:scale-110 text-white">
+                                    <ChevronRight size={16} strokeWidth={3} />
+                                </button>
+                            </div>
                         </div>
-                        <div className="flex flex-col items-end">
-                            <span className="text-3xl font-black text-white drop-shadow-md tracking-tighter group-hover:scale-110 transition-transform duration-300 origin-right">
-                                {mask(String(attendedPercent))}<span className="text-base align-top">%</span>
-                            </span>
-                        </div>
+                        <span className="text-xl font-black text-white drop-shadow-md">
+                            {mask(String(attendedPercent))}<span className="text-xs align-top">%</span>
+                        </span>
                     </div>
-
-                    {/* Bottom Grid of Squares (Track) */}
-                    <div className="mt-2 h-5 rounded-lg bg-gray-100/90 backdrop-blur-sm p-1 flex items-center shadow-inner group-hover:shadow-lg transition-all duration-300 relative z-20 overflow-visible">
+                    <div className="h-6 rounded-lg bg-gray-100/90 p-1 flex items-center shadow-inner overflow-visible">
                         <InteractiveAttendanceBar
                             attendanceBoxes={attendanceBoxes}
                             today={today}
-                            className="w-full h-1.5 gap-1 overflow-visible"
+                            className="w-full h-1.5 gap-[2px] overflow-visible"
                         />
                     </div>
                 </div>
@@ -409,7 +408,7 @@ function Dashboard({ data, isPrivacy, setIsPrivacy, togglePrivacy, onSettingsCli
                                 <div className="p-1.5 rounded-lg neumo-pressed text-purple-500">
                                     <TrendingUp size={16} />
                                 </div>
-                                <h2 className="text-[10px] font-black uppercase tracking-widest">本月薪資分布</h2>
+                                <h2 className="text-[10px] font-black uppercase tracking-widest">當月總薪資</h2>
                             </div>
                             <div
                                 onClick={() => setShowSalary(!showSalary)}

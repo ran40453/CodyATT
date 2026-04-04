@@ -446,11 +446,11 @@ function InfoPage() {
     const isDark = theme === 'dark';
 
     return (
-        <div className="space-y-4 relative w-full h-[calc(100vh-80px)] md:h-auto md:min-h-[85vh] flex flex-col">
+        <div className="space-y-2 relative w-full flex flex-col" style={{ minHeight: 'calc(100vh - 100px)' }}>
 
-            <header className="flex justify-between items-end px-1 mb-2">
+            <header className="flex justify-between items-end mb-2">
                 <div className="space-y-1">
-                    <h1 className="text-3xl font-black tracking-tight text-[#202731]">Info & Notes</h1>
+                    <h1 className="text-3xl font-black tracking-tight text-[#202731]">Notes</h1>
                 </div>
 
                 <HeaderActions onSettingsClick={() => { }}>
@@ -467,10 +467,11 @@ function InfoPage() {
             <div className={cn(
                 "flex-1 flex relative neumo-raised rounded-3xl z-20 transition-colors duration-300 overflow-hidden",
                 isDark ? "bg-[#202731]" : "bg-[#E0E5EC]"
-            )}>
+            )} style={{ minHeight: 'calc(100vh - 140px)' }}>
                 <motion.div
                     className={cn(
-                        "flex flex-col w-full md:w-1/3 min-w-[260px] max-w-sm border-r z-10 absolute md:relative h-full transition-all duration-300",
+                        "flex flex-col w-full md:w-64 shrink-0 border-r z-10 absolute md:relative transition-all duration-300",
+                        "inset-y-0 left-0",
                         isMobileListVisible ? "translate-x-0" : "-translate-x-full md:translate-x-0",
                         isDark ? "bg-purple-900 border-white/5" : "bg-purple-600 border-purple-700/30"
                     )}

@@ -464,9 +464,9 @@ function AnalysisPage({ data, onUpdate, isPrivacy, setIsPrivacy, togglePrivacy, 
 
     return (
         <div className="space-y-6 pb-32">
-            <header className="flex justify-between items-start">
+            <header className="flex justify-between items-end mb-2">
                 <div className="space-y-1">
-                    <h1 className="text-3xl font-black tracking-tight">Analysis</h1>
+                    <h1 className="text-3xl font-black tracking-tight text-[#202731]">Analysis</h1>
                 </div>
 
                 <HeaderActions
